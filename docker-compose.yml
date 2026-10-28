@@ -1,0 +1,35 @@
+# Local infrastructure for development: MySQL with the NewErp schema and Redis (Celery broker).
+# The API itself runs on the host with `uv run fastapi dev src/newerp/main.py`.
+services:
+  mysql:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${NEWERP_DB_NAME:-newerp_dev}
+      MYSQL_USER: ${NEWERP_DB_USER:-newerp}
+      MYSQL_PASSWORD: ${NEWERP_DB_PASSWORD:-newerp_dev_password}
+      MYSQL_ROOT_PASSWORD: ${NEWERP_DB_ROOT_PASSWORD:-root_dev_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Run once, on an empty volume, in this order (same as the Java integration tests).
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
+      - ./db/reconstructed.sql:/docker-entrypoint-initdb.d/2-reconstructed.sql:ro
+      - ./db/erp.sql:/docker-entrypoint-initdb.d/3-erp.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  mysql-data:
