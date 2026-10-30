@@ -14,6 +14,7 @@ from newerp.application.locations import (
     SaveLocationRequest,
 )
 from newerp.infrastructure.locations import SqlLocationStore
+from newerp.infrastructure.production.repositories import SqlSewnLocationRepository
 from newerp.infrastructure.spreadsheets import OpenpyxlSpreadsheet
 from newerp.infrastructure.stock.repositories import SqlStockLocationRepository
 
@@ -23,8 +24,7 @@ router = APIRouter(
 
 
 def get_location_service(session: Session) -> LocationService:
-    # Sewn pieces at warehouses (production) are added to the holders when that module is ported.
-    holders = [SqlStockLocationRepository(session)]
+    holders = [SqlStockLocationRepository(session), SqlSewnLocationRepository(session)]
     return LocationService(SqlLocationStore(session), OpenpyxlSpreadsheet(), holders)
 
 

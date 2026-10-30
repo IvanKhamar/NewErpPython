@@ -20,6 +20,13 @@ class StockSettings(BaseModel):
     reorder_target_factor: Decimal = Decimal(2)
 
 
+class ProductionSettings(BaseModel):
+    # Statuses in which an order takes sewn pieces from stock: entering writes off, leaving returns.
+    order_subtract_status_ids: list[int] = [18, 20, 21, 22, 23, 25]
+    # Statuses of active orders the sewing plan is counted for (not yet ready to ship).
+    plan_status_ids: list[int] = [1, 17, 18, 23, 24, 25]
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -43,6 +50,7 @@ class Settings(BaseSettings):
     # Module settings, like the sections of appsettings.json. Env example: NEWERP_BONUS__PERCENT=2.
     bonus: BonusSettings = BonusSettings()
     stock: StockSettings = StockSettings()
+    production: ProductionSettings = ProductionSettings()
 
     @property
     def is_development(self) -> bool:

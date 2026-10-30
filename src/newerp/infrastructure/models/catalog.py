@@ -99,3 +99,14 @@ class DdProductToCategory(Base):
 
     product_id: Mapped[int] = mapped_column(primary_key=True)
     category_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdCategory(Base):
+    __tablename__ = "dd_category"
+
+    category_id: Mapped[int] = mapped_column(primary_key=True)
+    parent_id: Mapped[int] = mapped_column(default=0)
+    sort_order: Mapped[int] = mapped_column(default=0)
+    status: Mapped[bool]
+    # How many days from the order date a product of this category must be ready (0: not set).
+    production_period: Mapped[int] = mapped_column(default=0)
