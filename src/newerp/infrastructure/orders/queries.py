@@ -56,9 +56,7 @@ class SqlOrderQueries:
             conditions.append(DdOrder.order_source_id == f.source_id)
         if f.manager_id is not None:
             assigned = aliased(ErpOrderManager)  # the main query joins ErpOrderManager too
-            conditions.append(
-                exists().where(assigned.order_id == DdOrder.order_id, assigned.user_id == f.manager_id)
-            )
+            conditions.append(exists().where(assigned.order_id == DdOrder.order_id, assigned.user_id == f.manager_id))
         if f.from_ is not None:
             conditions.append(DdOrder.date_added >= datetime.combine(f.from_, time.min))
         if f.to is not None:
