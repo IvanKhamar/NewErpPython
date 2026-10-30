@@ -27,7 +27,7 @@ jobs:
       NEWERP_TEST_DB: mysql+aiomysql://root:ci_root_password@127.0.0.1:3306
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
