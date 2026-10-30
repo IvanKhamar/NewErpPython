@@ -15,6 +15,11 @@ class BonusSettings(BaseModel):
     counted_status_ids: list[int] = [22, 20]
 
 
+class StockSettings(BaseModel):
+    # Reorder up to this many minimums: 2 means "bring the quantity up to 2 × minimum".
+    reorder_target_factor: Decimal = Decimal(2)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -37,6 +42,7 @@ class Settings(BaseSettings):
 
     # Module settings, like the sections of appsettings.json. Env example: NEWERP_BONUS__PERCENT=2.
     bonus: BonusSettings = BonusSettings()
+    stock: StockSettings = StockSettings()
 
     @property
     def is_development(self) -> bool:

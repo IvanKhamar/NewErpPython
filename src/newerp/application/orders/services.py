@@ -22,8 +22,8 @@ from newerp.application.orders.models import (
     UpdateOrderCompositionResult,
 )
 from newerp.application.orders.ports import NewOrderStore, OrderStatusHandler, OrderStore
-from newerp.domain.common import DomainError
-from newerp.domain.orders import RISK_LOOKBACK_YEARS, CustomerRisk, OrderDraft, OrderDraftLine, OrderStatusChange, plain
+from newerp.domain.common import DomainError, plain
+from newerp.domain.orders import RISK_LOOKBACK_YEARS, CustomerRisk, OrderDraft, OrderDraftLine, OrderStatusChange
 
 
 class OrderService:

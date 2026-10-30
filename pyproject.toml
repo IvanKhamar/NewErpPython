@@ -13,6 +13,7 @@ dependencies = [
     "celery[redis]>=5.4",
     "itsdangerous>=2.2",  # signs the auth cookie
     "tzdata",  # time zones on Windows (Europe/Kyiv)
+    "openpyxl>=3.1",  # Excel import and export
 ]
 
 [dependency-groups]

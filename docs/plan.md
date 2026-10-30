@@ -14,7 +14,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 1 | Foundation: ProblemDetails errors, cookie auth, roles, `/auth`, `/users` | done |
 | 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (order SMS → 10, vouchers → 14) |
 | 3 | Staff: managers' bonuses | done |
-| 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | |
+| 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | done |
 | 5 | Production: models, BOMs, sewn stock, sewing plan, cutting plan | |
 | 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | |
 | 7 | International shipments: Nova Post International | |
@@ -27,7 +27,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 14 | Marketing: birthdays, coupons, contacts export | |
 | 15 | Returns, customers | |
 | 16 | Reports, revenue feed | |
-| 17 | Locations (warehouses) with Excel import/export | |
+| 17 | Locations (warehouses) with Excel import/export | done in phase 4 (sewn-stock delete check → 5) |
 | 18 | Competitor prices (+ daily check task) | |
 
 ## Conventions (decided once, used everywhere)

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from newerp.api import auth, health, orders, staff, users
+from newerp.api import auth, health, locations, orders, staff, stock, users
 from newerp.api.errors import add_error_handlers
 from newerp.api.security import add_security_middleware
 from newerp.infrastructure.db import engine
@@ -21,5 +21,5 @@ app = FastAPI(title="NewErp API", version="0.1.0", lifespan=lifespan)
 add_error_handlers(app)
 add_security_middleware(app)
 
-for module in (health, auth, users, orders, staff):
+for module in (health, auth, users, orders, staff, stock, locations):
     app.include_router(module.router)

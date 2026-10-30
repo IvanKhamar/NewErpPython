@@ -85,7 +85,7 @@ def db(database: str) -> Iterator[pymysql.Connection]:
 def api(database: str) -> Iterator[Callable[..., TestClient]]:
     """api() is an anonymous client; api("марта") is a client logged in as that user."""
     engine = create_async_engine(SERVER_URL.set(database=database, query={"charset": "utf8mb4"}))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    sessions = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 
     async def test_session():
         async with sessions() as session:

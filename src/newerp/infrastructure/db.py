@@ -9,7 +9,8 @@ from newerp.config import get_settings
 
 # The engine owns the connection pool; it connects lazily, on the first query.
 engine = create_async_engine(get_settings().database_url, pool_pre_ping=True)
-session_factory = async_sessionmaker(engine, expire_on_commit=False)
+# No autoflush: like EF, nothing is written before commit (the OpenCart tables are MyISAM and cannot roll back).
+session_factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 
 
 class Base(DeclarativeBase):

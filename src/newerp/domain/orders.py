@@ -148,9 +148,3 @@ class CustomerRisk:
         """Last 9 digits: "+38 (067) 123-45-67" and "0671234567" count as one number."""
         digits = re.sub(r"[^0-9]", "", telephone or "")
         return digits[-9:] if len(digits) >= 9 else None
-
-
-def plain(value: Decimal) -> str:
-    """A sum without extra zeros: 650, 650.5 (GiftVoucher.Plain in .NET)."""
-    text = format(value.normalize(), "f")
-    return text

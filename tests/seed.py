@@ -184,3 +184,5 @@ def run(connection: pymysql.Connection) -> None:
         shipping_method="Нова Пошта", shipping_code="novaposhta_warehouse.novaposhta_warehouse",
         payment_method="Накладений платіж", payment_code="cod",
     )  # fmt: skip
+
+    insert(connection, "dd_stock_categories", category_id=1, name="Тканини", sort_order=0)

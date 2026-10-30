@@ -1,6 +1,7 @@
 """Building blocks shared by all application modules."""
 
 import math
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Protocol
@@ -84,3 +85,19 @@ class SystemClock:
 
     def utc_now(self) -> datetime:
         return datetime.now(UTC)
+
+
+class Spreadsheet(Protocol):
+    """Reading and writing .xlsx files (Excel import and export)."""
+
+    def write(self, sheet_name: str, header: Sequence[str], rows: Sequence[Sequence[object]]) -> bytes: ...
+
+    def read(self, content: bytes) -> list[list[str]]:
+        """Rows of the first sheet as text; DomainError if it is not an .xlsx file."""
+        ...
+
+
+class CreatedId(Dto):
+    """Body of a 201 answer: {"id": ...}."""
+
+    id: int
