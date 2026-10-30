@@ -36,6 +36,7 @@ BRANCH_1_REF = "wh-kyiv-1"
 KYIV_REF = "city-kyiv"
 WAITING_TTN = "20450000000002"  # order 2: waits at the branch, paid storage from tomorrow
 CASHIER_ID = 1
+BANK_APP_CODE = "tx-2000"
 
 
 def insert(connection: pymysql.Connection, table: str, **columns: object) -> None:
@@ -216,4 +217,11 @@ def run(connection: pymysql.Connection) -> None:
         connection, "dd_cashbox_user", user_id=CASHIER_ID, name="Олена Каса", description="", payment_code="",
         login="", password="", checkbox_key="", customer_id=0, warehouse_id=0, requisites_id=0, status=True,
         date_added=datetime.now(),
+    )  # fmt: skip
+
+    # 2000 UAH from the customer of order 2 (the sum and surname match): the first suggestion.
+    insert(
+        connection, "dd_privatbank", appcode=BANK_APP_CODE, card="UA00", amount="2000.00 UAH",
+        cardamount="2000.00 UAH", rest="5000.00 UAH", description="Оплата за замовлення 2", terminal="Тарас Клієнт2",
+        trandate=date(2026, 10, 3), trantime="10:00:00", status="", show_status=True, order_id=0,
     )  # fmt: skip

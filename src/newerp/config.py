@@ -124,6 +124,32 @@ class CheckboxSettings(BaseModel):
     auto_close_interval_minutes: int = 15
 
 
+class PrivatBankAccount(BaseModel):
+    """An "Автоклієнт" account: its id and token from the PrivatBank business cabinet."""
+
+    id: str = ""
+    token: SecretStr = SecretStr("")
+
+
+class PrivatBankSettings(BaseModel):
+    base_url: str = "https://acp.privatbank.ua"
+    accounts: list[PrivatBankAccount] = []
+
+    @property
+    def is_configured(self) -> bool:
+        return any(a.id and a.token.get_secret_value() for a in self.accounts)
+
+
+class LiqPaySettings(BaseModel):
+    base_url: str = "https://www.liqpay.ua"
+    public_key: str = ""
+    private_key: SecretStr = SecretStr("")
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.public_key and self.private_key.get_secret_value())
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -151,6 +177,8 @@ class Settings(BaseSettings):
     nova_poshta: NovaPoshtaSettings = NovaPoshtaSettings()
     nova_post_international: NovaPostInternationalSettings = NovaPostInternationalSettings()
     checkbox: CheckboxSettings = CheckboxSettings()
+    privat_bank: PrivatBankSettings = PrivatBankSettings()
+    liq_pay: LiqPaySettings = LiqPaySettings()
 
     @property
     def is_development(self) -> bool:
