@@ -18,7 +18,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 5 | Production: models, BOMs, sewn stock, sewing plan | done (pre-order settle → 13) |
 | 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | done (tracking task → Celery beat later) |
 | 7 | International shipments: Nova Post International | done |
-| 8 | Cashbox: Checkbox cashiers, shifts, receipts, auto close (Celery beat) | |
+| 8 | Cashbox: Checkbox cashiers, shifts, receipts, auto close (Celery beat) | done |
 | 9 | Payments: PrivatBank statement, LiqPay | |
 | 10 | SMS: SMSClub | |
 | 11 | Partners: reseller XML feeds | |

@@ -104,6 +104,26 @@ class NovaPostInternationalSettings(BaseModel):
         return "https://api-stage.novapost.com/v.1.0" if self.sandbox else "https://api.novapost.com/v.1.0"
 
 
+class CheckboxCashier(BaseModel):
+    """A cashier's Checkbox keys; cashier_id is dd_cashbox_user.user_id."""
+
+    cashier_id: int = 0
+    login: str = ""
+    password: SecretStr = SecretStr("")
+    license_key: SecretStr = SecretStr("")
+
+
+class CheckboxSettings(BaseModel):
+    base_url: str = "https://api.checkbox.in.ua"
+    client_name: str = "NewErp"
+    client_version: str = "1.0"
+    # Without keys the stub "fiscalizes" test receipts in memory (development and tests only).
+    fake_receipts: bool = False
+    cashiers: list[CheckboxCashier] = []
+    # How often the background task checks open shifts (minutes); 0: never (POST /cashbox/shifts/auto-close).
+    auto_close_interval_minutes: int = 15
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -130,6 +150,7 @@ class Settings(BaseSettings):
     production: ProductionSettings = ProductionSettings()
     nova_poshta: NovaPoshtaSettings = NovaPoshtaSettings()
     nova_post_international: NovaPostInternationalSettings = NovaPostInternationalSettings()
+    checkbox: CheckboxSettings = CheckboxSettings()
 
     @property
     def is_development(self) -> bool:

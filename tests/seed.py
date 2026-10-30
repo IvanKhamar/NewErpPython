@@ -35,6 +35,7 @@ BRANCH_1 = "Відділення №1: вул. Хрещатик, 1"
 BRANCH_1_REF = "wh-kyiv-1"
 KYIV_REF = "city-kyiv"
 WAITING_TTN = "20450000000002"  # order 2: waits at the branch, paid storage from tomorrow
+CASHIER_ID = 1
 
 
 def insert(connection: pymysql.Connection, table: str, **columns: object) -> None:
@@ -209,3 +210,10 @@ def run(connection: pymysql.Connection) -> None:
             city_ref=city_ref, city_description=city, weight=weight, sort_order=int(number.group(1)) if number else 1,
             status=working,
         )  # fmt: skip
+
+    # The default cashier (no payment code); the Checkbox test stub "fiscalizes" in memory.
+    insert(
+        connection, "dd_cashbox_user", user_id=CASHIER_ID, name="Олена Каса", description="", payment_code="",
+        login="", password="", checkbox_key="", customer_id=0, warehouse_id=0, requisites_id=0, status=True,
+        date_added=datetime.now(),
+    )  # fmt: skip
