@@ -12,9 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from newerp.application.auth.services import AuthService, UserAdminService
 from newerp.application.auth.throttle import LoginThrottle, LoginThrottleOptions
 from newerp.application.common import Clock, SystemClock
+from newerp.application.orders.ports import OrderStatusHandler
+from newerp.application.orders.services import NewOrderService, OrderService
+from newerp.config import get_settings
 from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
 from newerp.infrastructure.auth.user_login_store import SqlUserLoginStore
 from newerp.infrastructure.db import get_session
+from newerp.infrastructure.orders.new_order_store import SqlNewOrderStore
+from newerp.infrastructure.orders.queries import SqlOrderQueries
+from newerp.infrastructure.orders.store import SqlOrderStore
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 
@@ -57,3 +63,39 @@ def get_auth_service(store: UserLoginStoreDep, hasher: HasherDep, clock: ClockDe
 
 def get_user_admin_service(store: UserLoginStoreDep, hasher: HasherDep, clock: ClockDep) -> UserAdminService:
     return UserAdminService(store, hasher, clock)
+
+
+# ── Orders ──
+
+
+def get_order_queries(session: Session) -> SqlOrderQueries:
+    return SqlOrderQueries(session, get_settings().language_id)
+
+
+def get_order_store(session: Session) -> SqlOrderStore:
+    return SqlOrderStore(session)
+
+
+OrderStoreDep = Annotated[SqlOrderStore, Depends(get_order_store)]
+
+
+def get_order_status_handlers(session: Session) -> list[OrderStatusHandler]:
+    """What other modules do on a status change; modules add their handlers here as they are ported."""
+    return []
+
+
+def get_order_service(
+    store: OrderStoreDep,
+    clock: ClockDep,
+    handlers: Annotated[list[OrderStatusHandler], Depends(get_order_status_handlers)],
+) -> OrderService:
+    return OrderService(store, clock, handlers)
+
+
+def get_new_order_service(
+    session: Session,
+    orders: OrderStoreDep,
+    order_service: Annotated[OrderService, Depends(get_order_service)],
+    clock: ClockDep,
+) -> NewOrderService:
+    return NewOrderService(SqlNewOrderStore(session, get_settings().language_id), orders, order_service, clock)

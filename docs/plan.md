@@ -12,7 +12,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | # | Module (.NET) | Status |
 |---|---|---|
 | 1 | Foundation: ProblemDetails errors, cookie auth, roles, `/auth`, `/users` | done |
-| 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | |
+| 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (order SMS → 10, vouchers → 14) |
 | 3 | Staff: managers' bonuses | |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | |
 | 5 | Production: models, BOMs, sewn stock, sewing plan, cutting plan | |
