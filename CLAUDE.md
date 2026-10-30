@@ -4,16 +4,14 @@ Python rewrite of NewErp (.NET: `F:\PROJECTS\NewErp\NewErp`, Java: `F:\PROJECTS\
 Same business, same MySQL database `newerp_dev`, same HTTP API contract. The goal is a learning project and a
 portfolio piece for a Python backend job: FastAPI, AsyncIO, SQLAlchemy, Celery, Kafka, Docker, pytest.
 
-## Working with the user (most important rule)
+## Working with the user
 
-The user writes the core code: models, endpoints, Celery tasks, Kafka producers, tests. They must be able to
-explain every line in a technical interview. So:
+Since 2026-10-30 Claude ports the whole system from the .NET version (the user asked for it); the phases and
+their status are in `docs/plan.md`. The user must still be able to explain the code in an interview, so:
 
-- Do not write models, endpoints, tasks or tests unless the user explicitly asks for that piece.
-- Your job: explain concepts, answer questions, review the user's code, point to the matching .NET/Java code.
-- In a review, name the problem and the hint first; show the fix only when asked.
-- Infrastructure (docker-compose, config, tooling) you may write yourself.
-- Explain each new Python concept in 1–2 sentences and map it to C#/.NET.
+- Keep the code plain and idiomatic; explain each new Python concept in 1–2 sentences and map it to C#/.NET
+  (in commit messages or when asked).
+- When the user writes code themselves, review it: name the problem and the hint first, show the fix when asked.
 
 ## Stack
 

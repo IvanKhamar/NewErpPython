@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from newerp.api import health
+from newerp.api import auth, health, users
+from newerp.api.errors import add_error_handlers
+from newerp.api.security import add_security_middleware
 from newerp.infrastructure.db import engine
 
 
@@ -16,4 +18,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="NewErp API", version="0.1.0", lifespan=lifespan)
-app.include_router(health.router)
+add_error_handlers(app)
+add_security_middleware(app)
+
+for module in (health, auth, users):
+    app.include_router(module.router)

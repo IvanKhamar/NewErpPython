@@ -11,6 +11,8 @@ dependencies = [
     "aiomysql>=0.2",
     "cryptography>=43",  # MySQL 8 default auth (caching_sha2_password) needs it
     "celery[redis]>=5.4",
+    "itsdangerous>=2.2",  # signs the auth cookie
+    "tzdata",  # time zones on Windows (Europe/Kyiv)
 ]
 
 [dependency-groups]

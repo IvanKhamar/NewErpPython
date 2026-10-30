@@ -8,7 +8,10 @@ from sqlalchemy import URL
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
+
+    # Development, Testing or Production (like ASPNETCORE_ENVIRONMENT).
+    environment: str = "Development"
 
     db_host: str = "localhost"
     db_port: int = 3307
@@ -17,6 +20,16 @@ class Settings(BaseSettings):
     db_password: SecretStr = SecretStr("")
 
     redis_url: str = "redis://localhost:6379/0"
+
+    # Key that signs the auth cookie. Without it a random key is made at start, so sessions end on restart.
+    auth_secret: SecretStr | None = None
+
+    # Language of the OpenCart lookups (dd_order_status etc.). The real database has every name with language_id 3.
+    language_id: int = 3
+
+    @property
+    def is_development(self) -> bool:
+        return self.environment in ("Development", "Testing")
 
     @property
     def database_url(self) -> URL:
