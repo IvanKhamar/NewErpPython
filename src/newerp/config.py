@@ -70,6 +70,40 @@ class NovaPoshtaSettings(BaseModel):
         return key.strip() or None
 
 
+class InternationalSender(BaseModel):
+    """The shop's company as the sender. With a company TIN the API also needs the registration address: this one."""
+
+    company_tin: str = ""
+    company_name: str = ""
+    name: str = ""
+    phone: str = ""  # 380XXXXXXXXX
+    email: str = ""
+    city: str = ""
+    street: str = ""
+    building: str = ""
+    flat: str = ""
+    post_code: str = ""
+
+
+class NovaPostInternationalSettings(BaseModel):
+    api_key: SecretStr = SecretStr("")
+    sandbox: bool = False  # True: api-stage.novapost.com (test waybills)
+    base_url: str | None = None
+    # Local development only: without a key the stub "creates" test waybills (numbers start with TEST).
+    fake_documents: bool = False
+    sender: InternationalSender = InternationalSender()
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.api_key.get_secret_value().strip())
+
+    @property
+    def url(self) -> str:
+        if self.base_url and self.base_url.strip():
+            return self.base_url.strip().rstrip("/")
+        return "https://api-stage.novapost.com/v.1.0" if self.sandbox else "https://api.novapost.com/v.1.0"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -95,6 +129,7 @@ class Settings(BaseSettings):
     stock: StockSettings = StockSettings()
     production: ProductionSettings = ProductionSettings()
     nova_poshta: NovaPoshtaSettings = NovaPoshtaSettings()
+    nova_post_international: NovaPostInternationalSettings = NovaPostInternationalSettings()
 
     @property
     def is_development(self) -> bool:

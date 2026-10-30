@@ -3,6 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import delete, exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from newerp.application.delivery.international import InternationalOrderInfo, InternationalOrderLine
 from newerp.application.delivery.models import (
     CityDto,
     OpenShipment,
@@ -20,7 +21,7 @@ from newerp.domain.delivery import (
     ShipmentDocument,
 )
 from newerp.infrastructure.delivery.mapping import nova_poshta_warehouses, shipment_documents, shipment_senders
-from newerp.infrastructure.models.orders import DdOrder, ErpOrderManager
+from newerp.infrastructure.models.orders import DdOrder, DdOrderProduct, ErpOrderManager
 from newerp.infrastructure.models.users import DdUser
 
 INSERT_BATCH_SIZE = 1000  # the directory has tens of thousands of branches
@@ -117,6 +118,24 @@ class SqlShipmentRepository:
             payment_code=o.payment_code,
             prepayment=o.prepayment,
         )
+
+    async def get_international_order_info(self, order_id: int) -> InternationalOrderInfo | None:
+        o = await self._session.get(DdOrder, order_id)
+        if o is None:
+            return None
+        lines = await self._session.execute(
+            select(DdOrderProduct.name, DdOrderProduct.quantity, DdOrderProduct.total)
+            .where(DdOrderProduct.order_id == order_id)
+            .order_by(DdOrderProduct.order_product_id)
+        )
+        # As in the domestic form: the shipping address, or the buyer if it is empty.
+        return InternationalOrderInfo(
+            first_name=o.shipping_firstname or o.firstname, last_name=o.shipping_lastname or o.lastname,
+            telephone=o.telephone, email=o.email, country=o.shipping_country, region=o.shipping_zone,
+            city=o.shipping_city, post_code=o.shipping_postcode,
+            address=f"{o.shipping_address_1} {o.shipping_address_2}".strip(), total=o.total,
+            currency_code=o.currency_code, lines=[InternationalOrderLine(*line) for line in lines],
+        )  # fmt: skip
 
     def add(self, document: ShipmentDocument, sender_id: str, user_id: int, created_at: datetime) -> None:
         self._session.add(document)

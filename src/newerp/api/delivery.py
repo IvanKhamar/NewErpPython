@@ -7,6 +7,14 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from newerp.api.deps import ClockDep, Session
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.application.delivery.international import (
+    CountryDto,
+    CreateInternationalShipmentRequest,
+    HsCodeDto,
+    InternationalFormDto,
+    InternationalShipmentService,
+    countries,
+)
 from newerp.application.delivery.models import (
     CityDto,
     CreateShipmentRequest,
@@ -21,6 +29,7 @@ from newerp.application.delivery.models import (
 from newerp.application.delivery.services import DeliveryService, ShipmentService
 from newerp.config import get_settings
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
+from newerp.infrastructure.delivery.nova_post_international import nova_post_international_client
 from newerp.infrastructure.delivery.repositories import SqlShipmentRepository, SqlWarehouseDirectory
 
 orders_access = [Depends(require_roles(*Policies.ORDERS))]
@@ -35,7 +44,10 @@ def get_nova_poshta():
 
 
 def get_shipment_service(session: Session, clock: ClockDep) -> ShipmentService:
-    return ShipmentService(SqlShipmentRepository(session), SqlWarehouseDirectory(session), get_nova_poshta(), clock)
+    return ShipmentService(
+        SqlShipmentRepository(session), SqlWarehouseDirectory(session), get_nova_poshta(), clock,
+        get_nova_post_international(),
+    )  # fmt: skip
 
 
 def get_delivery_service(session: Session, clock: ClockDep) -> DeliveryService:
@@ -110,3 +122,41 @@ async def warehouses(
 @delivery_router.post("/warehouses/refresh", summary="Завантажити свіжий довідник відділень з Нової Пошти")
 async def refresh_warehouses(service: Shipments) -> WarehouseRefreshResult:
     return await service.refresh_warehouses()
+
+
+# ── Waybills abroad (Nova Post International): one waybill per order whatever the carrier ──
+
+
+@lru_cache
+def get_nova_post_international():
+    return nova_post_international_client(get_settings().nova_post_international)
+
+
+def get_international_service(session: Session, clock: ClockDep) -> InternationalShipmentService:
+    repository = SqlShipmentRepository(session)
+    return InternationalShipmentService(repository, repository, get_nova_post_international(), clock)
+
+
+International = Annotated[InternationalShipmentService, Depends(get_international_service)]
+
+
+@shipment_router.get("/international/form", summary="Форма міжнародної накладної з даними замовлення")
+async def international_form(order_id: int, service: International) -> InternationalFormDto:
+    return await service.form(order_id)
+
+
+@shipment_router.post("/international", summary="Створити накладну в Nova Post International (без ключа — тестову)")
+async def create_international(
+    order_id: int, request: CreateInternationalShipmentRequest, principal: CurrentPrincipal, service: International
+) -> ShipmentDto:
+    return await service.create(order_id, request, principal.user_id)
+
+
+@delivery_router.get("/international/countries", summary="Країни отримувача (усі, крім України)")
+async def international_countries() -> list[CountryDto]:
+    return countries()
+
+
+@delivery_router.get("/international/hs-codes", summary="Підказки кодів УКТЗЕД за словом (від двох літер)")
+async def hs_codes(service: International, search: str | None = None, country: str | None = None) -> list[HsCodeDto]:
+    return await service.hs_codes(search, country)

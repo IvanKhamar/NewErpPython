@@ -43,3 +43,6 @@ uv run fastapi dev src/newerp/main.py      # run the API; /health, /docs
 uv run pytest                              # tests
 uv run ruff check . ; uv run lint-imports  # lint + layer check
 ```
+
+Push only after all CI steps (`ruff check`, `ruff format --check`, `lint-imports`, `pytest`) pass locally, each
+exit code checked: a failed CI run e-mails the user. Report problems in the chat instead.
