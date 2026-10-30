@@ -1,6 +1,7 @@
 """Test data shared by all API tests (the seed of ApiFactory.cs in .NET). Only invented data."""
 
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 
 import pymysql
 
@@ -31,6 +32,9 @@ SHIPPING_ORDER_ID = 5  # no waybill yet, cash on delivery
 CANCELLED_ORDER_ID = 6  # cancelled order of the customer with RISKY_PHONE
 RISKY_PHONE = "+38 (093) 555-44-33"
 BRANCH_1 = "Відділення №1: вул. Хрещатик, 1"
+BRANCH_1_REF = "wh-kyiv-1"
+KYIV_REF = "city-kyiv"
+WAITING_TTN = "20450000000002"  # order 2: waits at the branch, paid storage from tomorrow
 
 
 def insert(connection: pymysql.Connection, table: str, **columns: object) -> None:
@@ -186,3 +190,22 @@ def run(connection: pymysql.Connection) -> None:
     )  # fmt: skip
 
     insert(connection, "dd_stock_categories", category_id=1, name="Тканини", sort_order=0)
+
+    # Order 2's waybill waits at the branch; paid storage starts tomorrow, so it is in the reminders.
+    insert(
+        connection, "dd_novaposhta_document", order_id=2, carrier="novaposhta", ref=WAITING_TTN, number=WAITING_TTN,
+        cost=70, status="Прибув у відділення", status_code=7, recipient_address="Київ, відділення 1",
+        redelivery=False, date_created=datetime.now(), date_payed_keeping=date.today() + timedelta(days=1),
+    )  # fmt: skip
+    for ref, description, category, city_ref, city, weight, working in (
+        (BRANCH_1_REF, BRANCH_1, "Branch", KYIV_REF, "Київ", 30, True),
+        ("wh-kyiv-2", "Поштомат №2", "Postomat", KYIV_REF, "Київ", 20, True),
+        ("wh-kyiv-3", "Відділення №3", "Branch", KYIV_REF, "Київ", 30, False),
+        ("wh-kovel-1", "Відділення №1", "Branch", "city-kovel", "Ковель", 30, True),
+    ):
+        number = re.search(r"№\s*(\d+)", description)
+        insert(
+            connection, "dd_novaposhta_warehouse", ref=ref, description=description, category_of_warehouse=category,
+            city_ref=city_ref, city_description=city, weight=weight, sort_order=int(number.group(1)) if number else 1,
+            status=working,
+        )  # fmt: skip

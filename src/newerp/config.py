@@ -27,6 +27,49 @@ class ProductionSettings(BaseModel):
     plan_status_ids: list[int] = [1, 17, 18, 23, 24, 25]
 
 
+class NovaPoshtaSender(BaseModel):
+    """A sender (for example, a sole proprietor) with its own API key; the refs come from the API or the cabinet."""
+
+    id: str = ""  # short id stored in erp_shipment_sender.sender_id; do not change after the first waybill
+    name: str = ""
+    api_key: SecretStr = SecretStr("")
+    counterparty_ref: str = ""
+    contact_ref: str = ""
+    phone: str = ""  # 380XXXXXXXXX
+    is_default: bool = False
+
+
+class NovaPoshtaDropoffPoint(BaseModel):
+    """The branch parcels are taken to (city and address refs)."""
+
+    id: str = ""
+    name: str = ""
+    city_ref: str = ""
+    address_ref: str = ""
+    is_default: bool = False
+
+
+class NovaPoshtaSettings(BaseModel):
+    """API keys only in env vars or .env (NEWERP_NOVA_POSHTA__SENDERS as JSON), never in committed files."""
+
+    api_key: SecretStr | None = None  # for tracking and the directory; else the default sender's key
+    base_url: str = "https://api.novaposhta.ua/v2.0/json/"
+    print_base_url: str = "https://my.novaposhta.ua/"
+    cargo_description: str = "Vidro"
+    # Local development only: without a key the stub "creates" test waybills starting with 00.
+    fake_documents: bool = False
+    senders: list[NovaPoshtaSender] = []
+    dropoff_points: list[NovaPoshtaDropoffPoint] = []
+
+    @property
+    def tracking_key(self) -> str | None:
+        if self.api_key and self.api_key.get_secret_value().strip():
+            return self.api_key.get_secret_value()
+        sender = next((s for s in self.senders if s.is_default), None) or next(iter(self.senders), None)
+        key = sender.api_key.get_secret_value() if sender else ""
+        return key.strip() or None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -51,6 +94,7 @@ class Settings(BaseSettings):
     bonus: BonusSettings = BonusSettings()
     stock: StockSettings = StockSettings()
     production: ProductionSettings = ProductionSettings()
+    nova_poshta: NovaPoshtaSettings = NovaPoshtaSettings()
 
     @property
     def is_development(self) -> bool:

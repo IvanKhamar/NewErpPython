@@ -16,6 +16,7 @@ os.environ["NEWERP_ENVIRONMENT"] = "Testing"
 os.environ["NEWERP_AUTH_SECRET"] = "test-only-cookie-key"
 os.environ["NEWERP_BONUS__PERCENT"] = "10"
 os.environ["NEWERP_BONUS__COUNTED_STATUS_IDS"] = "[22]"
+os.environ["NEWERP_NOVA_POSHTA__FAKE_DOCUMENTS"] = "true"  # no API key: test waybills of the stub
 
 import pymysql
 import pytest

@@ -15,8 +15,8 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (order SMS → 10, vouchers → 14) |
 | 3 | Staff: managers' bonuses | done |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | done |
-| 5 | Production: models, BOMs, sewn stock, sewing plan, cutting plan | |
-| 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | |
+| 5 | Production: models, BOMs, sewn stock, sewing plan | done (pre-order settle → 13) |
+| 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | done (tracking task → Celery beat later) |
 | 7 | International shipments: Nova Post International | |
 | 8 | Cashbox: Checkbox cashiers, shifts, receipts, auto close (Celery beat) | |
 | 9 | Payments: PrivatBank statement, LiqPay | |
@@ -27,7 +27,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 14 | Marketing: birthdays, coupons, contacts export | |
 | 15 | Returns, customers | |
 | 16 | Reports, revenue feed | |
-| 17 | Locations (warehouses) with Excel import/export | done in phase 4 (sewn-stock delete check → 5) |
+| 17 | Locations (warehouses) with Excel import/export | done in phase 4 |
 | 18 | Competitor prices (+ daily check task) | |
 
 ## Conventions (decided once, used everywhere)

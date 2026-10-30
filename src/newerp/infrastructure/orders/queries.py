@@ -14,7 +14,7 @@ from newerp.application.orders.models import (
     OrderStatusDto,
     OrderStatusHistoryEntry,
 )
-from newerp.infrastructure.models.delivery import DdNovaposhtaDocument
+from newerp.infrastructure.delivery.mapping import shipment_documents
 from newerp.infrastructure.models.orders import (
     DdOrder,
     DdOrderProduct,
@@ -102,7 +102,8 @@ class SqlOrderQueries:
     def _search(s: str):
         if len(s) == 14 and s.isascii() and s.isdigit():
             # 14 digits: a Nova Poshta waybill number; find the order it belongs to.
-            return exists().where(DdNovaposhtaDocument.order_id == DdOrder.order_id, DdNovaposhtaDocument.number == s)
+            documents = shipment_documents.c
+            return exists().where(documents.order_id == DdOrder.order_id, documents.number == s)
         order_id = parse_int(s)
         if order_id is not None:
             return or_(DdOrder.order_id == order_id, DdOrder.telephone.contains(s, autoescape=True))
