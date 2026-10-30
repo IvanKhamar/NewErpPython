@@ -1,10 +1,18 @@
 """App settings from env vars `NEWERP_*` and the git-ignored `.env` (like appsettings.json + user-secrets)."""
 
+from decimal import Decimal
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
+
+
+class BonusSettings(BaseModel):
+    """Managers' bonus: a percent of orders in the counted statuses."""
+
+    percent: Decimal = Decimal(1)
+    counted_status_ids: list[int] = [22, 20]
 
 
 class Settings(BaseSettings):
@@ -26,6 +34,9 @@ class Settings(BaseSettings):
 
     # Language of the OpenCart lookups (dd_order_status etc.). The real database has every name with language_id 3.
     language_id: int = 3
+
+    # Module settings, like the sections of appsettings.json. Env example: NEWERP_BONUS__PERCENT=2.
+    bonus: BonusSettings = BonusSettings()
 
     @property
     def is_development(self) -> bool:

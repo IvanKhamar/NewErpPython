@@ -13,7 +13,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 |---|---|---|
 | 1 | Foundation: ProblemDetails errors, cookie auth, roles, `/auth`, `/users` | done |
 | 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (order SMS → 10, vouchers → 14) |
-| 3 | Staff: managers' bonuses | |
+| 3 | Staff: managers' bonuses | done |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | |
 | 5 | Production: models, BOMs, sewn stock, sewing plan, cutting plan | |
 | 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | |
@@ -39,5 +39,6 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
   `erp_user_login` on each request. Password hashes use the ASP.NET Identity v3 format, so the same users log in
   to all three backends.
 - Layers like .NET: `application` holds services and `Protocol` interfaces (ports), `infrastructure` implements them
-  with SQLAlchemy, `api` holds routers. Wiring lives in `api/deps.py`.
+  with SQLAlchemy, `api` holds routers. Shared wiring (session, clock, order service) lives in `api/deps.py`;
+  wiring used by one module only sits next to its router.
 - Tests: pytest against a throwaway MySQL database created from `db/*.sql` (env `NEWERP_TEST_DB`, like .NET).
