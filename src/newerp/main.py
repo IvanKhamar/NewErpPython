@@ -9,6 +9,7 @@ from newerp.api import (
     auth,
     cashbox,
     catalog,
+    customers,
     delivery,
     health,
     locations,
@@ -18,6 +19,7 @@ from newerp.api import (
     payments,
     pre_orders,
     production,
+    returns,
     sms,
     staff,
     stock,
@@ -55,3 +57,5 @@ app.include_router(catalog.sort_router)
 app.include_router(pre_orders.router)
 app.include_router(marketing.router)
 app.include_router(marketing.order_router)
+app.include_router(returns.router)
+app.include_router(customers.router)
