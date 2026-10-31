@@ -157,6 +157,14 @@ class SmsClubSettings(BaseModel):
     only_phones: list[str] = []  # when set, SMS go only to these numbers (testing on real phones)
 
 
+class PartnerFeedSettings(BaseModel):
+    """The shop in the header of partners' XML feeds; store_url is the base of picture links."""
+
+    shop_name: str = "Vidro"
+    company: str = ""
+    store_url: str = ""
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -187,6 +195,7 @@ class Settings(BaseSettings):
     privat_bank: PrivatBankSettings = PrivatBankSettings()
     liq_pay: LiqPaySettings = LiqPaySettings()
     sms_club: SmsClubSettings = SmsClubSettings()
+    partner_feed: PartnerFeedSettings = PartnerFeedSettings()
 
     @property
     def is_development(self) -> bool:

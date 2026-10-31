@@ -110,3 +110,26 @@ class DdCategory(Base):
     status: Mapped[bool]
     # How many days from the order date a product of this category must be ready (0: not set).
     production_period: Mapped[int] = mapped_column(default=0)
+
+
+class DdCategoryDescription(Base):
+    __tablename__ = "dd_category_description"
+
+    category_id: Mapped[int] = mapped_column(primary_key=True)
+    language_id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(Text, default="")
+    meta_title: Mapped[str] = mapped_column(String(255), default="")
+    meta_description: Mapped[str] = mapped_column(String(255), default="")
+    meta_keyword: Mapped[str] = mapped_column(String(255), default="")
+
+
+class DdProductImage(Base):
+    """Extra product pictures; the main one is dd_product.image."""
+
+    __tablename__ = "dd_product_image"
+
+    product_image_id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int]
+    image: Mapped[str | None] = mapped_column(String(255))
+    sort_order: Mapped[int] = mapped_column(default=0)
