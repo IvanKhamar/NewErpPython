@@ -26,7 +26,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 13 | Pre-orders (+ settle task, Celery beat) | done |
 | 14 | Marketing: birthdays, coupons, bulk SMS, contacts export, gift vouchers | done |
 | 15 | Returns, customers | done |
-| 16 | Reports, revenue feed | |
+| 16 | Reports, revenue feed | done |
 | 17 | Locations (warehouses) with Excel import/export | done in phase 4 |
 | 18 | Competitor prices (+ daily check task) | |
 

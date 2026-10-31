@@ -19,6 +19,7 @@ from newerp.api import (
     payments,
     pre_orders,
     production,
+    reports,
     returns,
     sms,
     staff,
@@ -59,3 +60,5 @@ app.include_router(marketing.router)
 app.include_router(marketing.order_router)
 app.include_router(returns.router)
 app.include_router(customers.router)
+app.include_router(reports.router)
+app.include_router(reports.feed_router)

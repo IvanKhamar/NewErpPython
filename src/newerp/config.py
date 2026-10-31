@@ -199,6 +199,18 @@ class VoucherSettings(BaseModel):
     )
 
 
+class RevenueFeedSettings(BaseModel):
+    """The revenue feed for an outside dashboard. The token goes only into .env or NEWERP_REVENUE_FEED__TOKEN;
+    without it the feed is off."""
+
+    token: SecretStr = SecretStr("")  # what the dashboard sends in the X-Feed-Token header (or ?token=)
+    max_days: int = 366  # the longest daily series one request can ask for
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.token.get_secret_value().strip())
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -234,6 +246,7 @@ class Settings(BaseSettings):
     pre_orders: PreOrderSettings = PreOrderSettings()
     marketing: MarketingSettings = MarketingSettings()
     vouchers: VoucherSettings = VoucherSettings()
+    revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
 
     @property
     def is_development(self) -> bool:
