@@ -15,6 +15,7 @@ from newerp.api import (
     orders,
     partners,
     payments,
+    pre_orders,
     production,
     sms,
     staff,
@@ -50,3 +51,4 @@ app.include_router(partners.router)
 app.include_router(partners.feed_router)
 app.include_router(catalog.products_router)
 app.include_router(catalog.sort_router)
+app.include_router(pre_orders.router)

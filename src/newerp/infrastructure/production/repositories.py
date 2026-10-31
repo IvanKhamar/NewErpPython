@@ -35,6 +35,7 @@ from newerp.domain.production import (
     order_comment,
 )
 from newerp.domain.stock import StockItem
+from newerp.infrastructure.catalog.pre_orders import SqlPreOrderStore
 from newerp.infrastructure.models.catalog import (
     DdCategory,
     DdProduct,
@@ -505,12 +506,12 @@ class SqlSewnLocationRepository:
 class SqlStorefrontStock:
     """Pushes sewn stock to OpenCart with direct UPDATEs (MyISAM, no transactions), like the old module."""
 
-    def __init__(self, session: AsyncSession, language_id: int, settle_pre_orders=None) -> None:
+    def __init__(self, session: AsyncSession, language_id: int) -> None:
         self._session = session
         self._language_id = language_id
         # A negative stock is sold in advance: it is first taken off the pre-order limit, otherwise the new stock
-        # would wipe it while the limit stays full. Wired when the pre-orders module is ported.
-        self._settle_pre_orders = settle_pre_orders
+        # would wipe it while the limit stays full.
+        self._pre_orders = SqlPreOrderStore(session, language_id)
 
     async def push(self, production_ids: list[int] | None) -> StorefrontSyncResult:
         if production_ids is not None and not production_ids:
@@ -527,8 +528,7 @@ class SqlStorefrontStock:
             product_ids = [product_id for product_id, owner in owners.items() if owner == model.id]
             if not quantities or not product_ids:
                 continue
-            if self._settle_pre_orders is not None:
-                await self._settle_pre_orders(product_ids)
+            await self._pre_orders.settle(product_ids)
             for option_value_id, quantity in quantities.items():
                 await self._session.execute(
                     update(DdProductOptionValue)

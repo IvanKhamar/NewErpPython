@@ -15,7 +15,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (vouchers → 14) |
 | 3 | Staff: managers' bonuses | done |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | done |
-| 5 | Production: models, BOMs, sewn stock, sewing plan | done (pre-order settle → 13) |
+| 5 | Production: models, BOMs, sewn stock, sewing plan | done |
 | 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | done (tracking task → Celery beat later) |
 | 7 | International shipments: Nova Post International | done |
 | 8 | Cashbox: Checkbox cashiers, shifts, receipts, auto close (Celery beat) | done |
@@ -23,7 +23,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 10 | SMS: SMSClub | done |
 | 11 | Partners: reseller XML feeds | done |
 | 12 | Catalog: product sort, products, storefront stock, cross-sell | done (storefront stock in phase 5) |
-| 13 | Pre-orders (+ settle task) | |
+| 13 | Pre-orders (+ settle task, Celery beat) | done |
 | 14 | Marketing: birthdays, coupons, contacts export | |
 | 15 | Returns, customers | |
 | 16 | Reports, revenue feed | |

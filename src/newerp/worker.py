@@ -12,10 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from newerp.application.cashbox.services import CashboxService
+from newerp.application.catalog.pre_orders import PreOrderService
 from newerp.application.common import SystemClock
 from newerp.config import get_settings
 from newerp.infrastructure.cashbox.checkbox import checkbox_client
 from newerp.infrastructure.cashbox.repository import SqlCashboxRepository
+from newerp.infrastructure.catalog.pre_orders import SqlPreOrderStore
 
 settings = get_settings()
 
@@ -44,11 +46,27 @@ def cashbox_auto_close() -> dict:
     return asyncio.run(with_session(work))
 
 
+@app.task(name="preorders.settle")
+def pre_orders_settle() -> dict:
+    """Takes what the storefront sold ahead off the pre-order limits (the old site's cron updatePreOrdersQuantity)."""
+
+    async def work(session: AsyncSession) -> dict:
+        service = PreOrderService(SqlPreOrderStore(session, settings.language_id))
+        return (await service.settle()).model_dump(by_alias=True)
+
+    return asyncio.run(with_session(work))
+
+
 beat_schedule: dict[str, dict] = {}
 # With the Checkbox stub there is nothing to close (CashboxAutoCloseWorker in .NET does not start either).
 if not checkbox_client(settings.checkbox).is_fake and settings.checkbox.auto_close_interval_minutes > 0:
     beat_schedule["cashbox-auto-close"] = {
         "task": "cashbox.auto_close",
         "schedule": settings.checkbox.auto_close_interval_minutes * 60,
+    }
+if settings.pre_orders.settle_interval_minutes > 0:
+    beat_schedule["preorders-settle"] = {
+        "task": "preorders.settle",
+        "schedule": settings.pre_orders.settle_interval_minutes * 60,
     }
 app.conf.beat_schedule = beat_schedule

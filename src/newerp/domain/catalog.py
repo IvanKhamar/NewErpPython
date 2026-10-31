@@ -137,3 +137,43 @@ class ProductChange:
             if not all(category in known_categories for category in categories):
                 raise DomainError("Такої категорії немає або вона вимкнена.")
         return ProductChange(price, enabled, labels, categories)
+
+
+# ═══ Pre-orders ═══
+# As on the old site: when a size has no stock, the storefront sells ahead up to pre_order_quantity pieces and the stock
+# goes negative. Later the pieces sold ahead are taken off the limit (updatePreOrdersQuantity).
+
+MAX_QUOTA = 9999
+
+
+class SizeAvailability(IntEnum):
+    """Whether the storefront can sell a size."""
+
+    IN_STOCK = 0
+    PRE_ORDER = 1  # no stock, but a pre-order limit: the storefront sells ahead
+    SOLD_OUT = 2
+
+
+def availability(quantity: int, quota: int, subtract: bool) -> SizeAvailability:
+    """As in the old site's cart: a size without stock tracking is always in stock, pre-order when stock ≤ 0."""
+    if not subtract or quantity > 0:
+        return SizeAvailability.IN_STOCK
+    return SizeAvailability.PRE_ORDER if quota > 0 else SizeAvailability.SOLD_OUT
+
+
+def settle(quantity: int, quota: int) -> tuple[int, int]:
+    """Takes what was sold ahead (negative stock) off the limit.
+
+    The old code did limit += stock, and selling over the limit gave a negative limit, which the storefront took as
+    leave to sell further. Here the limit does not go below 0, and what was sold over it stays negative in the stock,
+    so it can be seen.
+    """
+    if quantity >= 0 or quota <= 0:
+        return quantity, quota
+    covered = min(quota, -quantity)
+    return quantity + covered, quota - covered
+
+
+def validate_quota(quota: int) -> None:
+    if not 0 <= quota <= MAX_QUOTA:
+        raise DomainError(f"Ліміт передзамовлення — від 0 до {MAX_QUOTA} штук.")

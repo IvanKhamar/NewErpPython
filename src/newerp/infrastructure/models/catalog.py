@@ -75,6 +75,8 @@ class DdProductOptionValue(Base):
     weight: Mapped[Decimal] = mapped_column(Numeric(15, 8), default=Decimal(0))
     weight_prefix: Mapped[str] = mapped_column(String(1), default="+")
     pre_order_quantity: Mapped[int] = mapped_column(default=0)
+    # When the size is expected (pre-orders). Deferred: the real database may hold the zero date 0000-00-00.
+    date_available: Mapped[date | None] = mapped_column(deferred=True)
 
 
 class DdOptionDescription(Base):

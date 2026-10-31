@@ -178,6 +178,11 @@ class ProductSortSettings(BaseModel):
     default_days: int = 90
 
 
+class PreOrderSettings(BaseModel):
+    # How often what was sold ahead is taken off the limits (minutes); 0: only by hand (POST /preorders/settle).
+    settle_interval_minutes: int = 60
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -210,6 +215,7 @@ class Settings(BaseSettings):
     sms_club: SmsClubSettings = SmsClubSettings()
     partner_feed: PartnerFeedSettings = PartnerFeedSettings()
     product_sort: ProductSortSettings = ProductSortSettings()
+    pre_orders: PreOrderSettings = PreOrderSettings()
 
     @property
     def is_development(self) -> bool:
