@@ -183,6 +183,22 @@ class PreOrderSettings(BaseModel):
     settle_interval_minutes: int = 60
 
 
+class MarketingSettings(BaseModel):
+    birthday_discount_percent: Decimal = Decimal(20)
+    birthday_coupon_days: int = 30
+    pickup_city: str = "Львів"
+    pickup_method_marker: str = "амовив"
+    bulk_sms_delay_milliseconds: int = 300
+
+
+class VoucherSettings(BaseModel):
+    # A voucher bought in an order is usable once the order is in one of these statuses.
+    paid_status_ids: list[int] = [22, 20]
+    sms_text: str = (
+        "Вам подарунковий сертифікат Vidro на {amount} грн. Код: {code}. Назвіть його менеджеру або введіть на сайті."
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -216,6 +232,8 @@ class Settings(BaseSettings):
     partner_feed: PartnerFeedSettings = PartnerFeedSettings()
     product_sort: ProductSortSettings = ProductSortSettings()
     pre_orders: PreOrderSettings = PreOrderSettings()
+    marketing: MarketingSettings = MarketingSettings()
+    vouchers: VoucherSettings = VoucherSettings()
 
     @property
     def is_development(self) -> bool:

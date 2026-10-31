@@ -12,7 +12,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | # | Module (.NET) | Status |
 |---|---|---|
 | 1 | Foundation: ProblemDetails errors, cookie auth, roles, `/auth`, `/users` | done |
-| 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done (vouchers → 14) |
+| 2 | Orders: list, card, statuses, status change, new order, composition, customer risk | done |
 | 3 | Staff: managers' bonuses | done |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | done |
 | 5 | Production: models, BOMs, sewn stock, sewing plan | done |
@@ -24,7 +24,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 11 | Partners: reseller XML feeds | done |
 | 12 | Catalog: product sort, products, storefront stock, cross-sell | done (storefront stock in phase 5) |
 | 13 | Pre-orders (+ settle task, Celery beat) | done |
-| 14 | Marketing: birthdays, coupons, contacts export | |
+| 14 | Marketing: birthdays, coupons, bulk SMS, contacts export, gift vouchers | done |
 | 15 | Returns, customers | |
 | 16 | Reports, revenue feed | |
 | 17 | Locations (warehouses) with Excel import/export | done in phase 4 |

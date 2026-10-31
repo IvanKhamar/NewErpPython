@@ -3,6 +3,7 @@
 FastAPI calls these functions per request; a function with `yield` (get_session) also cleans up afterwards.
 """
 
+from enum import Enum
 from functools import lru_cache
 from typing import Annotated
 
@@ -16,6 +17,7 @@ from newerp.application.orders.ports import OrderStatusHandler
 from newerp.application.orders.services import NewOrderService, OrderService
 from newerp.application.production.services import OrderSewnStockHandler
 from newerp.config import get_settings
+from newerp.domain.common import DomainError
 from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
 from newerp.infrastructure.auth.user_login_store import SqlUserLoginStore
 from newerp.infrastructure.db import get_session
@@ -106,3 +108,14 @@ def get_new_order_service(
     clock: ClockDep,
 ) -> NewOrderService:
     return NewOrderService(SqlNewOrderStore(session, get_settings().language_id), orders, order_service, clock)
+
+
+def enum_from_query[E: Enum](enum: type[E], value: str) -> E:
+    """A query value as the number or the .NET name (?type=CategoryColor for CATEGORY_COLOR), like ASP.NET binding."""
+    text = value.strip()
+    if text.isdigit() and int(text) in enum._value2member_map_:
+        return enum(int(text))
+    for member in enum:
+        if member.name.replace("_", "").lower() == text.lower():
+            return member
+    raise DomainError(f"Невідоме значення «{value}».")

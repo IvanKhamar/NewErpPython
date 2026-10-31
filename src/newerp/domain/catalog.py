@@ -19,9 +19,6 @@ class SortGroupType(IntEnum):
     CROSS_SELL = 4  # the cross-sell panel at checkout; key = "panel". Its order is kept apart from sort_order
 
 
-# The .NET names, which the query string may carry instead of the number (?type=Category).
-TYPE_NAMES = {"Tag": 0, "Category": 1, "CategoryColor": 2, "Label": 3, "CrossSell": 4}
-
 # group_type in the old site's pin table.
 _TYPE_CODES = {
     SortGroupType.TAG: "tag",

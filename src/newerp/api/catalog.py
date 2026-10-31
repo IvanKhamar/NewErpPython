@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from newerp.api.deps import ClockDep, Session
+from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import Policies, require_roles
 from newerp.application.catalog.products import (
     ProductCardDto,
@@ -31,8 +31,7 @@ from newerp.application.catalog.sort import (
 )
 from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
-from newerp.domain.catalog import TYPE_NAMES, SortGroupType
-from newerp.domain.common import DomainError
+from newerp.domain.catalog import SortGroupType
 from newerp.infrastructure.catalog.products import SqlProductStore
 from newerp.infrastructure.catalog.sort import SqlProductSortStore
 
@@ -104,13 +103,8 @@ async def update_product(product_id: int, request: UpdateProductRequest, service
 
 
 def group_type(type_: Annotated[str, Query(alias="type")]) -> SortGroupType:
-    """?type= takes the number or the .NET name (Category), like enum binding in ASP.NET."""
-    name = type_.lower()
-    value = int(name) if name.isdigit() else next((v for n, v in TYPE_NAMES.items() if n.lower() == name), -1)
-    try:
-        return SortGroupType(value)
-    except ValueError:
-        raise DomainError(f"Невідомий вид групи «{type_}».") from None
+    """?type= takes the number or the .NET name (Category)."""
+    return enum_from_query(SortGroupType, type_)
 
 
 @sort_router.get(
