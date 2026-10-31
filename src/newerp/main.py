@@ -9,6 +9,7 @@ from newerp.api import (
     auth,
     cashbox,
     catalog,
+    competitors,
     customers,
     delivery,
     health,
@@ -62,3 +63,4 @@ app.include_router(returns.router)
 app.include_router(customers.router)
 app.include_router(reports.router)
 app.include_router(reports.feed_router)
+app.include_router(competitors.router)

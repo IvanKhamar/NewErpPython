@@ -211,6 +211,11 @@ class RevenueFeedSettings(BaseModel):
         return bool(self.token.get_secret_value().strip())
 
 
+class CompetitorSettings(BaseModel):
+    # When to read competitor prices every day, "HH:mm" in the server's time; "-": do not check by itself.
+    check_time: str = "07:00"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -247,6 +252,7 @@ class Settings(BaseSettings):
     marketing: MarketingSettings = MarketingSettings()
     vouchers: VoucherSettings = VoucherSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
+    competitors: CompetitorSettings = CompetitorSettings()
 
     @property
     def is_development(self) -> bool:
