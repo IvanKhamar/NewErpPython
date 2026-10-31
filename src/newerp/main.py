@@ -5,7 +5,20 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from newerp.api import auth, cashbox, delivery, health, locations, orders, payments, production, staff, stock, users
+from newerp.api import (
+    auth,
+    cashbox,
+    delivery,
+    health,
+    locations,
+    orders,
+    payments,
+    production,
+    sms,
+    staff,
+    stock,
+    users,
+)
 from newerp.api.errors import add_error_handlers
 from newerp.api.security import add_security_middleware
 from newerp.infrastructure.db import engine
@@ -29,3 +42,5 @@ app.include_router(cashbox.router)
 app.include_router(cashbox.order_router)
 app.include_router(payments.router)
 app.include_router(payments.order_router)
+app.include_router(sms.router)
+app.include_router(sms.settings_router)

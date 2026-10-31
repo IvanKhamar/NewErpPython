@@ -150,6 +150,13 @@ class LiqPaySettings(BaseModel):
         return bool(self.public_key and self.private_key.get_secret_value())
 
 
+class SmsClubSettings(BaseModel):
+    base_url: str = "https://im.smsclub.mobi"
+    token: SecretStr = SecretStr("")  # without a token the stub is used
+    sender: str = "Vidro.ua"
+    only_phones: list[str] = []  # when set, SMS go only to these numbers (testing on real phones)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -179,6 +186,7 @@ class Settings(BaseSettings):
     checkbox: CheckboxSettings = CheckboxSettings()
     privat_bank: PrivatBankSettings = PrivatBankSettings()
     liq_pay: LiqPaySettings = LiqPaySettings()
+    sms_club: SmsClubSettings = SmsClubSettings()
 
     @property
     def is_development(self) -> bool:
