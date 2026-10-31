@@ -133,3 +133,103 @@ class DdProductImage(Base):
     product_id: Mapped[int]
     image: Mapped[str | None] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(default=0)
+
+
+class DdProductLabel(Base):
+    """Product labels ("Новинка", "Хіт"...)."""
+
+    __tablename__ = "dd_product_label"
+
+    label_id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(64))
+    background_color: Mapped[str] = mapped_column(String(16), default="")
+    text_color: Mapped[str] = mapped_column(String(16), default="")
+    sort_order: Mapped[int] = mapped_column(default=0)
+    status: Mapped[bool] = mapped_column(default=True)
+
+
+class DdProductToLabel(Base):
+    __tablename__ = "dd_product_to_label"
+
+    product_id: Mapped[int] = mapped_column(primary_key=True)
+    label_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdFilter(Base):
+    __tablename__ = "dd_filter"
+
+    filter_id: Mapped[int] = mapped_column(primary_key=True)
+    filter_group_id: Mapped[int]
+    sort_order: Mapped[int] = mapped_column(default=0)
+
+
+class DdFilterDescription(Base):
+    __tablename__ = "dd_filter_description"
+
+    filter_id: Mapped[int] = mapped_column(primary_key=True)
+    language_id: Mapped[int] = mapped_column(primary_key=True)
+    filter_group_id: Mapped[int]
+    name: Mapped[str] = mapped_column(String(64))
+
+
+class DdProductFilter(Base):
+    __tablename__ = "dd_product_filter"
+
+    product_id: Mapped[int] = mapped_column(primary_key=True)
+    filter_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdProductToStore(Base):
+    __tablename__ = "dd_product_to_store"
+
+    product_id: Mapped[int] = mapped_column(primary_key=True)
+    store_id: Mapped[int] = mapped_column(primary_key=True, default=0)
+
+
+class DdCrosssellItem(Base):
+    """What the cross-sell panel at checkout offers: a product or all products of a category (type)."""
+
+    __tablename__ = "dd_crosssell_item"
+
+    crosssell_item_id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str] = mapped_column(String(16))  # "product" or "category"
+    target_id: Mapped[int]
+    discount: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal(0))
+
+
+class DdCrosssellSort(Base):
+    """The cross-sell panel's own order of products."""
+
+    __tablename__ = "dd_crosssell_sort"
+
+    product_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    sort_order: Mapped[int]
+
+
+class DdProductManualPin(Base):
+    """A product pinned by hand at a position in a sort group (group_type is the old site's code)."""
+
+    __tablename__ = "dd_product_manual_pin"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    group_type: Mapped[str] = mapped_column(String(32))
+    group_key: Mapped[str] = mapped_column(String(128))
+    position: Mapped[int]
+    product_id: Mapped[int]
+    created_at: Mapped[datetime]
+
+
+class DdProductOrderSnapshot(Base):
+    __tablename__ = "dd_product_order_snapshot"
+
+    snapshot_id: Mapped[int] = mapped_column(primary_key=True)
+    note: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime]
+
+
+class DdProductOrderSnapshotItem(Base):
+    __tablename__ = "dd_product_order_snapshot_item"
+
+    snapshot_id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(primary_key=True)
+    sort_order: Mapped[int]

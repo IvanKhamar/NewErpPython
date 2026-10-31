@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from newerp.api import (
     auth,
     cashbox,
+    catalog,
     delivery,
     health,
     locations,
@@ -47,3 +48,5 @@ app.include_router(sms.router)
 app.include_router(sms.settings_router)
 app.include_router(partners.router)
 app.include_router(partners.feed_router)
+app.include_router(catalog.products_router)
+app.include_router(catalog.sort_router)

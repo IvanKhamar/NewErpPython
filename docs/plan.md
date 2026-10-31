@@ -22,7 +22,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 9 | Payments: PrivatBank statement, LiqPay | done |
 | 10 | SMS: SMSClub | done |
 | 11 | Partners: reseller XML feeds | done |
-| 12 | Catalog: product sort, products, storefront stock, cross-sell | |
+| 12 | Catalog: product sort, products, storefront stock, cross-sell | done (storefront stock in phase 5) |
 | 13 | Pre-orders (+ settle task) | |
 | 14 | Marketing: birthdays, coupons, contacts export | |
 | 15 | Returns, customers | |

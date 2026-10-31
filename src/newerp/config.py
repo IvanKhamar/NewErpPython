@@ -165,6 +165,19 @@ class PartnerFeedSettings(BaseModel):
     store_url: str = ""
 
 
+class ProductSortSettings(BaseModel):
+    """The storefront order by sales; the values are the old site's (see ProductSortOptions)."""
+
+    counted_status_ids: list[int] = [17, 18, 21, 22, 23, 24, 25]
+    excluded_user_ids: list[int] = [13]
+    excluded_order_markers: list[str] = ["B2B"]
+    excluded_comment_markers: list[str] = ["б2б", "магаз", "партнер"]
+    color_filter_ids: list[int] = [156, 157, 158, 159]
+    tag_filter_group_id: int = 7
+    new_label_name: str = "Новинка"
+    default_days: int = 90
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -196,6 +209,7 @@ class Settings(BaseSettings):
     liq_pay: LiqPaySettings = LiqPaySettings()
     sms_club: SmsClubSettings = SmsClubSettings()
     partner_feed: PartnerFeedSettings = PartnerFeedSettings()
+    product_sort: ProductSortSettings = ProductSortSettings()
 
     @property
     def is_development(self) -> bool:
