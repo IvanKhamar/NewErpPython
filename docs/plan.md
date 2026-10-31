@@ -16,7 +16,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 3 | Staff: managers' bonuses | done |
 | 4 | Stock: consumables, warehouses, purchase orders, reorder, stocktaking | done |
 | 5 | Production: models, BOMs, sewn stock, sewing plan | done |
-| 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | done (tracking task → Celery beat later) |
+| 6 | Delivery: Nova Poshta waybills, reminders (stub + real client) | done (+ hourly tracking task in Celery beat) |
 | 7 | International shipments: Nova Post International | done |
 | 8 | Cashbox: Checkbox cashiers, shifts, receipts, auto close (Celery beat) | done |
 | 9 | Payments: PrivatBank statement, LiqPay | done |

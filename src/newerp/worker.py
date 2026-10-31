@@ -18,11 +18,14 @@ from newerp.application.cashbox.services import CashboxService
 from newerp.application.catalog.pre_orders import PreOrderService
 from newerp.application.common import SystemClock
 from newerp.application.competitors import CompetitorService
-from newerp.config import get_settings
+from newerp.application.delivery.services import DeliveryService
+from newerp.config import Settings, get_settings
 from newerp.infrastructure.cashbox.checkbox import checkbox_client
 from newerp.infrastructure.cashbox.repository import SqlCashboxRepository
 from newerp.infrastructure.catalog.pre_orders import SqlPreOrderStore
 from newerp.infrastructure.competitors import HttpPageFetcher, SqlCompetitorStore
+from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
+from newerp.infrastructure.delivery.repositories import SqlShipmentRepository
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -81,6 +84,19 @@ def competitors_check() -> dict:
     return asyncio.run(with_session(work))
 
 
+@app.task(name="delivery.refresh_tracking")
+def delivery_refresh_tracking() -> dict:
+    """Refreshes the statuses of open Nova Poshta waybills, like POST /delivery/tracking/refresh. The .NET version
+    has only that button; here beat also runs it on a schedule."""
+
+    async def work(session: AsyncSession) -> dict:
+        client = nova_poshta_client(settings.nova_poshta)
+        service = DeliveryService(SqlShipmentRepository(session), client, SystemClock())
+        return (await service.refresh_tracking()).model_dump(by_alias=True)
+
+    return asyncio.run(with_session(work))
+
+
 def daily_at(setting: str) -> crontab | None:
     """crontab for "HH:mm" (like a cron line "mm HH * * *"); "-" or a wrong value: no schedule."""
     text = setting.strip()
@@ -94,18 +110,29 @@ def daily_at(setting: str) -> crontab | None:
     return crontab(hour=at.hour, minute=at.minute)
 
 
-beat_schedule: dict[str, dict] = {}
-# With the Checkbox stub there is nothing to close (CashboxAutoCloseWorker in .NET does not start either).
-if not checkbox_client(settings.checkbox).is_fake and settings.checkbox.auto_close_interval_minutes > 0:
-    beat_schedule["cashbox-auto-close"] = {
-        "task": "cashbox.auto_close",
-        "schedule": settings.checkbox.auto_close_interval_minutes * 60,
-    }
-if settings.pre_orders.settle_interval_minutes > 0:
-    beat_schedule["preorders-settle"] = {
-        "task": "preorders.settle",
-        "schedule": settings.pre_orders.settle_interval_minutes * 60,
-    }
-if (check_at := daily_at(settings.competitors.check_time)) is not None:
-    beat_schedule["competitors-check"] = {"task": "competitors.check", "schedule": check_at}
-app.conf.beat_schedule = beat_schedule
+def beat_schedule_for(config: Settings) -> dict[str, dict]:
+    """The periodic tasks for these settings: a function, so tests can pass their own settings."""
+    schedule: dict[str, dict] = {}
+    # With the Checkbox stub there is nothing to close (CashboxAutoCloseWorker in .NET does not start either).
+    if not checkbox_client(config.checkbox).is_fake and config.checkbox.auto_close_interval_minutes > 0:
+        schedule["cashbox-auto-close"] = {
+            "task": "cashbox.auto_close",
+            "schedule": config.checkbox.auto_close_interval_minutes * 60,
+        }
+    if config.pre_orders.settle_interval_minutes > 0:
+        schedule["preorders-settle"] = {
+            "task": "preorders.settle",
+            "schedule": config.pre_orders.settle_interval_minutes * 60,
+        }
+    if (check_at := daily_at(config.competitors.check_time)) is not None:
+        schedule["competitors-check"] = {"task": "competitors.check", "schedule": check_at}
+    # Without a key the stub has no waybills to track.
+    if config.nova_poshta.tracking_key is not None and config.nova_poshta.tracking_interval_minutes > 0:
+        schedule["delivery-refresh-tracking"] = {
+            "task": "delivery.refresh_tracking",
+            "schedule": config.nova_poshta.tracking_interval_minutes * 60,
+        }
+    return schedule
+
+
+app.conf.beat_schedule = beat_schedule_for(settings)

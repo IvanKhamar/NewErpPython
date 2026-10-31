@@ -60,6 +60,8 @@ class NovaPoshtaSettings(BaseModel):
     fake_documents: bool = False
     senders: list[NovaPoshtaSender] = []
     dropoff_points: list[NovaPoshtaDropoffPoint] = []
+    # How often the worker refreshes the statuses of open waybills; 0: never (the refresh endpoint still works).
+    tracking_interval_minutes: int = 60
 
     @property
     def tracking_key(self) -> str | None:
