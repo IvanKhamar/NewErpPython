@@ -9,6 +9,7 @@ the tests are skipped.
 import os
 import uuid
 from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 # Settings are read once, so the test values must be in place before the app is imported.
@@ -57,8 +58,9 @@ def _execute_script(connection: pymysql.Connection, sql: str) -> None:
             pass
 
 
-@pytest.fixture(scope="module")
-def database() -> Iterator[str]:
+@contextmanager
+def new_database(fill: Callable[[pymysql.Connection], None]) -> Iterator[str]:
+    """A throwaway database with the schema from db/*.sql, filled by `fill`; dropped afterwards."""
     try:
         server = _connect()
     except pymysql.err.OperationalError as error:
@@ -70,11 +72,17 @@ def database() -> Iterator[str]:
         with _connect(name) as connection:
             for file in SCHEMA_FILES:
                 _execute_script(connection, (DB_DIR / file).read_text(encoding="utf-8"))
-            seed.run(connection)
+            fill(connection)
         yield name
     finally:
         _execute_script(server, f"DROP DATABASE IF EXISTS `{name}`")
         server.close()
+
+
+@pytest.fixture(scope="module")
+def database() -> Iterator[str]:
+    with new_database(seed.run) as name:
+        yield name
 
 
 @pytest.fixture(scope="module")

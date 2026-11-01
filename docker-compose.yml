@@ -1,6 +1,27 @@
-# Local infrastructure for development: MySQL with the NewErp schema, Redis (Celery broker) and Kafka.
-# The API itself runs on the host with `uv run fastapi dev src/newerp/main.py`.
+# Local infrastructure for development: MySQL with the NewErp schema, Redis (Celery broker) and Kafka,
+# plus the API built from the Dockerfile (http://localhost:8000/docs).
+# For development with reload run the API on the host instead: `uv run fastapi dev src/newerp/main.py`.
 services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Inside the compose network the services are reached by name and their own port.
+      NEWERP_DB_HOST: mysql
+      NEWERP_DB_PORT: 3306
+      NEWERP_DB_NAME: ${NEWERP_DB_NAME:-newerp_dev}
+      NEWERP_DB_USER: ${NEWERP_DB_USER:-newerp}
+      NEWERP_DB_PASSWORD: ${NEWERP_DB_PASSWORD:-newerp_dev_password}
+      NEWERP_REDIS_URL: redis://redis:6379/0
+      # Plain HTTP on localhost: in Development the auth cookie is not HTTPS-only, so login works here.
+      NEWERP_ENVIRONMENT: Development
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   mysql:
     image: mysql:8.0
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci

@@ -4,8 +4,8 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 268 tests, CI with ruff,
-import-linter, pytest and gitleaks.
+**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 274 tests, CI with ruff,
+import-linter, pytest, a Docker image build and gitleaks. What is still missing: the table at the end of the plan.
 
 ## What it does
 
@@ -46,6 +46,7 @@ src/newerp/
   worker.py        worker composition root (Celery app)
   consumer.py      Kafka reader of order events
 tests/             pytest
+tools/devseed.py   demo data for the local database
 db/                the same SQL as the .NET repo: OpenCart tables, reconstructed tables, erp_* tables
 ```
 
@@ -72,6 +73,19 @@ Dependencies point inward only (`api → infrastructure → application → doma
    MySQL listens on port 3307 (the local MySQL80 keeps 3306) and loads `db/*.sql` on the first start.
 3. `copy .env.example .env` and change the values if needed.
 4. `uv sync`, then `uv run fastapi dev src/newerp/main.py`. Open http://localhost:8000/health and /docs.
+
+### Everything in Docker, with demo data
+
+`docker compose up -d` also builds the API from the [Dockerfile](Dockerfile) (two stages: uv builds the virtual
+environment, only the environment goes into the slim runtime image) and serves it on http://localhost:8000/docs.
+The database starts empty; fill it with invented data (a port of the .NET `DevSeed`, made with Faker):
+
+```
+uv run python tools/devseed.py   # only into an empty newerp_dev on localhost; about 400 orders and every module
+```
+
+Logins, all with the password `dev`: `admin` (Admin), `sklad` (Storekeeper), `manager1`…`manager4` (Manager;
+`manager5` is disabled). The Celery worker still runs on the host.
 
 ```
 uv run pytest                                              # tests (need the MySQL from docker compose)

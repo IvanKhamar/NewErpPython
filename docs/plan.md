@@ -31,6 +31,34 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 18 | Competitor prices (+ daily check task) | done |
 | 19 | Python only: `OrderCreated` and `OrderStatusChanged` events to Kafka (aiokafka), a reader in `newerp.consumer` | done |
 
+## What is still missing (found 2026-11-01)
+
+Compared with the .NET and Java versions:
+
+| # | Item | Where it exists | Status |
+|---|---|---|---|
+| 20 | Dockerfile for the API + `api` service in docker-compose, image build in CI | Java `Dockerfile` | done |
+| 21 | Demo data: port of `DevDataSeeder` (Faker), logins `admin` / `sklad` / `manager1…5` | .NET `tools/NewErp.DevSeed` | done |
+| 22 | Web interface (now only the API and Swagger `/docs`) | .NET Blazor `/app/`, Java Vaadin `newerp-web` | planned |
+
+Compared with the old PHP CRM (missing in all three new versions; from the .NET README, "Обмеження" and "Далі"):
+
+| # | Item | Status |
+|---|---|---|
+| 23 | Nova Poshta courier delivery to an address (now only branches, parcel lockers and international) | planned |
+| 24 | Sale prices (`dd_product_special`, its `percent` column) applied in a new order | planned |
+| 25 | Coupon admin with excluded categories and products (now only birthday coupons) | planned |
+| 26 | Low-stock alerts (now only the "below minimum" filter and the reorder report) | planned |
+| 27 | Consumables for sewing up to the minimum stock (the plan covers only active orders) | planned |
+| 28 | Automatic bank payment matching when there is one confident candidate | planned |
+| 29 | Check against the real database (`SHOW CREATE TABLE` for the reconstructed `dd_*` tables) and the real Nova Poshta, Checkbox, PrivatBank, LiqPay and SMSClub keys | planned (needs access) |
+| 30 | Marketing integrations: remarketing pixels, UTM report | planned (needs data the system does not collect) |
+| 31 | Reports without data in the system: who is online, product views, reward points, taxes | planned (needs data the system does not collect) |
+| 32 | "Different customers from one IP" in the customer risk check | planned (manager orders have no customer IP) |
+
+Not planned on purpose (they stay in OpenCart or were replaced): storefront features (colors and variants, FAQ,
+product questions, blog, reviews), customer account editing, LiqPay e-mail invoices (replaced by the payment link).
+
 ## Conventions (decided once, used everywhere)
 
 - JSON: camelCase (`ApiModel` base), `Decimal` serialized as a number, naive local datetimes like .NET `DateTime`.

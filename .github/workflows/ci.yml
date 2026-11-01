@@ -34,6 +34,13 @@ jobs:
       - run: uv run lint-imports
       - run: uv run pytest -q
 
+  # Build only (no push): a broken Dockerfile fails here, not on someone's machine.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t newerp-python .
+
   secrets:
     runs-on: ubuntu-latest
     steps:

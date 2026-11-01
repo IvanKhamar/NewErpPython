@@ -23,6 +23,7 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
     "import-linter>=2.1",
+    "faker>=30",  # invented names for the demo data (tools/devseed.py), like Bogus in .NET
 ]
 
 [build-system]
