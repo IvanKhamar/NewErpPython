@@ -218,6 +218,17 @@ class CompetitorSettings(BaseModel):
     check_time: str = "07:00"
 
 
+class KafkaSettings(BaseModel):
+    """Where order events go. Without bootstrap servers the events are only logged (local development, tests)."""
+
+    bootstrap_servers: str = ""  # "localhost:9092" for the Kafka from docker-compose
+    topic: str = "newerp.orders"
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.bootstrap_servers.strip())
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NEWERP_", env_file=".env", extra="ignore", env_nested_delimiter="__")
 
@@ -255,6 +266,7 @@ class Settings(BaseSettings):
     vouchers: VoucherSettings = VoucherSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
     competitors: CompetitorSettings = CompetitorSettings()
+    kafka: KafkaSettings = KafkaSettings()
 
     @property
     def is_development(self) -> bool:

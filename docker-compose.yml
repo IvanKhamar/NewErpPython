@@ -1,4 +1,4 @@
-# Local infrastructure for development: MySQL with the NewErp schema and Redis (Celery broker).
+# Local infrastructure for development: MySQL with the NewErp schema, Redis (Celery broker) and Kafka.
 # The API itself runs on the host with `uv run fastapi dev src/newerp/main.py`.
 services:
   mysql:
@@ -49,6 +49,17 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
+      retries: 20
+
+  # Kafka for order events: one node in KRaft mode (it keeps its own metadata, no ZooKeeper).
+  # The image's default config listens on localhost:9092 and creates topics on the first message.
+  kafka:
+    image: apache/kafka:3.9.1
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
       retries: 20
 
 volumes:

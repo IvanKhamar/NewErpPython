@@ -226,6 +226,18 @@ class NewOrderRecord:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class OrderCreatedEvent:
+    """A new order, for other systems (sent to Kafka). Only ids and the total: readers ask the API for details."""
+
+    order_id: int
+    status_id: int
+    manager_id: int
+    order_source_id: int
+    total: Decimal
+    occurred_at: datetime
+
+
 class OrderCompositionLine(Dto):
     """product_option_value_id: the chosen size (None without options); options: the product's sizes now."""
 

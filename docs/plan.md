@@ -29,6 +29,7 @@ Decided 2026-10-30: the user asked Claude to port the whole system (not only the
 | 16 | Reports, revenue feed | done |
 | 17 | Locations (warehouses) with Excel import/export | done in phase 4 |
 | 18 | Competitor prices (+ daily check task) | done |
+| 19 | Python only: `OrderCreated` event to Kafka (aiokafka), a reader in `newerp.consumer` | done |
 
 ## Conventions (decided once, used everywhere)
 

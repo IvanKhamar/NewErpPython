@@ -7,13 +7,13 @@ from enum import Enum
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.auth.services import AuthService, UserAdminService
 from newerp.application.auth.throttle import LoginThrottle, LoginThrottleOptions
 from newerp.application.common import Clock, SystemClock
-from newerp.application.orders.ports import OrderStatusHandler
+from newerp.application.orders.ports import OrderEvents, OrderStatusHandler
 from newerp.application.orders.services import NewOrderService, OrderService
 from newerp.application.production.services import OrderSewnStockHandler
 from newerp.config import get_settings
@@ -101,13 +101,20 @@ def get_order_service(
     return OrderService(store, clock, handlers)
 
 
+def get_order_events(request: Request) -> OrderEvents:
+    """The process-wide adapter main.py keeps in app.state (Kafka once the lifespan has started the producer)."""
+    return request.app.state.order_events
+
+
 def get_new_order_service(
     session: Session,
     orders: OrderStoreDep,
     order_service: Annotated[OrderService, Depends(get_order_service)],
     clock: ClockDep,
+    events: Annotated[OrderEvents, Depends(get_order_events)],
 ) -> NewOrderService:
-    return NewOrderService(SqlNewOrderStore(session, get_settings().language_id), orders, order_service, clock)
+    store = SqlNewOrderStore(session, get_settings().language_id)
+    return NewOrderService(store, orders, order_service, clock, events)
 
 
 def enum_from_query[E: Enum](enum: type[E], value: str) -> E:

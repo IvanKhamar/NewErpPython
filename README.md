@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 262 tests, CI with ruff,
+**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 266 tests, CI with ruff,
 import-linter, pytest and gitleaks.
 
 ## What it does
@@ -25,12 +25,13 @@ import-linter, pytest and gitleaks.
 | Competitors | `/competitors`: product pages on competitors' sites, price checks, comparison |
 
 Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
-hourly Nova Poshta tracking refresh. Without API keys every outside service uses a stub, so local development
-never reaches a real service.
+hourly Nova Poshta tracking refresh. A new order also goes to Kafka as an `OrderCreated` event (topic
+`newerp.orders`, key = order id); `newerp.consumer` reads them. Without API keys every outside service uses a stub,
+and without Kafka settings the events only go to the log, so local development never reaches a real service.
 
 ## Stack
 
-Python 3.13 · uv · FastAPI · Pydantic v2 · SQLAlchemy 2 (async, aiomysql) · MySQL 8 · Celery + Redis · pytest · ruff · import-linter
+Python 3.13 · uv · FastAPI · Pydantic v2 · SQLAlchemy 2 (async, aiomysql) · MySQL 8 · Celery + Redis · Kafka (aiokafka) · pytest · ruff · import-linter
 
 ## Structure
 
@@ -43,6 +44,7 @@ src/newerp/
   config.py        settings from env vars NEWERP_* and .env
   main.py          API composition root (FastAPI app)
   worker.py        worker composition root (Celery app)
+  consumer.py      Kafka reader of order events
 tests/             pytest
 db/                the same SQL as the .NET repo: OpenCart tables, reconstructed tables, erp_* tables
 ```
@@ -58,6 +60,7 @@ Dependencies point inward only (`api → infrastructure → application → doma
 | EF Core, `DbContext` | Spring Data JPA | SQLAlchemy 2, `AsyncSession` |
 | `appsettings.json` + user-secrets | `application.yml` | pydantic-settings + `.env` |
 | `BackgroundService` / Hangfire | `@Async` / `@Scheduled` | Celery |
+| — | — | Kafka (aiokafka) for order events |
 | Scalar (`/scalar`) | Swagger UI | Swagger UI (`/docs`) |
 | xUnit + WebApplicationFactory | JUnit 5 + `@SpringBootTest` | pytest + `TestClient` |
 
@@ -75,6 +78,7 @@ uv run pytest                                              # tests (need the MyS
 uv run ruff check . ; uv run ruff format --check .         # lint and format check
 uv run lint-imports                                        # layer check
 uv run celery -A newerp.worker worker --beat --pool=solo   # worker with the scheduler (--pool=solo: Windows has no fork)
+uv run python -m newerp.consumer                           # print order events (NEWERP_KAFKA__BOOTSTRAP_SERVERS set)
 ```
 
 ## Learning roadmap

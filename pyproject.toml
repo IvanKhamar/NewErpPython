@@ -15,6 +15,7 @@ dependencies = [
     "tzdata",  # time zones on Windows (Europe/Kyiv)
     "openpyxl>=3.1",  # Excel import and export
     "regex>=2024.11",  # like re, but with a match timeout (competitor price patterns)
+    "aiokafka>=0.12",  # async Kafka client: publishes order events
 ]
 
 [dependency-groups]

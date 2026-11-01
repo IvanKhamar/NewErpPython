@@ -15,13 +15,14 @@ from newerp.application.orders.models import (
     NewOrderLineRequest,
     NewOrderRecord,
     OrderCompositionDto,
+    OrderCreatedEvent,
     OrderMethodsDto,
     ProductOptionValueDto,
     ProductPickDto,
     UpdateOrderCompositionRequest,
     UpdateOrderCompositionResult,
 )
-from newerp.application.orders.ports import NewOrderStore, OrderStatusHandler, OrderStore
+from newerp.application.orders.ports import NewOrderStore, OrderEvents, OrderStatusHandler, OrderStore
 from newerp.domain.common import DomainError, plain
 from newerp.domain.orders import RISK_LOOKBACK_YEARS, CustomerRisk, OrderDraft, OrderDraftLine, OrderStatusChange
 
@@ -94,11 +95,14 @@ class NewOrderService:
 
     SEARCH_LIMIT = 10
 
-    def __init__(self, store: NewOrderStore, orders: OrderStore, order_service: OrderService, clock: Clock) -> None:
+    def __init__(
+        self, store: NewOrderStore, orders: OrderStore, order_service: OrderService, clock: Clock, events: OrderEvents
+    ) -> None:
         self._store = store
         self._orders = orders
         self._order_service = order_service
         self._clock = clock
+        self._events = events
 
     async def search_products(self, term: str | None) -> list[ProductPickDto]:
         if not term or not term.strip():
@@ -155,6 +159,11 @@ class NewOrderService:
         await self._orders.save_manager(order_id, manager_id, user_id, now)
         status = await self._order_service.change_status(
             order_id, ChangeOrderStatusRequest(status_id=request.status_id), user_id
+        )
+        # After the save, not in one transaction with it: the OpenCart tables are MyISAM and cannot roll back,
+        # so a transactional outbox is not possible here. A lost event is logged; the order stays.
+        await self._events.order_created(
+            OrderCreatedEvent(order_id, request.status_id, manager_id, request.order_source_id, draft.total, now)
         )
         return CreateOrderResult(order_id=order_id, warnings=status.warnings, risk=risk)
 

@@ -29,16 +29,30 @@ from newerp.api import (
 )
 from newerp.api.errors import add_error_handlers
 from newerp.api.security import add_security_middleware
+from newerp.config import get_settings
 from newerp.infrastructure.db import engine
+from newerp.infrastructure.events import KafkaOrderEvents, LogOrderEvents, kafka_producer
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    yield  # the app serves requests here
-    await engine.dispose()
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    kafka = get_settings().kafka
+    producer = kafka_producer(kafka) if kafka.enabled else None
+    if producer is not None:
+        await producer.start()  # connects to the broker; fails the start if Kafka is unreachable
+        app.state.order_events = KafkaOrderEvents(producer, kafka.topic)
+    try:
+        yield  # the app serves requests here
+    finally:
+        if producer is not None:
+            await producer.stop()  # sends what is still queued
+            app.state.order_events = LogOrderEvents()
+        await engine.dispose()
 
 
 app = FastAPI(title="NewErp API", version="0.1.0", lifespan=lifespan)
+# The default until the lifespan connects Kafka (tests do not run the lifespan, so they keep it).
+app.state.order_events = LogOrderEvents()
 add_error_handlers(app)
 add_security_middleware(app)
 

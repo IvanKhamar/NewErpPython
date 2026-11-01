@@ -8,6 +8,7 @@ from newerp.application.orders.models import (
     NewOrderLineRecord,
     NewOrderRecord,
     OrderCompositionDto,
+    OrderCreatedEvent,
     OrderDetails,
     OrderFilter,
     OrderListItem,
@@ -90,4 +91,12 @@ class NewOrderStore(Protocol):
 
     async def voucher_paid(self, order_id: int) -> Decimal:
         """How much of the order gift vouchers paid (positive), by its "voucher" total rows."""
+        ...
+
+
+class OrderEvents(Protocol):
+    """Tells other systems what happened to orders (Kafka in production, a log locally)."""
+
+    async def order_created(self, event: OrderCreatedEvent) -> None:
+        """Called after the order is saved. Must not raise: the order exists whether the event went out or not."""
         ...
