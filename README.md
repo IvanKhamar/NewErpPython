@@ -4,8 +4,29 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** skeleton. Project structure, config, docker-compose (MySQL + Redis), an empty FastAPI app with
-`/health`, an empty Celery app.
+**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 262 tests, CI with ruff,
+import-linter, pytest and gitleaks.
+
+## What it does
+
+| Area | Endpoints |
+|---|---|
+| Auth and users | `/auth` (cookie login, the same password hashes as ASP.NET Identity), `/users`, `/staff` |
+| Orders | `/orders`: list, card, new order, status changes with handlers, managers, customer risk |
+| Warehouse | `/stock`, `/locations` (Excel import and export) |
+| Production | `/production`: sewing orders, transfers, storefront stock |
+| Delivery | `/orders/{id}/shipment`, `/delivery`: Nova Poshta waybills, tracking, pickup reminders, international |
+| Money | `/cashbox` (Checkbox fiscal receipts, shifts), `/payments` (PrivatBank, LiqPay) |
+| Catalog | `/catalog/products`, `/catalog/sort` (sort by sales, pins), `/preorders` |
+| Marketing | `/marketing` (birthday coupons, contact export), gift vouchers, `/sms` |
+| After-sales | `/returns`, `/customers` |
+| Partners | `/partners` and their XML feed `/feeds/{code}.xml` |
+| Reports | `/reports` (sales, products, statuses, dashboard), revenue feed `/feeds/revenue.json` |
+| Competitors | `/competitors`: product pages on competitors' sites, price checks, comparison |
+
+Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
+hourly Nova Poshta tracking refresh. Without API keys every outside service uses a stub, so local development
+never reaches a real service.
 
 ## Stack
 
@@ -50,15 +71,15 @@ Dependencies point inward only (`api → infrastructure → application → doma
 4. `uv sync`, then `uv run fastapi dev src/newerp/main.py`. Open http://localhost:8000/health and /docs.
 
 ```
-uv run pytest                                      # tests
-uv run ruff check .                                # lint
-uv run lint-imports                                # layer check
-uv run celery -A newerp.worker worker --pool=solo  # Celery worker (--pool=solo: Windows has no fork)
+uv run pytest                                              # tests (need the MySQL from docker compose)
+uv run ruff check . ; uv run ruff format --check .         # lint and format check
+uv run lint-imports                                        # layer check
+uv run celery -A newerp.worker worker --beat --pool=solo   # worker with the scheduler (--pool=solo: Windows has no fork)
 ```
 
 ## Learning roadmap
 
-The core code (models, endpoints, tasks, tests) is written by hand, to learn the stack.
+The port itself is done with Claude Code, phase by phase. This list is the author's own learning plan for the stack.
 
 - [ ] AsyncIO: event loop, coroutines, `await`, `asyncio.gather`, why `time.sleep` blocks everything
 - [ ] FastAPI: path/query params, Pydantic models, dependencies, error handling (ProblemDetails like .NET)
