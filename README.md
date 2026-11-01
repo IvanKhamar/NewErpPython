@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 266 tests, CI with ruff,
+**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 268 tests, CI with ruff,
 import-linter, pytest and gitleaks.
 
 ## What it does
@@ -25,8 +25,8 @@ import-linter, pytest and gitleaks.
 | Competitors | `/competitors`: product pages on competitors' sites, price checks, comparison |
 
 Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
-hourly Nova Poshta tracking refresh. A new order also goes to Kafka as an `OrderCreated` event (topic
-`newerp.orders`, key = order id); `newerp.consumer` reads them. Without API keys every outside service uses a stub,
+hourly Nova Poshta tracking refresh. Orders also go to Kafka as `OrderCreated` and `OrderStatusChanged` events
+(topic `newerp.orders`, key = order id); `newerp.consumer` reads them. Without API keys every outside service uses a stub,
 and without Kafka settings the events only go to the log, so local development never reaches a real service.
 
 ## Stack

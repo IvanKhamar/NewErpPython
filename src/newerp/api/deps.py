@@ -93,17 +93,21 @@ def get_order_status_handlers(session: Session, clock: ClockDep) -> list[OrderSt
     ]
 
 
-def get_order_service(
-    store: OrderStoreDep,
-    clock: ClockDep,
-    handlers: Annotated[list[OrderStatusHandler], Depends(get_order_status_handlers)],
-) -> OrderService:
-    return OrderService(store, clock, handlers)
-
-
 def get_order_events(request: Request) -> OrderEvents:
     """The process-wide adapter main.py keeps in app.state (Kafka once the lifespan has started the producer)."""
     return request.app.state.order_events
+
+
+OrderEventsDep = Annotated[OrderEvents, Depends(get_order_events)]
+
+
+def get_order_service(
+    store: OrderStoreDep,
+    clock: ClockDep,
+    events: OrderEventsDep,
+    handlers: Annotated[list[OrderStatusHandler], Depends(get_order_status_handlers)],
+) -> OrderService:
+    return OrderService(store, clock, events, handlers)
 
 
 def get_new_order_service(
@@ -111,7 +115,7 @@ def get_new_order_service(
     orders: OrderStoreDep,
     order_service: Annotated[OrderService, Depends(get_order_service)],
     clock: ClockDep,
-    events: Annotated[OrderEvents, Depends(get_order_events)],
+    events: OrderEventsDep,
 ) -> NewOrderService:
     store = SqlNewOrderStore(session, get_settings().language_id)
     return NewOrderService(store, orders, order_service, clock, events)

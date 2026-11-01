@@ -100,3 +100,7 @@ class OrderEvents(Protocol):
     async def order_created(self, event: OrderCreatedEvent) -> None:
         """Called after the order is saved. Must not raise: the order exists whether the event went out or not."""
         ...
+
+    async def order_status_changed(self, change: OrderStatusChange) -> None:
+        """Called after a status change of an existing order is saved; must not raise either."""
+        ...

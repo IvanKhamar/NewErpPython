@@ -30,14 +30,18 @@ from newerp.domain.orders import RISK_LOOKBACK_YEARS, CustomerRisk, OrderDraft, 
 class OrderService:
     """Changing an order: its status and responsible manager."""
 
-    def __init__(self, store: OrderStore, clock: Clock, handlers: Sequence[OrderStatusHandler] = ()) -> None:
+    def __init__(
+        self, store: OrderStore, clock: Clock, events: OrderEvents, handlers: Sequence[OrderStatusHandler] = ()
+    ) -> None:
         self._store = store
         self._clock = clock
+        self._events = events
         self._handlers = handlers
 
     async def change_status(
-        self, order_id: int, request: ChangeOrderStatusRequest, user_id: int
+        self, order_id: int, request: ChangeOrderStatusRequest, user_id: int, *, publish: bool = True
     ) -> ChangeOrderStatusResult:
+        """publish=False: a new order's first status, which its OrderCreated event already carries."""
         current_status_id = await self._store.get_status_id(order_id)
         if current_status_id is None:
             raise NotFoundError(f"Замовлення {order_id} не знайдено.")
@@ -52,6 +56,8 @@ class OrderService:
         for handler in self._handlers:
             warnings += await handler.on_status_changing(change)
         await self._store.save_status_change(change)
+        if publish:
+            await self._events.order_status_changed(change)
         return ChangeOrderStatusResult(warnings=warnings)
 
     async def reapply_status(
@@ -158,7 +164,7 @@ class NewOrderService:
         order_id = await self._store.create(NewOrderRecord(request, draft, records, now))
         await self._orders.save_manager(order_id, manager_id, user_id, now)
         status = await self._order_service.change_status(
-            order_id, ChangeOrderStatusRequest(status_id=request.status_id), user_id
+            order_id, ChangeOrderStatusRequest(status_id=request.status_id), user_id, publish=False
         )
         # After the save, not in one transaction with it: the OpenCart tables are MyISAM and cannot roll back,
         # so a transactional outbox is not possible here. A lost event is logged; the order stays.

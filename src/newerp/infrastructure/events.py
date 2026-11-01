@@ -10,10 +10,12 @@ from aiokafka.errors import KafkaError
 
 from newerp.application.orders.models import OrderCreatedEvent
 from newerp.config import KafkaSettings
+from newerp.domain.orders import OrderStatusChange
 
 log = logging.getLogger(__name__)
 
 ORDER_CREATED = "OrderCreated"
+ORDER_STATUS_CHANGED = "OrderStatusChanged"
 
 
 def order_created_message(event: OrderCreatedEvent) -> dict[str, Any]:
@@ -27,6 +29,18 @@ def order_created_message(event: OrderCreatedEvent) -> dict[str, Any]:
         "managerId": event.manager_id,
         "orderSourceId": event.order_source_id,
         "total": float(event.total),
+    }
+
+
+def order_status_changed_message(change: OrderStatusChange) -> dict[str, Any]:
+    return {
+        "eventId": str(uuid4()),
+        "type": ORDER_STATUS_CHANGED,
+        "occurredAt": change.changed_at.isoformat(),
+        "orderId": change.order_id,
+        "oldStatusId": change.old_status_id,
+        "newStatusId": change.new_status_id,
+        "userId": change.user_id,
     }
 
 
@@ -47,20 +61,30 @@ class KafkaOrderEvents:
         self._topic = topic
 
     async def order_created(self, event: OrderCreatedEvent) -> None:
-        value = json.dumps(order_created_message(event)).encode()
+        await self._send(event.order_id, order_created_message(event))
+
+    async def order_status_changed(self, change: OrderStatusChange) -> None:
+        await self._send(change.order_id, order_status_changed_message(change))
+
+    async def _send(self, order_id: int, message: dict[str, Any]) -> None:
         try:
             # send_and_wait returns when the broker confirmed the write (send() alone only queues it).
-            await self._producer.send_and_wait(self._topic, value=value, key=str(event.order_id).encode())
+            await self._producer.send_and_wait(
+                self._topic, value=json.dumps(message).encode(), key=str(order_id).encode()
+            )
         except KafkaError:
             # The order is already saved; a request must not fail because Kafka is down.
-            log.exception("OrderCreated for order %s was not sent to Kafka", event.order_id)
+            log.exception("%s for order %s was not sent to Kafka", message["type"], order_id)
 
 
 class LogOrderEvents:
     """The stub without Kafka: like the other outside services, local development only writes to the log."""
 
     async def order_created(self, event: OrderCreatedEvent) -> None:
-        log.info("OrderCreated (Kafka is off): %s", order_created_message(event))
+        log.info("Kafka is off: %s", order_created_message(event))
+
+    async def order_status_changed(self, change: OrderStatusChange) -> None:
+        log.info("Kafka is off: %s", order_status_changed_message(change))
 
 
 def kafka_producer(settings: KafkaSettings) -> AIOKafkaProducer:
