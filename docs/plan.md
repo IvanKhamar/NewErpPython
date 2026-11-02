@@ -50,7 +50,7 @@ Compared with the old PHP CRM (missing in all three new versions; from the .NET 
 
 | # | Item | Status |
 |---|---|---|
-| 23 | Nova Poshta courier delivery to an address (now only branches, parcel lockers and international) | planned |
+| 23 | Nova Poshta courier delivery to an address: `toDoor`, `streetRef`, `building`, `flat` in a new waybill, `GET /delivery/streets` (Python first: the .NET and Java versions do not have it yet) | done |
 | 24 | Sale prices (`dd_product_special`, its `percent` column) applied in a new order | planned |
 | 25 | Coupon admin with excluded categories and products (now only birthday coupons) | planned |
 | 26 | Low-stock alerts (now only the "below minimum" filter and the reorder report) | planned |
@@ -60,6 +60,13 @@ Compared with the old PHP CRM (missing in all three new versions; from the .NET 
 | 30 | Marketing integrations: remarketing pixels, UTM report | planned (needs data the system does not collect) |
 | 31 | Reports without data in the system: who is online, product views, reward points, taxes | planned (needs data the system does not collect) |
 | 32 | "Different customers from one IP" in the customer risk check | planned (manager orders have no customer IP) |
+
+Security (found in the review of 2026-11-02; HSTS was added then):
+
+| # | Item | Status |
+|---|---|---|
+| 33 | The login throttle counts in the memory of one process: with several workers or containers each counts on its own. Keep the counters in Redis, and take the client address from X-Forwarded-For only from a trusted proxy | planned |
+| 34 | Login CSRF: SameSite=Strict does not cover the login form itself (a site could log the browser into another account). A token in the login form | planned |
 
 Not planned on purpose (they stay in OpenCart or were replaced): storefront features (colors and variants, FAQ,
 product questions, blog, reviews), customer account editing, LiqPay e-mail invoices (replaced by the payment link).

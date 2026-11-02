@@ -16,6 +16,7 @@ from newerp.application.delivery.models import (
     ShipmentFormDto,
     ShipmentPrintKind,
     StoredShipment,
+    StreetDto,
     TrackingRefreshResult,
     TrackingRequest,
     WarehouseDto,
@@ -161,6 +162,14 @@ class ShipmentService:
     async def search_warehouses(self, city_ref: str, search: str | None) -> list[WarehouseDto]:
         return await self._directory.search_warehouses(city_ref, (search or "").strip(), SUGGESTION_LIMIT)
 
+    async def search_streets(self, city_ref: str | None, search: str | None) -> list[StreetDto]:
+        """Streets for delivery to the door. Nova Poshta has no local street directory, so the API is asked: only
+        from two letters on, and only for a city of the branch directory."""
+        term = (search or "").strip()
+        if not city_ref or len(term) < 2 or not await self._directory.city_exists(city_ref):
+            return []
+        return await self._client.search_streets(city_ref, term)
+
     async def refresh_warehouses(self) -> WarehouseRefreshResult:
         """Loads a fresh branch directory from the API and replaces the local one (and the old storefront's)."""
         if not self._client.is_configured:
@@ -176,9 +185,14 @@ class ShipmentService:
         first_name = _name(request.first_name, "Ім'я")
         last_name = _name(request.last_name, "Прізвище")
         phone = normalize_phone(request.phone)
-        if not (request.city_ref or "").strip() or not (request.warehouse_ref or "").strip():
+        city_ref = (request.city_ref or "").strip()
+        door = _door_address(request) if request.to_door else None
+        if door is not None:
+            if not city_ref or not await self._directory.city_exists(city_ref):
+                raise DomainError("Оберіть місто з довідника.")
+        elif not city_ref or not (request.warehouse_ref or "").strip():
             raise DomainError("Оберіть місто й відділення з довідника.")
-        if not await self._directory.warehouse_exists(request.city_ref, request.warehouse_ref):
+        elif not await self._directory.warehouse_exists(city_ref, request.warehouse_ref):
             raise DomainError("Такого відділення в цьому місті немає в довіднику.")
         if request.declared_cost <= 0:
             raise DomainError("Оголошена вартість має бути більшою за нуль.")
@@ -195,8 +209,10 @@ class ShipmentService:
         return NewShipment(
             sender_id=sender.id, dropoff_point_id=point.id, order_id=order_id, ship_date=self._clock.now().date(),
             first_name=first_name, last_name=last_name, middle_name=(request.middle_name or "").strip(), phone=phone,
-            city_ref=request.city_ref, warehouse_ref=request.warehouse_ref, declared_cost=request.declared_cost,
-            cash_on_delivery=request.cash_on_delivery, sender_pays=request.sender_pays, seats=seats,
+            city_ref=city_ref, warehouse_ref="" if door else (request.warehouse_ref or ""),
+            declared_cost=request.declared_cost, cash_on_delivery=request.cash_on_delivery,
+            sender_pays=request.sender_pays, seats=seats, to_door=door is not None,
+            street_ref=door[0] if door else "", building=door[1] if door else "", flat=door[2] if door else "",
         )  # fmt: skip
 
     async def _require_stored(self, order_id: int) -> StoredShipment:
@@ -208,6 +224,23 @@ class ShipmentService:
     def _sender_of(self, stored: StoredShipment) -> str:
         """Waybills made on the old site have no sender record: the default sender is used for them."""
         return stored.sender_id or _pick(self._client.senders, None, "відправника").id
+
+
+MAX_BUILDING_LENGTH, MAX_FLAT_LENGTH = 10, 10  # Nova Poshta's limits for BuildingNumber and Flat
+
+
+def _door_address(request: CreateShipmentRequest) -> tuple[str, str, str]:
+    """The street ref, building and flat of a delivery to the door, checked."""
+    street = (request.street_ref or "").strip()
+    building = (request.building or "").strip()
+    flat = (request.flat or "").strip()
+    if not street:
+        raise DomainError("Для доставки на адресу оберіть вулицю з довідника.")
+    if not building:
+        raise DomainError("Для доставки на адресу вкажіть номер будинку.")
+    if len(building) > MAX_BUILDING_LENGTH or len(flat) > MAX_FLAT_LENGTH:
+        raise DomainError("Номер будинку чи квартири задовгий.")
+    return street, building, flat
 
 
 def _name(value: str | None, field: str) -> str:

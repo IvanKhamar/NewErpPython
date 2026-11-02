@@ -22,6 +22,7 @@ from newerp.application.delivery.models import (
     ShipmentDto,
     ShipmentFormDto,
     ShipmentPrintKind,
+    StreetDto,
     TrackingRefreshResult,
     WarehouseDto,
     WarehouseRefreshResult,
@@ -110,6 +111,15 @@ async def reminded(order_id: int, service: Delivery) -> None:
 @delivery_router.get("/cities", summary="Міста з довідника, назва яких починається з search")
 async def cities(service: Shipments, search: str | None = None) -> list[CityDto]:
     return await service.search_cities(search)
+
+
+@delivery_router.get(
+    "/streets", summary="Вулиці міста з довідника Нової Пошти для доставки на адресу (search — від двох літер)"
+)
+async def streets(
+    service: Shipments, city_ref: Annotated[str | None, Query(alias="cityRef")] = None, search: str | None = None
+) -> list[StreetDto]:
+    return await service.search_streets(city_ref, search)
 
 
 @delivery_router.get("/warehouses", summary="Робочі відділення й поштомати міста, у назві яких є search")

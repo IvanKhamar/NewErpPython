@@ -13,6 +13,7 @@ from newerp.application.delivery.models import (
     ShipmentDto,
     ShipmentPrintKind,
     StoredShipment,
+    StreetDto,
     TrackingRequest,
     WarehouseDto,
 )
@@ -59,6 +60,10 @@ class NovaPoshtaClient(Protocol):
 
     async def fetch_warehouses(self) -> list[NovaPoshtaWarehouse]:
         """The whole directory of branches and parcel lockers (Address.getWarehouses page by page)."""
+        ...
+
+    async def search_streets(self, city_ref: str, search: str) -> list[StreetDto]:
+        """Streets of a city whose name contains search (Address.getStreet), for delivery to the door."""
         ...
 
 
@@ -112,6 +117,10 @@ class WarehouseDirectory(Protocol):
     async def find_warehouse(self, city_ref: str, name: str) -> WarehouseDto | None: ...
 
     async def warehouse_exists(self, city_ref: str, warehouse_ref: str) -> bool: ...
+
+    async def city_exists(self, city_ref: str) -> bool:
+        """A city with at least one working branch (the directory knows cities only through branches)."""
+        ...
 
     async def replace_all(self, warehouses: list[NovaPoshtaWarehouse]) -> None:
         """Replaces the whole directory in one transaction."""

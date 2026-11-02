@@ -87,6 +87,13 @@ class DropoffPointOption(Dto):
     is_default: bool
 
 
+class StreetDto(Dto):
+    """A street of a city from the Nova Poshta directory (Address.getStreet), for delivery to the door."""
+
+    ref: str
+    name: str
+
+
 class CityDto(Dto):
     ref: str
     name: str
@@ -166,6 +173,11 @@ class CreateShipmentRequest(Dto):
     seats: list[ShipmentSeat] | None = None
     sender_id: str | None = None
     dropoff_point_id: str | None = None
+    # Courier delivery to the address: a street from the directory, the building and the flat; no branch then.
+    to_door: bool = False
+    street_ref: str | None = None
+    building: str | None = None
+    flat: str | None = None
 
 
 @dataclass(frozen=True)
@@ -186,6 +198,11 @@ class NewShipment:
     cash_on_delivery: Decimal
     sender_pays: bool
     seats: list[ShipmentSeat]
+    # To the door (WarehouseDoors) instead of a branch: the recipient's address is saved at Nova Poshta first.
+    to_door: bool = False
+    street_ref: str = ""
+    building: str = ""
+    flat: str = ""
 
 
 @dataclass(frozen=True)

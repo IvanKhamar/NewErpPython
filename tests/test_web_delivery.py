@@ -79,3 +79,20 @@ def test_waybill_abroad_from_the_order_card(api):
     assert "Міжнародну накладну створено." in created.text
     assert client.get(f"/orders/{ORDER_ID}/shipment").json()["carrier"] == "international"
     client.post(f"/app/delivery/orders/{ORDER_ID}/shipment/delete", headers=HTMX)
+
+
+def test_courier_delivery_from_the_order_card(api):
+    client = api(MANAGER)
+    url = f"/app/delivery/orders/{SHIPPING_ORDER_ID}/shipment"
+    assert "Кур'єром на адресу" in client.get(url, headers=HTMX).text
+    found = client.get(f"/app/delivery/streets?city_ref={KYIV_REF}&street_search=Січ", headers=HTMX).text
+    assert "вул. Січових Стрільців" in found
+
+    form = {"first_name": "Тарас", "last_name": "Клієнт", "middle_name": "", "phone": "0670000005",
+            "city_ref": KYIV_REF, "warehouse_ref": "", "to_door": "1", "street_ref": f"{KYIV_REF}-street-2",
+            "building": "", "flat": "", "declared_cost": "1200", "cash_on_delivery": "0",
+            "box": "Маленька"}  # fmt: skip
+    assert "вкажіть номер будинку" in client.post(url, data=form, headers=HTMX).text
+    created = client.post(url, data=form | {"building": "7"}, headers=HTMX)
+    assert "ТТН створено." in created.text
+    client.post(f"{url}/delete", headers=HTMX)

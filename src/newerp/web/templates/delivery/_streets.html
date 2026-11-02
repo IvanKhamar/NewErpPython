@@ -1,0 +1,4 @@
+<select name="street_ref" aria-label="Вулиця">
+  {% for street in streets %}<option value="{{ street.ref }}">{{ street.name }}</option>
+  {% else %}<option value="">Вулиць не знайдено</option>{% endfor %}
+</select>

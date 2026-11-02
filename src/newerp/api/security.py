@@ -165,6 +165,9 @@ def add_security_middleware(app: FastAPI) -> None:
         headers["Referrer-Policy"] = "no-referrer"
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
         headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        if not get_settings().is_development:
+            # The browser remembers for a year to use only HTTPS here, so the cookie never goes over plain HTTP.
+            headers["Strict-Transport-Security"] = "max-age=31536000"
         # The interactive docs (/docs) load their own scripts, so they get no content policy.
         if not request.url.path.startswith(("/docs", "/redoc", "/openapi.json")):
             headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY

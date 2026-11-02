@@ -223,6 +223,10 @@ class SqlWarehouseDirectory:
             )
         )
 
+    async def city_exists(self, city_ref: str) -> bool:
+        w = nova_poshta_warehouses.c
+        return bool(await self._session.scalar(select(exists().where(w.city_ref == city_ref, w.status.is_(True)))))
+
     async def replace_all(self, warehouses: list[NovaPoshtaWarehouse]) -> None:
         # One transaction: the old site's storefront must not see an empty directory in the middle of the update.
         unique: dict[str, NovaPoshtaWarehouse] = {}

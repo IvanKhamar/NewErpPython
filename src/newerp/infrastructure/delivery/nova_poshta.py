@@ -15,6 +15,7 @@ from newerp.application.delivery.models import (
     NewShipment,
     SenderOption,
     ShipmentPrintKind,
+    StreetDto,
     TrackingRequest,
 )
 from newerp.config import NovaPoshtaSender, NovaPoshtaSettings
@@ -23,6 +24,7 @@ from newerp.domain.delivery import NovaPoshtaWarehouse, TrackingInfo
 
 WAREHOUSES_PAGE_SIZE = 500
 MAX_WAREHOUSE_PAGES = 1000  # guard against an endless loop
+STREETS_LIMIT = 30  # a picker list, not the whole city
 DATE_FORMATS = ("%d-%m-%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%d.%m.%Y %H:%M:%S", "%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y")
 TIMEOUT_SECONDS = 30
 
@@ -113,13 +115,34 @@ class HttpNovaPoshtaClient:
         if not recipient_ref or not contact_ref:
             raise DomainError("Нова Пошта не повернула отримувача чи його контактну особу.")
 
-        # 2. The waybill itself: branch → branch, paid in cash, as on the old site.
+        # 2. To the door: the recipient's address is saved first, and the waybill points to it instead of a branch.
+        recipient_address = shipment.warehouse_ref
+        if shipment.to_door:
+            address = (
+                await self._call(
+                    key,
+                    "Address",
+                    "save",
+                    {
+                        "CounterpartyRef": recipient_ref,
+                        "StreetRef": shipment.street_ref,
+                        "BuildingNumber": shipment.building,
+                        "Flat": shipment.flat,
+                        "Note": "",
+                    },
+                )
+            )[0]
+            recipient_address = text(address, "Ref")
+            if not recipient_address:
+                raise DomainError("Нова Пошта не зберегла адресу отримувача.")
+
+        # 3. The waybill itself: from the sender's branch to a branch or the door, paid in cash, as on the old site.
         properties: dict[str, Any] = {
             "PayerType": "Sender" if shipment.sender_pays else "Recipient",
             "PaymentMethod": "Cash",
             "DateTime": shipment.ship_date.strftime("%d.%m.%Y"),
             "CargoType": "Cargo",
-            "ServiceType": "WarehouseWarehouse",
+            "ServiceType": "WarehouseDoors" if shipment.to_door else "WarehouseWarehouse",
             "Description": self._settings.cargo_description,
             "Cost": number(shipment.declared_cost),
             "SeatsAmount": str(len(shipment.seats)),
@@ -144,7 +167,7 @@ class HttpNovaPoshtaClient:
             "ContactRecipient": contact_ref,
             "RecipientsPhone": shipment.phone,
             "CityRecipient": shipment.city_ref,
-            "RecipientAddress": shipment.warehouse_ref,
+            "RecipientAddress": recipient_address,
         }
         # Cash on delivery through "payment control", as on the old site.
         if shipment.cash_on_delivery > 0:
@@ -186,6 +209,16 @@ class HttpNovaPoshtaClient:
                 break
             result += [parse_warehouse(item) for item in data]
         return result
+
+    async def search_streets(self, city_ref: str, search: str) -> list[StreetDto]:
+        data = await self._call(
+            self._settings.tracking_key, "Address", "getStreet", {"CityRef": city_ref, "FindByString": search}
+        )
+        streets = [
+            StreetDto(ref=text(item, "Ref"), name=f"{text(item, 'StreetsType')} {text(item, 'Description')}".strip())
+            for item in data
+        ]
+        return streets[:STREETS_LIMIT]
 
     def _sender(self, sender_id: str) -> NovaPoshtaSender:
         sender = next((s for s in self._settings.senders if s.id == sender_id), None)
@@ -269,6 +302,7 @@ def number(value: Decimal) -> str:
 
 
 TEST_SENDER_ID = "test"
+TEST_STREETS = ("вул. Хрещатик", "вул. Січових Стрільців")
 TEST_DROPOFF_POINT_ID = "test"
 
 
@@ -322,6 +356,13 @@ class StubNovaPoshtaClient:
 
     async def fetch_warehouses(self) -> list[NovaPoshtaWarehouse]:
         return []
+
+    async def search_streets(self, city_ref: str, search: str) -> list[StreetDto]:
+        """With test waybills, two invented streets of any city, so delivery to the door can be tried locally."""
+        if not self._fake:
+            return []
+        streets = [StreetDto(ref=f"{city_ref}-street-{n}", name=name) for n, name in enumerate(TEST_STREETS, 1)]
+        return [s for s in streets if search.casefold() in s.name.casefold()]
 
 
 def nova_poshta_client(settings: NovaPoshtaSettings) -> HttpNovaPoshtaClient | StubNovaPoshtaClient:

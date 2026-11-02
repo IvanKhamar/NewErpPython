@@ -31,6 +31,21 @@
         <span id="warehouse-options">{% with warehouses=[form.warehouse] if form.warehouse else [], selected=form.warehouse.ref if form.warehouse %}{% include "delivery/_warehouses.html" %}{% endwith %}</span>
       </label>
     </div>
+    {# To the door: the street comes from Nova Poshta's directory of the chosen city; the branch is not used then. #}
+    <fieldset>
+      <label><input type="radio" name="to_door" value="0" checked> У відділення чи поштомат</label>
+      <label><input type="radio" name="to_door" value="1"> Кур'єром на адресу</label>
+    </fieldset>
+    <div class="grid">
+      <label>Вулиця (для кур'єра)
+        <input name="street_search" placeholder="Почніть вводити назву вулиці" data-no-submit
+               hx-get="/app/delivery/streets" hx-include="[name=city_ref]" hx-trigger="keyup changed delay:400ms"
+               hx-target="#street-options">
+        <span id="street-options"></span>
+      </label>
+      <label>Будинок <input name="building" maxlength="10"></label>
+      <label>Квартира <input name="flat" maxlength="10"></label>
+    </div>
     <div class="grid">
       <label>Оголошена вартість <input name="declared_cost" value="{{ form.declared_cost|qty }}" inputmode="decimal"></label>
       <label>Накладений платіж <input name="cash_on_delivery" value="{{ form.cash_on_delivery|qty }}" inputmode="decimal"></label>

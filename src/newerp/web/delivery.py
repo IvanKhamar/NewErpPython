@@ -78,6 +78,12 @@ async def cities(request: Request, shipments: Shipments, city_search: str = "") 
     return render(request, "delivery/_cities.html", cities=found, autoload=True)
 
 
+@router.get("/streets")
+async def streets(request: Request, shipments: Shipments, city_ref: str = "", street_search: str = "") -> HTMLResponse:
+    found = await shipments.search_streets(city_ref, street_search)
+    return render(request, "delivery/_streets.html", streets=found)
+
+
 @router.get("/warehouses")
 async def warehouses(
     request: Request, shipments: Shipments, city_ref: str = "", warehouse_search: str = ""
@@ -143,6 +149,10 @@ async def create_shipment(
             seats=[_seat(form)],
             sender_id=_text(form, "sender_id") or None,
             dropoff_point_id=_text(form, "dropoff_point_id") or None,
+            to_door=_text(form, "to_door") == "1",
+            street_ref=_text(form, "street_ref") or None,
+            building=_text(form, "building"),
+            flat=_text(form, "flat"),
         )
         await shipments.create(order_id, create, user.user_id)
     except BUSINESS_ERRORS as error:

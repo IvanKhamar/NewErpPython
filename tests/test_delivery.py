@@ -87,3 +87,24 @@ def test_directory_searches_cities_and_working_branches(api):
 
 def test_storekeeper_has_no_access(api):
     assert api(STOREKEEPER).get("/delivery/reminders").status_code == 403
+
+
+def test_courier_delivery_to_the_door_needs_a_street_and_a_building(api):
+    client = api(MANAGER)
+    streets = client.get(f"/delivery/streets?cityRef={KYIV_REF}&search=Хрещ").json()
+    assert streets == [{"ref": f"{KYIV_REF}-street-1", "name": "вул. Хрещатик"}]
+    assert client.get("/delivery/streets?cityRef=unknown-city&search=Хрещ").json() == []
+    assert client.get(f"/delivery/streets?cityRef={KYIV_REF}&search=Х").json() == []  # from two letters
+
+    url = f"/orders/{SHIPPING_ORDER_ID}/shipment"
+    request = {
+        "firstName": "Тарас", "lastName": "Клієнт", "phone": "0670000005", "cityRef": KYIV_REF, "toDoor": True,
+        "streetRef": streets[0]["ref"], "building": "22", "flat": "5", "declaredCost": 1200,
+        "seats": [{"weight": 1, "width": 30, "length": 30, "height": 10}],
+    }  # fmt: skip
+    no_building = client.post(url, json=request | {"building": " "})
+    assert no_building.json()["detail"] == "Для доставки на адресу вкажіть номер будинку."
+    assert client.post(url, json=request | {"streetRef": None}).status_code == 400
+    created = client.post(url, json=request)  # no branch is needed for the door
+    assert created.status_code == 200, created.text
+    assert client.delete(url).status_code == 204
