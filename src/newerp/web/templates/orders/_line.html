@@ -1,0 +1,11 @@
+<tr>
+  <td>
+    {{ name }} <small>{{ model }}</small>
+    <input type="hidden" name="product_id" value="{{ product_id }}">
+    <input type="hidden" name="option_id" value="{{ option_id or '' }}">
+  </td>
+  <td>{{ size or "—" }}</td>
+  <td><input type="number" name="quantity" value="1" min="1" required aria-label="Кількість"></td>
+  <td><input name="price" value="{{ price }}" inputmode="decimal" required aria-label="Ціна"></td>
+  <td><button type="button" class="outline secondary" data-remove-row aria-label="Прибрати">✕</button></td>
+</tr>

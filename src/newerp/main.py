@@ -32,6 +32,7 @@ from newerp.api.security import add_security_middleware
 from newerp.config import get_settings
 from newerp.infrastructure.db import engine
 from newerp.infrastructure.events import KafkaOrderEvents, LogOrderEvents, kafka_producer
+from newerp.web import add_web
 
 
 @asynccontextmanager
@@ -78,3 +79,4 @@ app.include_router(customers.router)
 app.include_router(reports.router)
 app.include_router(reports.feed_router)
 app.include_router(competitors.router)
+add_web(app)  # the HTML pages at /app/

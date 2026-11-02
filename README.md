@@ -4,8 +4,9 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET system is ported (phases in [docs/plan.md](docs/plan.md)): 274 tests, CI with ruff,
-import-linter, pytest, a Docker image build and gitleaks. What is still missing: the table at the end of the plan.
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 289 tests, CI with ruff,
+import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` has the dashboard and the order
+pages so far. What is still missing: the table at the end of the plan.
 
 ## What it does
 
@@ -24,6 +25,11 @@ import-linter, pytest, a Docker image build and gitleaks. What is still missing:
 | Reports | `/reports` (sales, products, statuses, dashboard), revenue feed `/feeds/revenue.json` |
 | Competitors | `/competitors`: product pages on competitors' sites, price checks, comparison |
 
+The web interface at `/app/` (in Ukrainian, like the other versions) renders HTML on the server with Jinja2; HTMX
+swaps in the fragments the server returns, so there is no JavaScript build. Pages call the same application services
+as the API and use the same login cookie and roles. So far: login, the dashboard, the order list with filters, the
+order card (status, manager) and new orders.
+
 Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
 hourly Nova Poshta tracking refresh. Orders also go to Kafka as `OrderCreated` and `OrderStatusChanged` events
 (topic `newerp.orders`, key = order id); `newerp.consumer` reads them. Without API keys every outside service uses a stub,
@@ -31,7 +37,7 @@ and without Kafka settings the events only go to the log, so local development n
 
 ## Stack
 
-Python 3.13 · uv · FastAPI · Pydantic v2 · SQLAlchemy 2 (async, aiomysql) · MySQL 8 · Celery + Redis · Kafka (aiokafka) · pytest · ruff · import-linter
+Python 3.13 · uv · FastAPI · Jinja2 + HTMX · Pydantic v2 · SQLAlchemy 2 (async, aiomysql) · MySQL 8 · Celery + Redis · Kafka (aiokafka) · pytest · ruff · import-linter
 
 ## Structure
 
@@ -41,6 +47,7 @@ src/newerp/
   application/     use cases and the interfaces they need
   infrastructure/  SQLAlchemy (db.py), Celery tasks, external clients
   api/             FastAPI routers and request/response schemas
+  web/             HTML pages at /app/: routes, Jinja2 templates, static files (HTMX, Pico.css)
   config.py        settings from env vars NEWERP_* and .env
   main.py          API composition root (FastAPI app)
   worker.py        worker composition root (Celery app)
@@ -50,7 +57,7 @@ tools/devseed.py   demo data for the local database
 db/                the same SQL as the .NET repo: OpenCart tables, reconstructed tables, erp_* tables
 ```
 
-Dependencies point inward only (`api → infrastructure → application → domain`); `uv run lint-imports` checks it.
+Dependencies point inward only (`web → api → infrastructure → application → domain`); `uv run lint-imports` checks it.
 
 | .NET | Java | Python here |
 |---|---|---|
@@ -62,6 +69,7 @@ Dependencies point inward only (`api → infrastructure → application → doma
 | `appsettings.json` + user-secrets | `application.yml` | pydantic-settings + `.env` |
 | `BackgroundService` / Hangfire | `@Async` / `@Scheduled` | Celery |
 | — | — | Kafka (aiokafka) for order events |
+| Blazor WebAssembly + MudBlazor (`/app/`) | Vaadin | Jinja2 + HTMX (`/app/`) |
 | Scalar (`/scalar`) | Swagger UI | Swagger UI (`/docs`) |
 | xUnit + WebApplicationFactory | JUnit 5 + `@SpringBootTest` | pytest + `TestClient` |
 
@@ -77,7 +85,8 @@ Dependencies point inward only (`api → infrastructure → application → doma
 ### Everything in Docker, with demo data
 
 `docker compose up -d` also builds the API from the [Dockerfile](Dockerfile) (two stages: uv builds the virtual
-environment, only the environment goes into the slim runtime image) and serves it on http://localhost:8000/docs.
+environment, only the environment goes into the slim runtime image) and serves it on http://localhost:8000/app/
+(the web interface) and http://localhost:8000/docs.
 The database starts empty; fill it with invented data (a port of the .NET `DevSeed`, made with Faker):
 
 ```

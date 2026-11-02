@@ -1,0 +1,36 @@
+{% from "_macros.html" import chip %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>№</th><th>Дата</th><th>Покупець</th><th>Телефон</th><th class="num">Сума</th>
+      <th>Статус</th><th>Джерело</th><th>Менеджер</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for order in result.items %}
+    <tr>
+      <td><a href="/app/orders/{{ order.id }}">{{ order.id }}</a></td>
+      <td>{{ order.date_added|when }}</td>
+      <td>{{ order.customer }}</td>
+      <td>{{ order.telephone }}</td>
+      <td class="num">{{ order.total|money }} {{ order.currency_code }}</td>
+      <td>{{ chip(colors.get(order.status_id), order.status_name) }}</td>
+      <td>{{ order.source_name or "" }}</td>
+      <td>{{ order.manager_name or "" }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="pager">
+  {% if previous_page %}
+  <a href="/app/orders?{{ previous_page }}" hx-get="/app/orders?{{ previous_page }}" hx-target="#orders" hx-push-url="true">← Попередня</a>
+  {% endif %}
+  <span>Сторінка {{ result.page }} з {{ pages }} · замовлень: {{ result.total_count }}</span>
+  {% if next_page %}
+  <a href="/app/orders?{{ next_page }}" hx-get="/app/orders?{{ next_page }}" hx-target="#orders" hx-push-url="true">Наступна →</a>
+  {% endif %}
+</div>

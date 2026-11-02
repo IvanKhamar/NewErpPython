@@ -1,0 +1,11 @@
+{# A status with the colour it has on the old site (StatusChip.razor). #}
+{% macro chip(color, name) -%}
+<span class="chip"{% if color %} style="background: {{ color }}"{% endif %}>{{ name or "—" }}</span>
+{%- endmacro %}
+
+{# Business errors and warnings of other modules under a form. #}
+{% macro messages(error=None, warnings=(), saved_text=None) -%}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% for warning in warnings %}<p class="warning">{{ warning }}</p>{% endfor %}
+{% if saved_text and not error %}<p class="ok">{{ saved_text }}</p>{% endif %}
+{%- endmacro %}

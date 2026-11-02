@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Нове замовлення{% endblock %}
+{% block content %}
+<p><a href="/app/orders">← Замовлення</a></p>
+<h1>Нове замовлення</h1>
+<form id="new-order" hx-post="/app/orders/new" hx-target="#form-result">
+  <div class="grid">
+    <article>
+      <header>Покупець</header>
+      <div class="grid">
+        <label>Ім'я <input name="firstname" autocomplete="off"></label>
+        <label>Прізвище <input name="lastname" autocomplete="off"></label>
+      </div>
+      {# After the phone is typed, the server says whether this customer cancelled orders before. #}
+      <label>Телефон
+        <input name="telephone" inputmode="tel" autocomplete="off" hx-get="/app/orders/new/risk" hx-trigger="change"
+               hx-include="#new-order [name=firstname], #new-order [name=lastname], #new-order [name=email]"
+               hx-target="#risk">
+      </label>
+      <div id="risk"></div>
+      <div class="grid">
+        <label>Email <input type="email" name="email" autocomplete="off"></label>
+        <label>Instagram <input name="instagram" autocomplete="off"></label>
+      </div>
+    </article>
+    <article>
+      <header>Замовлення</header>
+      <div class="grid">
+        <label>Джерело
+          <select name="order_source_id">
+            {% for source in sources %}<option value="{{ source.id }}">{{ source.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Статус
+          <select name="status_id">
+            {% for status in statuses %}<option value="{{ status.id }}">{{ status.name }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <label>Відповідальний
+        <select name="manager_id">
+          <option value="">Я</option>
+          {% for manager in managers %}<option value="{{ manager.id }}">{{ manager.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="grid">
+        <label>Доставка
+          <select name="shipping_code">
+            {% for method in methods.shipping %}<option value="{{ method.code }}">{{ method.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Оплата
+          <select name="payment_code">
+            {% for method in methods.payment %}<option value="{{ method.code }}">{{ method.name }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="grid">
+        <label>Місто <input name="city"></label>
+        <label>Відділення <input name="address2"></label>
+      </div>
+      <div class="grid">
+        <label>Вулиця <input name="address1"></label>
+        <label>Будинок <input name="house"></label>
+        <label>Квартира <input name="flat"></label>
+      </div>
+    </article>
+  </div>
+  <article>
+    <header>Товари</header>
+    <input type="search" name="search" placeholder="Знайти товар: назва, модель або номер" aria-label="Пошук товару"
+           data-no-submit hx-get="/app/orders/new/products" hx-trigger="input changed delay:300ms, search"
+           hx-target="#found">
+    <div id="found"></div>
+    <div class="overflow-auto">
+    <table id="lines">
+      <thead><tr><th>Товар</th><th>Розмір</th><th>Кількість</th><th>Ціна, грн</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="grid">
+      <label>Доставка, грн <input name="shipping_cost" value="0" inputmode="decimal"></label>
+      <label>Знижка, грн <input name="discount" value="0" inputmode="decimal"></label>
+      <label>Передоплата, грн <input name="prepayment" value="0" inputmode="decimal"></label>
+    </div>
+    <label>Коментар <textarea name="comment" rows="2"></textarea></label>
+  </article>
+  <div id="form-result"></div>
+  <button type="submit">Створити замовлення</button>
+</form>
+{% endblock %}

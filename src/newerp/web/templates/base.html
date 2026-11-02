@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NewErp{% endblock %} · NewErp</title>
+  <link rel="stylesheet" href="/app/static/pico.min.css">
+  <link rel="stylesheet" href="/app/static/app.css">
+  <script src="/app/static/htmx.min.js" defer></script>
+  <script src="/app/static/app.js" defer></script>
+</head>
+<body>
+{% if user %}
+<header class="container-fluid">
+  <nav>
+    <ul>
+      <li><strong>NewErp</strong></li>
+      {% for link in menu %}
+      <li><a href="{{ link.href }}"{% if request.url.path == link.href %} aria-current="page"{% endif %}>{{ link.title }}</a></li>
+      {% endfor %}
+    </ul>
+    <ul>
+      <li><a href="/app/password" title="Змінити пароль">{{ user.full_name }}</a></li>
+      <li>
+        <form method="post" action="/app/logout" class="inline">
+          <button type="submit" class="outline secondary">Вийти</button>
+        </form>
+      </li>
+    </ul>
+  </nav>
+</header>
+{% endif %}
+<main class="container-fluid">
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

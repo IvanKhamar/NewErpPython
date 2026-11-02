@@ -1,0 +1,14 @@
+{% for product, choices in found %}
+<div class="found">
+  <strong>{{ product.name }}</strong>
+  <small>{{ product.model }} · №{{ product.id }} · {{ product.price|money }} грн · на складі {{ product.quantity }}</small>
+  <div>
+    {% for label, line in choices %}
+    <button type="button" class="outline" hx-get="/app/orders/new/line?{{ line }}" hx-target="#lines tbody"
+            hx-swap="beforeend">{{ label }}</button>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+{% if search %}<p>Нічого не знайдено</p>{% endif %}
+{% endfor %}

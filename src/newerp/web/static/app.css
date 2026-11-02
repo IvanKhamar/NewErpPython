@@ -1,0 +1,21 @@
+/* Small additions to Pico.css (which styles the plain HTML tags). */
+header.container-fluid nav { flex-wrap: wrap; }
+form.inline { display: inline; margin: 0; }
+form.inline button { margin: 0; padding: 0.3rem 0.8rem; }
+.narrow { max-width: 26rem; margin: 3rem auto; }
+.title-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.5rem; align-items: start; }
+.filters > * { margin-bottom: 0.5rem; }
+.chip { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 1rem; background: var(--pico-muted-border-color); color: #1b1b1b; font-size: 0.85em; white-space: nowrap; }
+th.num, td.num { text-align: right; }
+.pager { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.tiles article { margin: 0; }
+.tile-value { font-size: 1.6rem; font-weight: 600; }
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 8rem; margin-bottom: 2rem; }
+.bars div { flex: 1; min-height: 2px; background: var(--pico-primary-background); }
+.found { padding: 0.5rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
+.found button { width: auto; margin: 0.3rem 0.3rem 0 0; padding: 0.2rem 0.7rem; }
+.error, .down { color: #c62828; }
+.warning { color: #b26a00; }
+.ok, .up { color: #2e7d32; }

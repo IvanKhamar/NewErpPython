@@ -1,0 +1,13 @@
+{% from "_macros.html" import messages %}
+<header>Відповідальний менеджер</header>
+<p>Зараз: <strong>{{ order.manager_name or "не призначено" }}</strong></p>
+<form hx-post="/app/orders/{{ order.id }}/manager" hx-target="#manager" role="group">
+  <select name="manager_id" aria-label="Менеджер">
+    <option value="">—</option>
+    {% for manager in managers %}
+    <option value="{{ manager.id }}"{% if manager.id == order.manager_id %} selected{% endif %}>{{ manager.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Призначити</button>
+</form>
+{{ messages(error, (), "Менеджера призначено." if saved else None) }}

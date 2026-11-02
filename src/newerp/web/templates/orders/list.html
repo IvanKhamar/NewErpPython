@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Замовлення{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Замовлення</h1>
+  <a href="/app/orders/new" role="button">Нове замовлення</a>
+</div>
+{# Without JavaScript the form still works as a plain GET; with HTMX only the table is replaced. #}
+<form class="filters" action="/app/orders" method="get"
+      hx-get="/app/orders" hx-target="#orders" hx-push-url="true" hx-trigger="change, submit">
+  <select name="status" aria-label="Статус">
+    <option value="">Усі статуси</option>
+    {% for status in statuses %}
+    <option value="{{ status.id }}"{% if status.id == order_filter.status_id %} selected{% endif %}>{{ status.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="manager" aria-label="Менеджер">
+    <option value="">Усі менеджери</option>
+    {% for manager in managers %}
+    <option value="{{ manager.id }}"{% if manager.id == order_filter.manager_id %} selected{% endif %}>{{ manager.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="source" aria-label="Джерело">
+    <option value="">Усі джерела</option>
+    {% for source in sources %}
+    <option value="{{ source.id }}"{% if source.id == order_filter.source_id %} selected{% endif %}>{{ source.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="search" name="search" value="{{ order_filter.search or '' }}" placeholder="Номер, ім'я, телефон"
+         aria-label="Пошук">
+  <button type="submit">Знайти</button>
+</form>
+<div id="orders">{% include "orders/_table.html" %}</div>
+{% endblock %}

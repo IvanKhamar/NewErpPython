@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Головна{% endblock %}
+{% block content %}
+<h1>Вітаємо, {{ user.full_name }}</h1>
+{% if dashboard %}
+<section class="tiles">
+  {% for title, tile, is_money in tiles %}
+  <article>
+    <small>{{ title }}</small>
+    <div class="tile-value">{{ tile.current|money ~ " грн" if is_money else tile.current|int }}</div>
+    <small>
+      було {{ tile.previous|money ~ " грн" if is_money else tile.previous|int }}
+      {% if tile.change_percent is not none %}
+      · <span class="{{ 'up' if tile.change_percent >= 0 else 'down' }}">{{ "%+d"|format(tile.change_percent) }}%</span>
+      {% endif %}
+    </small>
+  </article>
+  {% endfor %}
+</section>
+
+<h2>Продажі за 30 днів</h2>
+<div class="bars">
+  {% for day, height in bars %}
+  <div style="height: {{ height }}%" title="{{ day.start|when }}: {{ day.total|money }} грн, замовлень {{ day.orders }}"></div>
+  {% endfor %}
+</div>
+
+<h2>Топ-5 товарів за 30 днів</h2>
+<table class="striped">
+  <thead><tr><th>Товар</th><th>Модель</th><th class="num">Штук</th><th class="num">Сума, грн</th></tr></thead>
+  <tbody>
+  {% for row in dashboard.top_products30_days %}
+    <tr><td>{{ row.name }}</td><td>{{ row.model }}</td><td class="num">{{ row.quantity }}</td><td class="num">{{ row.total|money }}</td></tr>
+  {% else %}
+    <tr><td colspan="4">Продажів ще немає</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Оберіть розділ у меню.</p>
+{% endif %}
+{% endblock %}

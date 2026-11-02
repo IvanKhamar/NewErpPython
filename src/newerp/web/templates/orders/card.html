@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Замовлення №{{ order.id }}{% endblock %}
+{% block content %}
+<p><a href="/app/orders">← Замовлення</a></p>
+<h1>Замовлення №{{ order.id }} <small>від {{ order.date_added|when }}</small></h1>
+<div class="grid">
+  <article>
+    <header>Покупець і доставка</header>
+    <p><strong>{{ order.customer }}</strong><br>{{ order.telephone }}{% if order.email %}<br>{{ order.email }}{% endif %}</p>
+    <p>{{ order.shipping_method }}<br>{{ order.shipping_city }}{% if order.shipping_address %}, {{ order.shipping_address }}{% endif %}</p>
+    <p>Оплата: {{ order.payment_method or "—" }}<br>Джерело: {{ order.source_name or "—" }}</p>
+    {% if order.comment %}<p>Коментар: {{ order.comment }}</p>{% endif %}
+  </article>
+  <article id="manager">{% include "orders/_manager.html" %}</article>
+</div>
+<article>
+  <header>Товари</header>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Товар</th><th>Модель</th><th class="num">Кількість</th><th class="num">Ціна</th><th class="num">Сума</th></tr></thead>
+    <tbody>
+    {% for line in order.products %}
+      <tr>
+        <td>{{ line.name }}</td><td>{{ line.model }}</td><td class="num">{{ line.quantity }}</td>
+        <td class="num">{{ line.price|money }}</td><td class="num">{{ line.total|money }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="4">Разом</th><th class="num">{{ order.total|money }} {{ order.currency_code }}</th></tr></tfoot>
+  </table>
+  </div>
+</article>
+<article id="status">{% include "orders/_status.html" %}</article>
+{% endblock %}

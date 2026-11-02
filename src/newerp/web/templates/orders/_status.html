@@ -1,0 +1,22 @@
+{% from "_macros.html" import chip, messages %}
+<header>Статус: {{ chip(colors.get(order.status_id), order.status_name) }}</header>
+<form hx-post="/app/orders/{{ order.id }}/status" hx-target="#status" role="group">
+  <select name="status_id" aria-label="Новий статус">
+    {% for status in statuses %}
+    <option value="{{ status.id }}"{% if status.id == order.status_id %} selected{% endif %}>{{ status.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Змінити статус</button>
+</form>
+{{ messages(error, warnings or (), "Статус змінено." if saved else None) }}
+<h3>Історія статусів</h3>
+<table>
+  <thead><tr><th>Коли</th><th>Статус</th><th>Хто</th></tr></thead>
+  <tbody>
+  {% for entry in order.status_history %}
+    <tr><td>{{ entry.changed_at|when }}</td><td>{{ entry.new_status_name or entry.new_status_id }}</td><td>{{ entry.user_name or "" }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">Записів ще немає</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

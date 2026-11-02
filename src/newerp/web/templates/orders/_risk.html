@@ -1,0 +1,5 @@
+{# 3 = red (half or more cancelled), 2 = yellow; see CustomerRiskLevel. #}
+<p class="{{ 'error' if risk.level == 3 else 'warning' if risk.level == 2 else '' }}">
+  {{ risk.message }}
+  {% for order_id in risk.cancelled_order_ids %}<a href="/app/orders/{{ order_id }}" target="_blank">№{{ order_id }}</a> {% endfor %}
+</p>

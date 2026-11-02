@@ -50,6 +50,7 @@ root_package = "newerp"
 name = "Layers point inward"
 type = "layers"
 layers = [
+    "newerp.web",  # the HTML pages reuse the API's dependencies and security; the API never imports them
     "newerp.api",
     "newerp.infrastructure",
     "newerp.application",

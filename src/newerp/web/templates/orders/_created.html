@@ -1,0 +1,8 @@
+<article id="new-order">
+  <h2>Замовлення <a href="/app/orders/{{ result.order_id }}">№{{ result.order_id }}</a> створено</h2>
+  {% for warning in result.warnings %}<p class="warning">{{ warning }}</p>{% endfor %}
+  {% set risk = result.risk %}
+  {% include "orders/_risk.html" %}
+  <a href="/app/orders/{{ result.order_id }}" role="button">Відкрити замовлення</a>
+  <a href="/app/orders/new" role="button" class="secondary">Ще одне замовлення</a>
+</article>
