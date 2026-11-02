@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Вивантаження контактів{% endblock %}
+{% block content %}
+<h1>Вивантаження контактів</h1>
+<p>Унікальні телефони чи e-mail клієнтів за період — файл CSV для Excel чи рекламного кабінету.</p>
+<form action="/app/marketing/export/contacts.csv" method="get">
+  <fieldset>
+    <legend>Що вивантажити</legend>
+    <label><input type="radio" name="field" value="Phone" checked> Телефони</label>
+    <label><input type="radio" name="field" value="Email"> E-mail</label>
+  </fieldset>
+  <fieldset>
+    <legend>Звідки</legend>
+    <label><input type="checkbox" name="sources" value="Orders" checked> Замовлення</label>
+    <label><input type="checkbox" name="sources" value="Questions"> Питання про товар (лише телефони)</label>
+    <label><input type="checkbox" name="sources" value="Subscribers"> Підписники розсилки (лише e-mail)</label>
+  </fieldset>
+  <div class="grid">
+    <label>З <input type="date" name="since"></label>
+    <label>По <input type="date" name="until"></label>
+  </div>
+  <button type="submit">Вивантажити CSV</button>
+</form>
+{% endblock %}

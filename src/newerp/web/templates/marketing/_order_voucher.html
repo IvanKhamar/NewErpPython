@@ -1,0 +1,16 @@
+{% from "_macros.html" import messages %}
+<header>Подарунковий сертифікат</header>
+{{ messages(error, (), saved) }}
+{% set base = "/app/marketing/orders/%d/voucher" % order_id %}
+{% if spent %}
+<p>Сертифікатом <a href="/app/marketing/vouchers/{{ spent.voucher_id }}"><code>{{ spent.code }}</code></a> сплачено
+  {{ spent.amount|money }}; на ньому лишилося {{ spent.voucher_balance|money }}.</p>
+<button class="secondary outline" hx-post="{{ base }}/release" hx-target="#voucher"
+        hx-confirm="Зняти сертифікат із замовлення?">Зняти сертифікат</button>
+{% else %}
+<form hx-post="{{ base }}/redeem" hx-target="#voucher" role="group">
+  <input name="code" placeholder="Код сертифіката" aria-label="Код сертифіката" required>
+  <input name="amount" inputmode="decimal" placeholder="Сума (порожньо — скільки можна)" aria-label="Сума">
+  <button type="submit" class="outline">Оплатити сертифікатом</button>
+</form>
+{% endif %}

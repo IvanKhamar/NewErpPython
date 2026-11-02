@@ -1,0 +1,10 @@
+<tr>
+  <td><input type="hidden" name="product_id" value="{{ row.product_id }}">
+    <a href="/app/catalog/products/{{ row.product_id }}">{{ row.product_name or row.product_id }}</a></td>
+  <td><input type="hidden" name="product_size" value="{{ row.size_name or '' }}">{{ row.size_name or "усі" }}</td>
+  <td><input name="product_external_id" value="{{ row.external_id or '' }}" aria-label="Id у партнера"></td>
+  <td><input name="product_external_name" value="{{ row.external_name or '' }}" aria-label="Назва в партнера"></td>
+  <td><input name="product_supply" value="{{ row.price_supply|qty if row.price_supply is number else '' }}" inputmode="decimal" aria-label="Ціна постачання"></td>
+  <td><input name="product_sale" value="{{ row.price_sale|qty if row.price_sale is number else '' }}" inputmode="decimal" aria-label="Ціна продажу"></td>
+  <td><button type="button" class="outline secondary" data-remove-row aria-label="Прибрати">✕</button></td>
+</tr>

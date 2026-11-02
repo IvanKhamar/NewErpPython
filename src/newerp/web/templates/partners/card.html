@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ partner.name if partner else "Новий партнер" }}{% endblock %}
+{% block content %}
+<p><a href="/app/partners">← Партнери</a></p>
+<div class="title-row">
+  <h1>{{ self.title() }}</h1>
+  {% if partner %}
+  <span>
+    {% if partner.feed_enabled %}<a href="/feeds/{{ partner.code }}.xml" target="_blank" rel="noopener">Фід партнера</a>{% endif %}
+    <button class="secondary outline" hx-post="/app/partners/{{ partner.id }}/delete" hx-target="#form-result"
+            hx-confirm="Видалити партнера?">Видалити</button>
+  </span>
+  {% endif %}
+</div>
+{# One form with both maps as repeated fields; on success the browser goes to the saved card. #}
+<form hx-post="/app/partners/save" hx-target="#form-result">
+  <input type="hidden" name="partner_id" value="{{ partner.id if partner else '' }}">
+  <div class="grid">
+    <label>Назва <input name="name" value="{{ partner.name if partner else '' }}" maxlength="64" required></label>
+    <label>Код (латиницею) <input name="code" value="{{ partner.code if partner else '' }}" maxlength="32" required></label>
+    <label>Бренд у фіді <input name="vendor_name" value="{{ partner.vendor_name if partner else 'Vidro' }}" maxlength="64"></label>
+    <label>Кількість у фіді <input name="default_quantity" value="{{ partner.default_quantity if partner else 5 }}" inputmode="numeric"></label>
+  </div>
+  <div class="grid">
+    <label>Адреса фіда в партнера (довідково) <input name="feed_url" value="{{ partner.feed_url if partner else '' }}" maxlength="255"></label>
+    <label><input type="checkbox" role="switch" name="feed_enabled" value="1"{% if partner and partner.feed_enabled %} checked{% endif %}> Фід увімкнено</label>
+    <label><input type="checkbox" role="switch" name="is_active" value="1"{% if not partner or partner.is_active %} checked{% endif %}> Партнер активний</label>
+  </div>
+  <label>Нотатки <textarea name="notes" rows="2">{{ partner.notes if partner else '' }}</textarea></label>
+
+  <h3>Категорії</h3>
+  <p><small>Усі товари категорії йдуть у фід з відсотком до ціни постачання й продажу; розмір — лише товари цього розміру.</small></p>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Категорія</th><th>Розмір</th><th>Id у партнера</th><th>Назва в партнера</th><th>% постачання</th><th>% продажу</th><th></th></tr></thead>
+    <tbody id="category-rows">
+    {% for row in partner.category_map if partner %}
+      {% with category = categories|selectattr("id", "equalto", row.category_id)|first %}
+      {% include "partners/_category_row.html" %}
+      {% endwith %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <select name="add" aria-label="Додати категорію" hx-get="/app/partners/category-row" hx-target="#category-rows"
+          hx-swap="beforeend" data-reset>
+    <option value="">+ Додати категорію…</option>
+    {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+  </select>
+
+  <h3>Окремі товари</h3>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Товар</th><th>Розмір</th><th>Id у партнера</th><th>Назва в партнера</th><th>Ціна постачання</th><th>Ціна продажу</th><th></th></tr></thead>
+    <tbody id="product-rows">
+    {% for row in partner.product_map if partner %}{% include "partners/_product_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <input type="search" name="product_search" placeholder="Додати товар: назва чи номер" aria-label="Пошук товару" data-no-submit
+         hx-get="/app/partners/products" hx-trigger="keyup changed delay:400ms" hx-target="#found-products">
+  <div id="found-products"></div>
+
+  <div id="form-result"></div>
+  <button type="submit">Зберегти</button>
+</form>
+{% endblock %}

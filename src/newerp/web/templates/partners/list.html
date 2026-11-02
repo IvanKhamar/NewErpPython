@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Партнери{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Партнери</h1>
+  <a href="/app/partners/new" role="button">Новий партнер</a>
+</div>
+<p>Магазини-перепродавці: кожен забирає наш XML-фід зі своєю відповідністю категорій, цінами й переліком товарів.</p>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Партнер</th><th>Код</th><th>Фід</th><th class="num">Категорій</th><th class="num">Товарів</th><th></th></tr></thead>
+  <tbody>
+  {% for partner in partners %}
+    <tr>
+      <td><a href="/app/partners/{{ partner.id }}">{{ partner.name }}</a></td>
+      <td><code>{{ partner.code }}</code></td>
+      <td>{% if partner.feed_enabled %}<a href="/feeds/{{ partner.code }}.xml" target="_blank" rel="noopener">увімкнено</a>{% else %}вимкнено{% endif %}</td>
+      <td class="num">{{ partner.categories }}</td>
+      <td class="num">{{ partner.products }}</td>
+      <td>{% if not partner.is_active %}<span class="chip none">неактивний</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Партнерів ще немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

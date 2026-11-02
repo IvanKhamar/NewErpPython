@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Сертифікат " ~ card.code if card else "Новий сертифікат" }}{% endblock %}
+{% block content %}
+<p><a href="/app/marketing/vouchers">← Сертифікати</a></p>
+<h1>{{ self.title() }}</h1>
+{{ messages(error) }}
+{% if card %}<p>Залишок: <strong>{{ card.balance|money }}</strong> з {{ card.amount|money }}</p>{% endif %}
+<div class="grid">
+  <form method="post" action="/app/marketing/vouchers/save">
+    <input type="hidden" name="voucher_id" value="{{ voucher_id or '' }}">
+    <div class="grid">
+      <label>Код <input name="code" value="{{ values.code or '' }}" maxlength="10" placeholder="Порожній — згенерується"></label>
+      <label>Сума <input name="amount" value="{{ values.amount or '' }}" inputmode="decimal" required></label>
+    </div>
+    <div class="grid">
+      <label>Від кого <input name="from_name" value="{{ values.from_name or '' }}" maxlength="64"></label>
+      <label>E-mail дарувальника <input name="from_email" value="{{ values.from_email or '' }}" maxlength="96"></label>
+    </div>
+    <div class="grid">
+      <label>Кому <input name="to_name" value="{{ values.to_name or '' }}" maxlength="64"></label>
+      <label>E-mail отримувача <input name="to_email" value="{{ values.to_email or '' }}" maxlength="96"></label>
+    </div>
+    <label>Тема
+      <select name="theme_id">
+        {% for theme in themes %}
+        <option value="{{ theme.id }}"{% if theme.id|string == values.theme_id|string %} selected{% endif %}>{{ theme.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Побажання <textarea name="message" rows="2">{{ values.message or '' }}</textarea></label>
+    <label><input type="checkbox" name="active" value="1"{% if values.active %} checked{% endif %}> Діє</label>
+    <button type="submit">Зберегти</button>
+  </form>
+  {% if card %}
+  <div>
+    <article>
+      <header>Надіслати код SMS</header>
+      <form hx-post="/app/marketing/vouchers/{{ card.id }}/sms" hx-target="#sms-result" role="group">
+        <input name="phone" placeholder="Телефон отримувача" aria-label="Телефон" required>
+        <button type="submit" class="outline">Надіслати</button>
+      </form>
+      <div id="sms-result"></div>
+    </article>
+    <article>
+      <header>Списання</header>
+      <table>
+        <tbody>
+        {% for row in card.history %}
+          <tr><td>{{ row.date|when }}</td><td><a href="/app/orders/{{ row.order_id }}">№{{ row.order_id }}</a> {{ row.customer }}</td>
+            <td class="num">{{ row.amount|money }}</td></tr>
+        {% else %}
+          <tr><td>Сертифікатом ще не платили.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </article>
+    <button class="secondary outline" hx-post="/app/marketing/vouchers/{{ card.id }}/delete" hx-target="#delete-result"
+            hx-confirm="Видалити сертифікат? Яким уже платили — буде вимкнено.">Видалити</button>
+    <div id="delete-result"></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

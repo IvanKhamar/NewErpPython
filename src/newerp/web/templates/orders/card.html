@@ -40,6 +40,9 @@
     <header>Фіскальний чек</header><p aria-busy="true">Завантаження…</p>
   </article>
 </div>
+<article id="voucher" hx-get="/app/marketing/orders/{{ order.id }}/voucher" hx-trigger="load">
+  <header>Подарунковий сертифікат</header><p aria-busy="true">Завантаження…</p>
+</article>
 <article id="shipment" hx-get="/app/delivery/orders/{{ order.id }}/shipment" hx-trigger="load">
   <header>Доставка</header><p aria-busy="true">Завантаження…</p>
 </article>

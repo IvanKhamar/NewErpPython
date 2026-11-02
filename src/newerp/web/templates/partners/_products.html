@@ -1,0 +1,14 @@
+{# Found products; a button adds a row for the whole product or for one size. #}
+{% for product in products %}
+<div class="found">
+  <strong>{{ product.name }}</strong> <small>№{{ product.id }}{% if not product.is_enabled %}, вимкнений{% endif %}</small><br>
+  <button type="button" hx-get="/app/partners/product-row?{{ {'product_id': product.id, 'name': product.name}|urlencode }}"
+          hx-target="#product-rows" hx-swap="beforeend">Увесь товар</button>
+  {% for size in product.sizes %}
+  <button type="button" class="outline" hx-get="/app/partners/product-row?{{ {'product_id': product.id, 'name': product.name, 'size': size.name}|urlencode }}"
+          hx-target="#product-rows" hx-swap="beforeend">{{ size.name }} ({{ size.price|money }})</button>
+  {% endfor %}
+</div>
+{% else %}
+<p>Нічого не знайдено.</p>
+{% endfor %}

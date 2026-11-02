@@ -1,0 +1,27 @@
+<article>
+  <header>Привітання: {{ name }}, {{ phone }}</header>
+  <form hx-post="/app/marketing/birthdays/sms" hx-target="#greet-result">
+    <input type="hidden" name="phone" value="{{ phone }}">
+    <div role="group">
+      {% include "marketing/_coupon.html" %}
+      <button type="button" class="outline" hx-post="/app/marketing/birthdays/coupon-code" hx-target="#coupon"
+              hx-swap="outerHTML">Купон</button>
+    </div>
+    <textarea name="text" rows="3" maxlength="670" placeholder="З днем народження! …" aria-label="Текст SMS" required></textarea>
+    <button type="submit">Надіслати SMS</button>
+  </form>
+  <div id="greet-result"></div>
+  {% if orders %}
+  <h4>Замовлення клієнта</h4>
+  <table>
+    <tbody>
+    {% for order in orders %}
+      <tr>
+        <td><a href="/app/orders/{{ order.order_id }}">№{{ order.order_id }}</a></td><td>{{ order.date_added|when }}</td>
+        <td>{{ order.products }}</td><td class="num">{{ order.total|money }}</td><td>{{ order.status }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</article>

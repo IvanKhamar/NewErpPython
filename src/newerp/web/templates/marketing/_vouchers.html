@@ -1,0 +1,20 @@
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Код</th><th>Від кого</th><th>Кому</th><th class="num">Сума</th><th class="num">Залишок</th><th>Створено</th><th></th></tr></thead>
+  <tbody>
+  {% for voucher in vouchers %}
+    <tr>
+      <td><a href="/app/marketing/vouchers/{{ voucher.id }}"><code>{{ voucher.code }}</code></a></td>
+      <td>{{ voucher.from_name }}</td>
+      <td>{{ voucher.to_name }}</td>
+      <td class="num">{{ voucher.amount|money }}</td>
+      <td class="num">{{ voucher.balance|money }}</td>
+      <td>{{ voucher.created_at|when }}</td>
+      <td>{% if not voucher.active %}<span class="chip none">вимкнений</span>{% elif not voucher.usable %}<span class="chip few">вичерпаний</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">Сертифікатів не знайдено.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

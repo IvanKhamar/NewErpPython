@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Подарункові сертифікати{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Подарункові сертифікати</h1>
+  <a href="/app/marketing/vouchers/new" role="button">Новий сертифікат</a>
+</div>
+<form class="filters" action="/app/marketing/vouchers" method="get"
+      hx-get="/app/marketing/vouchers" hx-target="#vouchers" hx-push-url="true" hx-trigger="submit, search">
+  <input type="search" name="search" value="{{ search }}" placeholder="Код чи ім'я" aria-label="Пошук">
+  <button type="submit">Знайти</button>
+</form>
+<div id="vouchers">{% include "marketing/_vouchers.html" %}</div>
+{% endblock %}

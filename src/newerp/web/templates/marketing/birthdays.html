@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Дні народження{% endblock %}
+{% block content %}
+<h1>Дні народження</h1>
+<p>Клієнти з датою народження із замовлень. Привітайте одного (можна з купоном на знижку) або надішліть однаковий
+  текст вибраним.</p>
+<nav class="tabs">
+  {% for value, name in periods.items() %}
+  <a href="/app/marketing/birthdays?period={{ value|int }}"{% if value == period %} aria-current="page"{% endif %}>{{ name }}</a>
+  {% endfor %}
+</nav>
+<div id="greet"></div>
+<form hx-post="/app/marketing/birthdays/sms-bulk" hx-target="#bulk-result">
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead><tr><th></th><th>Клієнт</th><th>Телефон</th><th>Місто</th><th>День народження</th><th class="num">Привітань цього року</th><th></th></tr></thead>
+    <tbody>
+    {% for contact in contacts %}
+      <tr>
+        <td><input type="checkbox" name="phones" value="{{ contact.phone }}" aria-label="Вибрати"></td>
+        <td>{{ contact.first_name }} {{ contact.last_name }}{% if contact.instagram %}<br><small>{{ contact.instagram }}</small>{% endif %}</td>
+        <td>{{ contact.phone }}</td>
+        <td>{{ contact.city }}</td>
+        <td>{{ "%02d.%02d" % (contact.day, contact.month) }}</td>
+        <td class="num">{{ contact.sent_this_year or "" }}</td>
+        <td><button type="button" class="outline" hx-get="/app/marketing/birthdays/greet"
+                    hx-vals='{{ {"phone": contact.phone, "name": contact.first_name ~ " " ~ contact.last_name}|tojson }}'
+                    hx-target="#greet">Привітати</button></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">Іменинників за цей період немає.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if contacts %}
+  <details>
+    <summary>Однаковий текст вибраним</summary>
+    <textarea name="text" rows="3" maxlength="670" placeholder="Текст SMS" aria-label="Текст SMS"></textarea>
+    <button type="submit">Надіслати вибраним</button>
+  </details>
+  <div id="bulk-result"></div>
+  {% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,16 @@
+<tr>
+  <td><input type="hidden" name="category_id" value="{{ row.category_id }}">{{ category.name if category else row.category_name }}</td>
+  <td>
+    <select name="category_size" aria-label="Розмір">
+      <option value="">Усі розміри</option>
+      {% for size in (category.sizes if category else []) %}
+      <option value="{{ size }}"{% if size == row.size_name %} selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+  </td>
+  <td><input name="category_external_id" value="{{ row.external_id or '' }}" aria-label="Id у партнера"></td>
+  <td><input name="category_external_name" value="{{ row.external_name or '' }}" aria-label="Назва в партнера"></td>
+  <td><input name="category_supply" value="{{ row.percent_supply|qty if row.percent_supply is number else '' }}" inputmode="decimal" aria-label="% постачання"></td>
+  <td><input name="category_sale" value="{{ row.percent_sale|qty if row.percent_sale is number else '' }}" inputmode="decimal" aria-label="% продажу"></td>
+  <td><button type="button" class="outline secondary" data-remove-row aria-label="Прибрати">✕</button></td>
+</tr>
