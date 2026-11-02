@@ -564,3 +564,20 @@ CREATE TABLE `dd_warehouse` (
   `image` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`warehouse_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Акційні ціни товарів ═══
+
+-- Стандартна таблиця OpenCart, якої немає в нашому дампі; старий сайт додав колонку `percent`:
+-- знижка у відсотках від ціни товару (тоді `price` не діє), ціну округлено до десятків гривень.
+CREATE TABLE `dd_product_special` (
+  `product_special_id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `customer_group_id` int(11) NOT NULL,
+  `priority` int(5) NOT NULL DEFAULT '1',
+  `price` decimal(15,4) NOT NULL DEFAULT '0.0000',
+  `percent` decimal(5,2) NOT NULL DEFAULT '0.00',
+  `date_start` date NOT NULL DEFAULT '0000-00-00',
+  `date_end` date NOT NULL DEFAULT '0000-00-00',
+  PRIMARY KEY (`product_special_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

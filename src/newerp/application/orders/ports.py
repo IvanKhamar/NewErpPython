@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -16,6 +16,7 @@ from newerp.application.orders.models import (
     OrderStatusDto,
     ProductPickDto,
 )
+from newerp.domain.catalog import SpecialPrice
 from newerp.domain.orders import OrderDraft, OrderStatusChange
 
 
@@ -66,6 +67,10 @@ class NewOrderStore(Protocol):
     async def search_products(self, term: str, limit: int) -> list[ProductPickDto]: ...
 
     async def get_products(self, product_ids: list[int]) -> list[ProductPickDto]: ...
+
+    async def current_specials(self, product_ids: list[int], today: date) -> dict[int, SpecialPrice]:
+        """The first sale price on today per product (by priority, then price), as the old site picked it."""
+        ...
 
     async def search_customers(self, term: str, limit: int) -> list[CustomerPickDto]: ...
 

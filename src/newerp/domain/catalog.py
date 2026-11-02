@@ -3,7 +3,7 @@ product."""
 
 from collections.abc import Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from enum import IntEnum
 
 from newerp.domain.common import DomainError
@@ -174,3 +174,18 @@ def settle(quantity: int, quota: int) -> tuple[int, int]:
 def validate_quota(quota: int) -> None:
     if not 0 <= quota <= MAX_QUOTA:
         raise DomainError(f"Ліміт передзамовлення — від 0 до {MAX_QUOTA} штук.")
+
+
+@dataclass(frozen=True)
+class SpecialPrice:
+    """A sale price of the old site: a fixed price, or a percent off the product's price rounded to tens."""
+
+    price: Decimal
+    percent: Decimal
+
+    def apply(self, regular: Decimal) -> Decimal:
+        if self.percent > 0:
+            # round(price * (100 - percent) / 100 / 10) * 10, as PHP rounds: halves away from zero.
+            tens = (regular * (100 - self.percent) / 100 / 10).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+            return max(tens * 10, Decimal(0))
+        return self.price

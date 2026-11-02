@@ -235,3 +235,19 @@ class DdProductOrderSnapshotItem(Base):
     snapshot_id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(primary_key=True)
     sort_order: Mapped[int]
+
+
+class DdProductSpecial(Base):
+    """A sale price of a product for a period (OpenCart), with the old site's `percent` column."""
+
+    __tablename__ = "dd_product_special"
+
+    product_special_id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int]
+    customer_group_id: Mapped[int]
+    priority: Mapped[int] = mapped_column(default=1)
+    price: Mapped[Decimal] = mapped_column(Money, default=Decimal(0))
+    percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal(0))
+    # Kept as text on purpose: '0000-00-00' (no limit) cannot become a Python date; they are only compared in SQL.
+    date_start: Mapped[str] = mapped_column(String(10), default="0000-00-00")
+    date_end: Mapped[str] = mapped_column(String(10), default="0000-00-00")

@@ -1,7 +1,8 @@
 {% for product, choices in found %}
 <div class="found">
   <strong>{{ product.name }}</strong>
-  <small>{{ product.model }} · №{{ product.id }} · {{ product.price|money }} грн · на складі {{ product.quantity }}</small>
+  <small>{{ product.model }} · №{{ product.id }} · {% if product.regular_price is number %}<del>{{ product.regular_price|money }}</del>
+    <strong class="ok">акція {{ product.price|money }} грн</strong>{% else %}{{ product.price|money }} грн{% endif %} · на складі {{ product.quantity }}</small>
   <div>
     {% for label, line in choices %}
     <button type="button" class="outline" hx-get="/app/orders/new/line?{{ line }}" hx-target="#lines tbody"

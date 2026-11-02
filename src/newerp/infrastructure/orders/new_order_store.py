@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import String, and_, delete, exists, func, or_, select, update
@@ -16,6 +16,7 @@ from newerp.application.orders.models import (
     ProductOptionValueDto,
     ProductPickDto,
 )
+from newerp.domain.catalog import SpecialPrice
 from newerp.domain.orders import CustomerRisk, OrderDraft
 from newerp.infrastructure.models.catalog import (
     DdOptionDescription,
@@ -23,12 +24,16 @@ from newerp.infrastructure.models.catalog import (
     DdProduct,
     DdProductDescription,
     DdProductOptionValue,
+    DdProductSpecial,
 )
 from newerp.infrastructure.models.orders import DdOrder, DdOrderOption, DdOrderProduct, DdOrderSource, DdOrderTotal
 from newerp.infrastructure.orders.queries import parse_int
 
 # Ukraine's id in the standard OpenCart country list; used only while the database has no order yet.
 UKRAINE_COUNTRY_ID = 220
+# OpenCart writes "no date" as 0000-00-00. Strict MySQL refuses that literal in a query, but a stored zero date is
+# smaller than any real one, so "below the first valid date" finds it.
+NO_DATE_BELOW = "1000-01-01"
 
 
 class SqlNewOrderStore:
@@ -53,6 +58,26 @@ class SqlNewOrderStore:
             .limit(limit)
         )
         return await self.get_products(list(ids))
+
+    async def current_specials(self, product_ids: list[int], today: date) -> dict[int, SpecialPrice]:
+        if not product_ids:
+            return {}
+        s = DdProductSpecial
+        day = today.isoformat()
+        rows = await self._session.execute(
+            select(s.product_id, s.price, s.percent)
+            .where(
+                s.product_id.in_(product_ids),
+                # As the old site: started before now (the start day counts), ends after today; zero = no limit.
+                or_(s.date_start < NO_DATE_BELOW, s.date_start <= day),
+                or_(s.date_end < NO_DATE_BELOW, s.date_end > day),
+            )
+            .order_by(s.product_id, s.priority, s.price)
+        )
+        specials: dict[int, SpecialPrice] = {}
+        for product_id, price, percent in rows:
+            specials.setdefault(product_id, SpecialPrice(price, percent))  # the first one of a product wins
+        return specials
 
     async def get_products(self, product_ids: list[int]) -> list[ProductPickDto]:
         if not product_ids:

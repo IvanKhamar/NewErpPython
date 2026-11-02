@@ -111,9 +111,18 @@ class NewOrderService:
         self._events = events
 
     async def search_products(self, term: str | None) -> list[ProductPickDto]:
+        """Products for a new order. With a sale price on today, price is the sale one and regular_price the old
+        one, like the old site's quick order; the manager can still change the price of a line."""
         if not term or not term.strip():
             return []
-        return await self._store.search_products(term.strip(), self.SEARCH_LIMIT)
+        products = await self._store.search_products(term.strip(), self.SEARCH_LIMIT)
+        specials = await self._store.current_specials([p.id for p in products], self._clock.now().date())
+        return [
+            p.model_copy(update={"price": specials[p.id].apply(p.price), "regular_price": p.price})
+            if p.id in specials
+            else p
+            for p in products
+        ]
 
     async def search_customers(self, term: str | None) -> list[CustomerPickDto]:
         if not term or len(term.strip()) < 3:

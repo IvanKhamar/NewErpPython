@@ -171,6 +171,7 @@ class ProductPickDto(Dto):
     price: Money
     quantity: int
     options: list[ProductOptionValueDto]
+    regular_price: Money | None = None  # the price before the sale when a sale price is on; then price is the sale one
 
 
 class CustomerPickDto(Dto):
