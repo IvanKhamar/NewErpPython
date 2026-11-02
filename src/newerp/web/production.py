@@ -8,10 +8,11 @@ from fastapi.responses import HTMLResponse
 from starlette.datastructures import FormData
 
 from newerp.api.deps import Session
-from newerp.api.production import ByWarehouse, Repository, Service, get_plan_service
+from newerp.api.production import ByWarehouse, Repository, Service, get_materials_service, get_plan_service
 from newerp.api.security import Policies
 from newerp.api.stock import ByWarehouse as StockPlaces
 from newerp.application.common import NotFoundError
+from newerp.application.production.materials import MaterialScope, PlanMaterialsService
 from newerp.application.production.models import (
     ProductionLogFilter,
     ProductionModelDto,
@@ -42,6 +43,7 @@ router = APIRouter(
     prefix="/app/production", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.STOCK))]
 )
 Plan = Annotated[SewingPlanService, Depends(get_plan_service)]
+Materials = Annotated[PlanMaterialsService, Depends(get_materials_service)]
 
 TYPES = {"clothing": "Власний пошив", "ready_made": "Готовий товар"}
 STAGES = {"cut": "Крій", "sewn": "Пошите"}
@@ -297,3 +299,17 @@ async def sewing_plan(request: Request, plan: Plan, sizes: str = "") -> HTMLResp
 async def production_log(request: Request, repository: Repository, stage: str = "") -> HTMLResponse:
     entries = await repository.list_log(ProductionLogFilter(stage=stage if stage in STAGES else None, limit=200))
     return render(request, "production/log.html", log=entries, log_labels=LOG_LABELS, stage=stage, stages=STAGES)
+
+
+MATERIAL_SCOPES = {
+    MaterialScope.ORDERS: "Для замовлень",
+    MaterialScope.MINIMUM: "Дошити до мінімуму",
+    MaterialScope.ALL: "Разом",
+}
+
+
+@router.get("/plan/materials")
+async def plan_materials(request: Request, materials: Materials, scope: str = "orders") -> HTMLResponse:
+    chosen = MaterialScope(scope) if scope in iter(MaterialScope) else MaterialScope.ORDERS
+    return render(request, "production/materials.html", report=await materials.get(chosen), scope=chosen,
+                  scopes=MATERIAL_SCOPES)  # fmt: skip

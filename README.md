@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 342 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 344 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
 Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 
@@ -15,7 +15,7 @@ Blazor app of the .NET version. What is still missing: the table at the end of t
 | Auth and users | `/auth` (cookie login, the same password hashes as ASP.NET Identity), `/users`, `/staff` |
 | Orders | `/orders`: list, card, new order, status changes with handlers, managers, customer risk |
 | Warehouse | `/stock`, `/locations` (Excel import and export) |
-| Production | `/production`: sewing orders, transfers, storefront stock |
+| Production | `/production`: models, cut and sewn operations, sewing plan and its consumables, transfers, storefront stock |
 | Delivery | `/orders/{id}/shipment`, `/delivery`: Nova Poshta waybills, tracking, pickup reminders, international |
 | Money | `/cashbox` (Checkbox fiscal receipts, shifts), `/payments` (PrivatBank, LiqPay) |
 | Catalog | `/catalog/products`, `/catalog/sort` (sort by sales, pins), `/preorders` |

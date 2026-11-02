@@ -5,8 +5,11 @@ from fastapi import APIRouter, Depends, Query, Response
 from newerp.api.deps import ClockDep, Session
 from newerp.api.errors import problem
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.api.stock import PurchaseOrders
 from newerp.application.common import CreatedId
+from newerp.application.production.materials import MaterialScope, PlanMaterialsService
 from newerp.application.production.models import (
+    PlanMaterialsDto,
     ProductionLogDto,
     ProductionLogFilter,
     ProductionModelDto,
@@ -170,6 +173,24 @@ async def plan(
     only_to_sew: Annotated[bool, Query(alias="onlyToSew")] = True,
 ) -> SewingPlanDto:
     return await service.get(only_to_sew)
+
+
+def get_materials_service(
+    plan: Annotated[SewingPlanService, Depends(get_plan_service)], repository: Repository, orders: PurchaseOrders
+) -> PlanMaterialsService:
+    return PlanMaterialsService(plan, repository, orders)
+
+
+@router.get(
+    "/plan/materials",
+    summary="Розхідники для плану пошиву: скільки треба на крій і пошив, залишок, замовлене в постачальників і "
+    "нестача; scope=minimum — на дошив моделей до мінімального запасу, all — і те, й те",
+)
+async def plan_materials(
+    service: Annotated[PlanMaterialsService, Depends(get_materials_service)],
+    scope: MaterialScope = MaterialScope.ORDERS,
+) -> PlanMaterialsDto:
+    return await service.get(scope)
 
 
 @router.get("/log", summary="Журнал крою й пошиву (stage = cut або sewn), нові записи першими")

@@ -1,7 +1,8 @@
 """Production (the old site's StockTrack module): models with sizes, cut and sewn stock, BOMs, sewing plan, sewn
 pieces at warehouses. Plain classes; infrastructure maps them to tables (see infrastructure/production/mapping.py)."""
 
-from collections.abc import Callable, Iterable, Sequence
+import math
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -604,3 +605,48 @@ def deadline(order_date: datetime, production_days: int) -> date | None:
     0 means "not set" (the old site then showed the order date itself, and everything looked overdue).
     """
     return order_date.date() + timedelta(days=production_days) if production_days > 0 else None
+
+
+# ── Consumables for the sewing plan ──
+
+CUTTING, SEWING = "Крій", "Пошив"
+
+
+@dataclass(frozen=True)
+class MaterialNeed:
+    """How much of a consumable a size needs at one stage."""
+
+    item_id: int
+    stage: str
+    quantity: Decimal
+
+
+def material_needs(
+    model: ProductionModel, components: Iterable[ProductionComponent], size_id: int, to_cut: Decimal, to_sew: Decimal
+) -> list[MaterialNeed]:
+    """
+    The consumables to cut and sew a size, by the same rules the cut and sewn operations write them off: each part's
+    cutting BOM for the cut, the sewing BOM's own consumables (threads, labels) for the sewing; the parts the sewing
+    takes come from the cut itself, so they are not counted again.
+    """
+    needs: list[MaterialNeed] = []
+    if to_cut > 0:
+        for component in components:
+            for line in resolve_bom(component.bom, size_id, lambda b: b.size_id, lambda b: b.item_id):
+                needs.append(MaterialNeed(line.item_id, CUTTING, line.qty_per_unit * to_cut))
+    if to_sew > 0:
+        for line in resolve_bom(model.sewn_bom, size_id, lambda b: b.size_id, lambda b: b.item_id):
+            needs.append(MaterialNeed(line.item_id, SEWING, line.qty_per_unit * to_sew))
+    return needs
+
+
+def spread_by_share(total: Decimal, shares: Mapping[int, Decimal]) -> dict[int, Decimal]:
+    """
+    Pieces to sew per size so the model reaches its minimum: the total split by the sizes' shares in a batch and
+    rounded up to whole pieces (a little more rather than short). Without shares the sizes get equal parts.
+    """
+    if total <= 0 or not shares:
+        return {}
+    weights = {size: share for size, share in shares.items() if share > 0} or {size: Decimal(1) for size in shares}
+    whole = sum(weights.values(), Decimal(0))
+    return {size: math.ceil(total * weight / whole) for size, weight in weights.items()}

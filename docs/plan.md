@@ -54,7 +54,7 @@ Compared with the old PHP CRM (missing in all three new versions; from the .NET 
 | 24 | Sale prices (`dd_product_special`, its `percent` column) in the product search of a new order: `price` is the sale price, `regularPrice` the old one (Python first; the table is added to `db/reconstructed.sql`, the .NET and Java copies need it too) | done |
 | 25 | Coupon admin `/marketing/coupons` and `/app/marketing/coupons`: products and categories a coupon works on and never works on (the old site's `*_exclude` tables), usage history; a used coupon is only turned off (Python first; the tables are in `db/reconstructed.sql`) | done |
 | 26 | Low-stock alerts: a daily SMS (Celery beat, `NEWERP_STOCK__ALERT_PHONES`, 08:00) about consumables that fell below the minimum since the last run (from the movement log, so no repeats), `POST /stock/alerts/low-stock`, and a "Мало на складі" panel on the home page (Python first) | done |
-| 27 | Consumables for sewing up to the minimum stock (the plan covers only active orders) | planned |
+| 27 | Consumables for the sewing plan: `GET /production/plan/materials` (ported from .NET, it was missing here) with `scope=minimum` (sewing every model up to its minimal stock, spread by size shares; Python first) and `scope=all`, page `/app/production/plan/materials` | done |
 | 28 | Automatic bank payment matching when there is one confident candidate | planned |
 | 29 | Check against the real database (`SHOW CREATE TABLE` for the reconstructed `dd_*` tables) and the real Nova Poshta, Checkbox, PrivatBank, LiqPay and SMSClub keys | planned (needs access) |
 | 30 | Marketing integrations: remarketing pixels, UTM report | planned (needs data the system does not collect) |

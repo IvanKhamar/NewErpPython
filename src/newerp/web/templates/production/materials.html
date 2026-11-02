@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Розхідники для пошиву{% endblock %}
+{% block content %}
+<p><a href="/app/production/plan">← План пошиву</a></p>
+<h1>Розхідники для пошиву</h1>
+<p>Скільки треба на крій і пошив за специфікаціями, що є на складі, що вже замовлено в постачальників і чого не вистачить.
+  «Дошити до мінімуму» — щоб після замовлень кожна модель мала свій мінімальний запас пошитого.</p>
+<nav class="tabs">
+  {% for value, name in scopes.items() %}
+  <a href="/app/production/plan/materials?scope={{ value }}"{% if value == scope %} aria-current="page"{% endif %}>{{ name }}</a>
+  {% endfor %}
+</nav>
+{% for warning in report.warnings %}<p class="warning">{{ warning }}</p>{% endfor %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr><th>Розхідник</th><th class="num">Треба</th><th class="num">На складі</th><th class="num">Замовлено</th><th class="num">Не вистачить</th><th>На що</th></tr>
+  </thead>
+  <tbody>
+  {% for material in report.materials %}
+    <tr>
+      <td><a href="/app/stock/items/{{ material.item_id }}">{{ material.name }}</a></td>
+      <td class="num">{{ material.needed|qty }} {{ material.unit }}</td>
+      <td class="num">{{ material.in_stock|qty }}</td>
+      <td class="num">{{ material.on_order|qty if material.on_order else "" }}</td>
+      <td class="num">{% if material.shortage > 0 %}<strong class="down">{{ material.shortage|qty }}</strong>{% endif %}</td>
+      <td><details><summary>{{ material.uses|length }} поз.</summary>
+        <ul>{% for use in material.uses %}
+          <li><a href="/app/production/models/{{ use.production_id }}">{{ use.model_name }}</a> {{ use.size_name }} · {{ use.stage }}
+            · {{ use.quantity|qty }}{% if use.for_minimum %} <small>(до мінімуму)</small>{% endif %}</li>
+        {% endfor %}</ul></details></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Нічого не треба: усе пошито або в моделей немає специфікацій.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

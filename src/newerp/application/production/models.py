@@ -302,6 +302,36 @@ class SewingPlanDto(Dto):
     issues: list[SewingPlanIssueDto]
 
 
+class PlanMaterialUseDto(Dto):
+    """What a consumable goes to: model, size, stage ("Крій" or "Пошив") and how much. for_minimum: sewing up to the
+    model's minimal stock rather than for orders (Python first)."""
+
+    production_id: int
+    model_name: str
+    size_name: str
+    stage: str
+    quantity: Money
+    for_minimum: bool = False
+
+
+class PlanMaterialDto(Dto):
+    item_id: int
+    name: str
+    unit: str
+    needed: Money
+    in_stock: Money
+    on_order: Money  # ordered from suppliers and not yet received
+    shortage: Money  # what is missing even after the stock and the ordered
+    uses: list[PlanMaterialUseDto]
+
+
+class PlanMaterialsDto(Dto):
+    """Consumables of the sewing plan, the missing ones first. warnings: BOM consumables that are not in stock."""
+
+    materials: list[PlanMaterialDto]
+    warnings: list[str]
+
+
 # ── Sewn pieces by warehouse ──
 
 

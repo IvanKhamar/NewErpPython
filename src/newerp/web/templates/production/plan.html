@@ -5,7 +5,8 @@
 <p>Що пошити й розкроїти для активних замовлень ({{ plan.order_count }}): спершу йде те, що є на складі, потім
   розкроєне. Термін — від найстарішого замовлення.</p>
 <p>{% if show_all %}<a href="/app/production/plan">Лише те, що треба шити</a>
-  {% else %}<a href="/app/production/plan?sizes=all">Також розміри, яких вистачає</a>{% endif %}</p>
+  {% else %}<a href="/app/production/plan?sizes=all">Також розміри, яких вистачає</a>{% endif %}
+  · <a href="/app/production/plan/materials">Розхідники для пошиву</a></p>
 <div class="overflow-auto">
 <table class="striped">
   <thead>
