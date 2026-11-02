@@ -20,7 +20,16 @@
     {% endfor %}
   </select>
   {% endif %}
-  {% if values.view == "sales" %}
+  {% if values.view == "utm" and report %}
+  {% for name, options, label in (("source", report.sources, "Усі джерела"), ("medium", report.mediums, "Усі канали"), ("campaign", report.campaigns, "Усі кампанії")) %}
+  <select name="{{ name }}" aria-label="{{ label }}">
+    <option value="">{{ label }}</option>
+    {% for option in options %}<option{% if option == values[name] %} selected{% endif %}>{{ option }}</option>{% endfor %}
+  </select>
+  {% endfor %}
+  <label><input type="checkbox" role="switch" name="by_source" value="1"{% if values.by_source %} checked{% endif %}> Окремо за джерелом</label>
+  {% endif %}
+  {% if values.view in ("sales", "utm") %}
   <select name="group" aria-label="Групувати">
     {% for value, name in groups.items() %}
     <option value="{{ value|int }}"{% if value == values.group %} selected{% endif %}>По {{ name }}</option>
@@ -43,6 +52,21 @@
   {% endfor %}
   </tbody>
   <tfoot><tr><th>Разом</th><th class="num">{{ report.orders }}</th><th class="num">{{ report.products }}</th><th class="num">{{ report.total|money }}</th></tr></tfoot>
+</table>
+{% elif values.view == "utm" %}
+<p><small>Лише замовлення з сайту: мітки пише модуль ремаркетингу вітрини.</small></p>
+<table class="striped">
+  <thead><tr><th>Період</th>{% if values.by_source %}<th>Джерело</th>{% endif %}<th class="num">Замовлень</th><th class="num">Товарів</th><th class="num">Сума</th></tr></thead>
+  <tbody>
+  {% for row in report.rows %}
+    <tr><td>{{ row.start|when }}{% if row.end != row.start %} — {{ row.end|when }}{% endif %}</td>
+      {% if values.by_source %}<td>{{ row.utm_source }}</td>{% endif %}
+      <td class="num">{{ row.orders }}</td><td class="num">{{ row.products }}</td><td class="num">{{ row.total|money }}</td></tr>
+  {% else %}
+    <tr><td colspan="5">Замовлень з мітками за період немає.</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th{% if values.by_source %} colspan="2"{% endif %}>Разом</th><th class="num">{{ report.orders }}</th><th></th><th class="num">{{ report.total|money }}</th></tr></tfoot>
 </table>
 {% elif values.view == "products" %}
 <table class="striped">

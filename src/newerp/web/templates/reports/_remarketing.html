@@ -1,0 +1,13 @@
+<header>Звідки замовлення</header>
+{% if data %}
+<table>
+  <tbody>
+  {% for name, value in data.utm.items() %}<tr><td>{{ name }}</td><td>{{ value }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% if data.events %}
+<p><small>Події пікселів: {% for event in data.events %}{{ event.name }} {{ event.sent_at|when }}{{ "; " if not loop.last }}{% endfor %}</small></p>
+{% else %}<p><small>Пікселі подій не надсилали.</small></p>{% endif %}
+{% else %}
+<p><small>Даних немає: замовлення оформлене не на сайті або без модуля ремаркетингу.</small></p>
+{% endif %}

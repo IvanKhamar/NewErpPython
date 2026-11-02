@@ -620,3 +620,28 @@ CREATE TABLE `dd_coupon_category_exclude` (
   `category_id` int(11) NOT NULL,
   PRIMARY KEY (`coupon_id`,`category_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Ремаркетинг: звідки прийшло замовлення й коли пішли події пікселів ═══
+
+-- Таблиця модуля «Remarketing All in One» старого сайту; вітрина пише її при оформленні замовлення. Колонки відновлено
+-- з admin/controller/sale/order.php (картка замовлення) і admin/model/report/remarketing.php (звіт UTM); у модуля
+-- можуть бути й інші колонки, звірити tools/check_live.py. Час події '0000-00-00 00:00:00' — подію не надсилали.
+CREATE TABLE `dd_remarketing_orders` (
+  `order_id` int(11) NOT NULL,
+  `first_referrer` varchar(255) NOT NULL DEFAULT '',
+  `last_referrer` varchar(255) NOT NULL DEFAULT '',
+  `utm_source` varchar(255) NOT NULL DEFAULT '',
+  `utm_medium` varchar(255) NOT NULL DEFAULT '',
+  `utm_campaign` varchar(255) NOT NULL DEFAULT '',
+  `utm_content` varchar(255) NOT NULL DEFAULT '',
+  `utm_term` varchar(255) NOT NULL DEFAULT '',
+  `utm_referrer` varchar(255) NOT NULL DEFAULT '',
+  `success_page` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `ga4` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `facebook` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `facebook_lead` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `esputnik` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `telegram` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `tiktok` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`order_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

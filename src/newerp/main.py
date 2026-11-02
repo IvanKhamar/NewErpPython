@@ -20,6 +20,7 @@ from newerp.api import (
     payments,
     pre_orders,
     production,
+    remarketing,
     reports,
     returns,
     sms,
@@ -78,5 +79,7 @@ app.include_router(returns.router)
 app.include_router(customers.router)
 app.include_router(reports.router)
 app.include_router(reports.feed_router)
+app.include_router(remarketing.router)
+app.include_router(remarketing.order_router)
 app.include_router(competitors.router)
 add_web(app)  # the HTML pages at /app/
