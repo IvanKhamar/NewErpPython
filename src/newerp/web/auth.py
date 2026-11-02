@@ -1,5 +1,7 @@
 """Login, logout and own password (Login.razor, ChangePassword.razor). The same cookie as POST /auth/login."""
 
+import hmac
+import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -10,6 +12,7 @@ from newerp.api.security import sign_in, sign_out
 from newerp.application.auth.models import ChangePasswordRequest, LoginRequest
 from newerp.application.auth.services import AuthService
 from newerp.application.auth.throttle import LoginThrottle, whole_minutes
+from newerp.config import get_settings
 from newerp.domain.common import DomainError
 from newerp.web.common import WebUser, local_path, render
 
@@ -18,9 +21,30 @@ Service = Annotated[AuthService, Depends(get_auth_service)]
 Field = Annotated[str, Form()]
 
 
+# Login CSRF: SameSite=Strict protects the session cookie, but before the login there is no session, so a form on
+# another site could log this browser into the attacker's account. The login page sets a random token in a
+# SameSite=Strict cookie and in the form; a POST counts only when both are there and equal (double submit).
+CSRF_COOKIE = "newerp.login_csrf"
+
+
+def _login_page(request: Request, status_code: int = 200, **context: str | None) -> HTMLResponse:
+    token = secrets.token_urlsafe(32)
+    response = render(request, "login.html", status_code=status_code, csrf=token, **context)
+    response.set_cookie(
+        CSRF_COOKIE, token, path="/app/login", httponly=True, samesite="strict",
+        secure=not get_settings().is_development,
+    )  # fmt: skip
+    return response
+
+
+def _same_token(request: Request, sent: str) -> bool:
+    kept = request.cookies.get(CSRF_COOKIE, "")
+    return bool(kept) and bool(sent) and hmac.compare_digest(kept.encode(), sent.encode())
+
+
 @router.get("/login")
 async def login_page(request: Request, next: str | None = None) -> HTMLResponse:
-    return render(request, "login.html", next=local_path(next))
+    return _login_page(request, next=local_path(next))
 
 
 @router.post("/login")
@@ -31,20 +55,24 @@ async def login(
     username: Field = "",
     password: Field = "",
     next: Field = "",
+    csrf: Field = "",
 ) -> Response:
     page = {"next": local_path(next), "username": username}
+    if not _same_token(request, csrf):
+        error = "Сторінку входу відкрито з іншого сайту або вона застаріла. Спробуйте ще раз."
+        return _login_page(request, status_code=400, error=error, **page)
     address = request.client.host if request.client else None
-    wait = throttle.retry_after(address, username)
+    wait = await throttle.retry_after(address, username)
     if wait is not None:
         error = f"Забагато невдалих спроб входу. Спробуйте знову через {whole_minutes(wait)} хв."
-        return render(request, "login.html", status_code=429, error=error, **page)
+        return _login_page(request, status_code=429, error=error, **page)
 
     authenticated = await service.login(LoginRequest(username=username, password=password))
     if authenticated is None:
-        throttle.failed(address, username)
-        return render(request, "login.html", status_code=401, error="Невірний логін або пароль", **page)
+        await throttle.failed(address, username)
+        return _login_page(request, status_code=401, error="Невірний логін або пароль", **page)
 
-    throttle.succeeded(username)
+    await throttle.succeeded(username)
     sign_in(request, authenticated)
     target = "/app/password" if authenticated.user.must_change_password else page["next"]
     return RedirectResponse(target, status_code=303)  # 303: the browser follows with GET, so F5 does not resend

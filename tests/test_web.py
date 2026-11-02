@@ -35,15 +35,32 @@ def test_a_page_without_a_session_sends_to_the_login_form(api):
     assert response.headers["HX-Redirect"] == f"/app/login?next=/app/orders/{ORDER_ID}"
 
 
+def login_token(client) -> str:
+    """The token of the login form; the client keeps its cookie, like a browser."""
+    return re.search(r'name="csrf" value="([^"]+)"', client.get("/app/login").text).group(1)
+
+
+def test_login_needs_the_token_of_its_own_page(api):
+    browser, attacker = api(), api()
+    form = {"username": MANAGER, "password": PASSWORD, "next": "/app/"}
+    assert browser.post("/app/login", data=form).status_code == 400  # no token
+    # A token from another browser (an attacker'"'"'s page) does not match this browser'"'"'s cookie.
+    refused = browser.post("/app/login", data=form | {"csrf": login_token(attacker)})
+    assert refused.status_code == 400
+    assert "з іншого сайту" in refused.text
+
+
 def test_login_sets_the_cookie_and_goes_back(api):
     client = api()
     assert 'name="next" value="/app/orders"' in client.get("/app/login?next=/app/orders").text
 
-    wrong = client.post("/app/login", data={"username": MANAGER, "password": "wrong", "next": "/app/orders"})
+    token = login_token(client)
+    wrong = client.post("/app/login", data={"username": MANAGER, "password": "wrong", "next": "/app/orders",
+                                            "csrf": token})  # fmt: skip
     assert wrong.status_code == 401
     assert "Невірний логін або пароль" in wrong.text
 
-    form = {"username": MANAGER, "password": PASSWORD, "next": "/app/orders"}
+    form = {"username": MANAGER, "password": PASSWORD, "next": "/app/orders", "csrf": login_token(client)}
     response = client.post("/app/login", data=form, follow_redirects=False)
     assert (response.status_code, response.headers["location"]) == (303, "/app/orders")
     assert client.get("/app/orders", follow_redirects=False).status_code == 200
@@ -51,8 +68,9 @@ def test_login_sets_the_cookie_and_goes_back(api):
 
 @pytest.mark.parametrize("target", ["https://evil.example/", "//evil.example/app/", "/docs"])
 def test_login_never_leaves_the_app(api, target):
-    form = {"username": MANAGER, "password": PASSWORD, "next": target}
-    response = api().post("/app/login", data=form, follow_redirects=False)
+    client = api()
+    form = {"username": MANAGER, "password": PASSWORD, "next": target, "csrf": login_token(client)}
+    response = client.post("/app/login", data=form, follow_redirects=False)
     assert response.headers["location"] == "/app/"
 
 

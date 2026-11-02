@@ -27,7 +27,8 @@ class LoginThrottle:
     """
     Counts only failed attempts, so a person with the right password never hits the limit. When there are too
     many, the login for that username or address is closed until the window ends (even with the right password,
-    otherwise guessing would go on). Counters live in the memory of one process; a restart resets them.
+    otherwise guessing would go on). Counters live in the memory of one process: for development and tests; on a
+    server RedisLoginThrottle keeps them for all workers. The methods are async, so both look the same to callers.
     """
 
     # Memory limit for an attack with thousands of invented usernames: then expired counters are dropped first.
@@ -38,7 +39,7 @@ class LoginThrottle:
         self._clock = clock
         self._failures: dict[str, _Window] = {}
 
-    def retry_after(self, address: str | None, username: str | None) -> timedelta | None:
+    async def retry_after(self, address: str | None, username: str | None) -> timedelta | None:
         """How long to wait if the login is closed now; None means the user may try."""
         now = self._clock.utc_now()
         wait: timedelta | None = None
@@ -49,7 +50,7 @@ class LoginThrottle:
                 wait = left if wait is None or left > wait else wait
         return wait
 
-    def failed(self, address: str | None, username: str | None) -> None:
+    async def failed(self, address: str | None, username: str | None) -> None:
         now = self._clock.utc_now()
         if len(self._failures) >= self.MAX_ENTRIES:
             self._prune(now)
@@ -60,7 +61,7 @@ class LoginThrottle:
             else:
                 self._failures[key] = _Window(window.count + 1, window.until)
 
-    def succeeded(self, username: str | None) -> None:
+    async def succeeded(self, username: str | None) -> None:
         """A successful login resets the username counter; the address counter stays."""
         self._failures.pop(self._user_key(username), None)
 

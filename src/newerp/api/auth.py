@@ -23,7 +23,7 @@ async def login(
 ) -> CurrentUser | Response:
     # Behind a proxy this is the proxy's address; then the proxy must pass the client's one (see README).
     address = http.client.host if http.client else None
-    wait = throttle.retry_after(address, request.username)
+    wait = await throttle.retry_after(address, request.username)
     if wait is not None:
         minutes = whole_minutes(wait)
         return problem(
@@ -35,10 +35,10 @@ async def login(
 
     authenticated = await service.login(request)
     if authenticated is None:
-        throttle.failed(address, request.username)
+        await throttle.failed(address, request.username)
         return problem(401, "Невірний логін або пароль")
 
-    throttle.succeeded(request.username)
+    await throttle.succeeded(request.username)
     sign_in(http, authenticated)
     return authenticated.user
 

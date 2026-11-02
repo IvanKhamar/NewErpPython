@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Request
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.auth.services import AuthService, UserAdminService
@@ -19,6 +20,7 @@ from newerp.application.production.services import OrderSewnStockHandler
 from newerp.config import get_settings
 from newerp.domain.common import DomainError
 from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
+from newerp.infrastructure.auth.redis_throttle import RedisLoginThrottle
 from newerp.infrastructure.auth.user_login_store import SqlUserLoginStore
 from newerp.infrastructure.db import get_session
 from newerp.infrastructure.orders.new_order_store import SqlNewOrderStore
@@ -43,7 +45,11 @@ def get_hasher() -> Pbkdf2PasswordHasher:
 
 
 @lru_cache
-def get_login_throttle() -> LoginThrottle:
+def get_login_throttle() -> LoginThrottle | RedisLoginThrottle:
+    """In development and tests the counters live in this process; on a server in Redis, shared by all workers."""
+    settings = get_settings()
+    if not settings.is_development:
+        return RedisLoginThrottle(Redis.from_url(settings.redis_url), LoginThrottleOptions())
     return LoginThrottle(LoginThrottleOptions(), get_clock())
 
 

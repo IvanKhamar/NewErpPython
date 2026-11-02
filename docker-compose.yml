@@ -14,6 +14,9 @@ services:
       NEWERP_DB_USER: ${NEWERP_DB_USER:-newerp}
       NEWERP_DB_PASSWORD: ${NEWERP_DB_PASSWORD:-newerp_dev_password}
       NEWERP_REDIS_URL: redis://redis:6379/0
+      # Behind a reverse proxy: its address, so uvicorn takes the client IP from X-Forwarded-For (the login throttle
+      # counts per IP). Only these addresses are trusted; anyone else could fake the header.
+      FORWARDED_ALLOW_IPS: ${NEWERP_TRUSTED_PROXIES:-127.0.0.1}
       # Plain HTTP on localhost: in Development the auth cookie is not HTTPS-only, so login works here.
       NEWERP_ENVIRONMENT: Development
     depends_on:

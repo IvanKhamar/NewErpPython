@@ -65,8 +65,8 @@ Security (found in the review of 2026-11-02; HSTS was added then):
 
 | # | Item | Status |
 |---|---|---|
-| 33 | The login throttle counts in the memory of one process: with several workers or containers each counts on its own. Keep the counters in Redis, and take the client address from X-Forwarded-For only from a trusted proxy | planned |
-| 34 | Login CSRF: SameSite=Strict does not cover the login form itself (a site could log the browser into another account). A token in the login form | planned |
+| 33 | The login throttle keeps its counters in Redis outside development (`RedisLoginThrottle`), so all workers and containers count together; uvicorn takes the client address from X-Forwarded-For only from `FORWARDED_ALLOW_IPS` (`NEWERP_TRUSTED_PROXIES` in docker-compose) | done |
+| 34 | Login CSRF: the login page puts a random token into a SameSite=Strict cookie and the form; a login POST without both, equal, is refused (double submit) | done |
 
 Not planned on purpose (they stay in OpenCart or were replaced): storefront features (colors and variants, FAQ,
 product questions, blog, reviews), customer account editing, LiqPay e-mail invoices (replaced by the payment link).
