@@ -1,0 +1,9 @@
+<table>
+  <tbody>
+  {% for price in prices %}
+    <tr><td>{{ price.checked_at|when }}</td><td class="num">{{ price.price|money }}</td><td>{{ "вручну" if price.source == "manual" else "автоматично" }}</td></tr>
+  {% else %}
+    <tr><td>Цін ще не було.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

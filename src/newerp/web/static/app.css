@@ -26,3 +26,5 @@ th.num, td.num { text-align: right; }
 pre { white-space: pre-wrap; padding: 0.8rem; }
 .pre { white-space: pre-line; }
 fieldset.columns { columns: 2; }
+nav.tabs { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem; }
+nav.tabs a[aria-current] { font-weight: 600; text-decoration: underline; }

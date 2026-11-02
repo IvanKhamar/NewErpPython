@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Ціни конкурентів{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Ціни конкурентів</h1>
+  <span>
+    <a href="/app/competitors/new" role="button" class="outline">Новий конкурент</a>
+    <button hx-post="/app/competitors/check" hx-target="#competitors">Перевірити всі ціни</button>
+  </span>
+</div>
+<p>Сторінки наших товарів на сайтах конкурентів; ціни читаються щодня о 07:00 і за кнопкою.</p>
+<div id="competitors">{% include "competitors/_main.html" %}</div>
+{% endblock %}

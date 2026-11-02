@@ -1,0 +1,91 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<article>
+  <header>Порівняння: наша ціна проти останніх цін</header>
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead>
+      <tr>
+        <th>Товар</th><th class="num">Наша</th>
+        {% for column in report.competitors %}<th class="num">{{ column.name }}</th>{% endfor %}
+        <th class="num">Найнижча</th><th class="num">Різниця</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in report.rows %}
+      <tr>
+        <td><a href="/app/catalog/products/{{ row.product_id }}">{{ row.product_name }}</a></td>
+        <td class="num">{{ row.our_price|money }}</td>
+        {% for price in row.prices %}<td class="num">{{ price|money if price is number else "" }}</td>{% endfor %}
+        <td class="num">{{ row.lowest|money if row.lowest is number else "" }}</td>
+        <td class="num {{ 'down' if row.difference_percent and row.difference_percent > 0 }}">
+          {{ row.difference_percent|qty ~ "%" if row.difference_percent is number else "" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="{{ 4 + report.competitors|length }}">Ще немає жодної сторінки з ціною.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>
+
+<article>
+  <header>Сторінки товарів у конкурентів</header>
+  <form hx-post="/app/competitors/links" hx-target="#competitors" class="filters">
+    <select name="competitor_id" aria-label="Конкурент" required>
+      {% for competitor in competitors if competitor.is_active %}<option value="{{ competitor.id }}">{{ competitor.name }}</option>{% endfor %}
+    </select>
+    <input name="product_id" inputmode="numeric" placeholder="№ нашого товару" aria-label="Номер товару" required>
+    <input name="url" type="url" placeholder="https://… сторінка товару" aria-label="Адреса сторінки" required>
+    <button type="submit" class="outline">Додати сторінку</button>
+  </form>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Товар</th><th>Конкурент</th><th class="num">Ціна</th><th>Перевірено</th><th></th></tr></thead>
+    {% for link in links %}
+    <tbody id="link-{{ link.id }}">
+      <tr>
+        <td>{{ link.product_name }}<br><a href="{{ link.url if link.url.startswith('http') else '#' }}" target="_blank" rel="noopener noreferrer"><small>{{ link.url }}</small></a></td>
+        <td>{{ link.competitor_name }}</td>
+        <td class="num">{{ link.last_price|money if link.last_price is number else "—" }}</td>
+        <td>{{ link.last_checked_at|when if link.last_checked_at else "" }}{% if link.last_error %}<br><small class="error">{{ link.last_error }}</small>{% endif %}</td>
+        <td class="actions">
+          <button class="outline" hx-post="/app/competitors/links/{{ link.id }}/check" hx-target="#competitors">Перевірити</button>
+          <button class="outline" hx-get="/app/competitors/links/{{ link.id }}/history" hx-target="#history-{{ link.id }}">Історія</button>
+          <button class="secondary outline" hx-post="/app/competitors/links/{{ link.id }}/delete" hx-target="#competitors"
+                  hx-confirm="Видалити сторінку разом з історією цін?">✕</button>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="5">
+          <form hx-post="/app/competitors/links/{{ link.id }}/price" hx-target="#competitors" role="group">
+            <input name="price" inputmode="decimal" placeholder="Ціна вручну" aria-label="Ціна вручну">
+            <button type="submit" class="outline">Записати</button>
+          </form>
+          <div id="history-{{ link.id }}"></div>
+        </td>
+      </tr>
+    </tbody>
+    {% else %}
+    <tbody><tr><td colspan="5">Сторінок ще немає.</td></tr></tbody>
+    {% endfor %}
+  </table>
+  </div>
+</article>
+
+<article>
+  <header>Конкуренти</header>
+  <table>
+    <tbody>
+    {% for competitor in competitors %}
+      <tr>
+        <td><a href="/app/competitors/{{ competitor.id }}/edit">{{ competitor.name }}</a>{% if not competitor.is_active %} <small>(не перевіряється)</small>{% endif %}</td>
+        <td>{{ competitor.site_url }}</td>
+        <td class="num">{{ competitor.links }} стор.</td>
+      </tr>
+    {% else %}
+      <tr><td>Конкурентів ще немає.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</article>

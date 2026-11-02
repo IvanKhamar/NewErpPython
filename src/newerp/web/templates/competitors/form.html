@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Змінити конкурента" if competitor_id else "Новий конкурент" }}{% endblock %}
+{% block content %}
+<p><a href="/app/competitors">← Ціни конкурентів</a></p>
+<h1>{{ self.title() }}</h1>
+{{ messages(error) }}
+<form method="post" action="/app/competitors/save">
+  <input type="hidden" name="competitor_id" value="{{ competitor_id or '' }}">
+  <div class="grid">
+    <label>Назва <input name="name" value="{{ values.name or '' }}" maxlength="100" required></label>
+    <label>Сайт <input name="site_url" value="{{ values.site_url or '' }}" maxlength="255" placeholder="https://shop.ua" required></label>
+  </div>
+  <label>Шаблон ціни (необов'язково)
+    <input name="price_regex" value="{{ values.price_regex or '' }}" maxlength="255" placeholder="Регулярний вираз з групою для ціни">
+  </label>
+  <p><small>Без шаблону ціна шукається в мітках сторінки (schema.org, Open Graph).</small></p>
+  <label><input type="checkbox" name="is_active" value="1"{% if values.is_active %} checked{% endif %}> Перевіряти ціни</label>
+  <button type="submit">Зберегти</button>
+</form>
+{% endblock %}
