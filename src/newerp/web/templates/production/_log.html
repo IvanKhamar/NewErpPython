@@ -1,0 +1,27 @@
+{# The production log table (ProductionLogTable.razor); show_model adds the model column. #}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>Коли</th>{% if show_model %}<th>Модель</th>{% endif %}<th>Розмір</th><th>Що</th>
+      <th class="num">Кількість</th><th class="num">Стало</th><th>Коментар</th><th>Хто</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for entry in log %}
+    <tr>
+      <td>{{ entry.created_at|when }}</td>
+      {% if show_model %}<td><a href="/app/production/models/{{ entry.production_id }}">{{ entry.production_name or "" }}</a></td>{% endif %}
+      <td>{{ entry.size_name }}</td>
+      <td>{{ log_labels.get((entry.stage, entry.direction), entry.stage ~ " " ~ entry.direction) }}</td>
+      <td class="num {{ 'up' if entry.direction == 'in' else 'down' }}">{{ "+" if entry.direction == "in" else "−" }}{{ entry.quantity|qty }}</td>
+      <td class="num">{{ entry.stock_after|qty }}</td>
+      <td>{{ entry.comment }}</td>
+      <td>{{ entry.username }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="{{ 8 if show_model else 7 }}">Записів ще немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

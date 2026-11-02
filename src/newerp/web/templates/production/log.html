@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Журнал крою й пошиву{% endblock %}
+{% block content %}
+<h1>Журнал крою й пошиву</h1>
+<form class="filters" action="/app/production/log" method="get" hx-get="/app/production/log" hx-target="#log"
+      hx-select="#log" hx-swap="outerHTML" hx-push-url="true" hx-trigger="change">
+  <select name="stage" aria-label="Етап">
+    <option value="">Крій і пошите</option>
+    {% for code, name in stages.items() %}
+    <option value="{{ code }}"{% if code == stage %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</form>
+<div id="log">{% with show_model=True %}{% include "production/_log.html" %}{% endwith %}</div>
+{% endblock %}

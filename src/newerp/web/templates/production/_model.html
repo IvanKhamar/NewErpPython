@@ -1,0 +1,103 @@
+{% from "_macros.html" import messages, place_options %}
+{{ messages(error, result.warnings if result else (), saved) }}
+{% if result %}
+<p>{% for size in result.sizes %}{{ size.size_name }}: {{ size.before|qty }} → {{ size.after|qty }}{{ "; " if not loop.last }}{% endfor %}</p>
+{% endif %}
+<article>
+  <header>Розміри й операції</header>
+  {# One form for the four buttons: the pressed button sends its operation (OperationPanel.razor). #}
+  <form hx-post="/app/production/models/{{ model.id }}/operations" hx-target="#model">
+  <div class="overflow-auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Розмір</th><th class="num">Частка, %</th>
+        {% if model.type != "ready_made" %}<th class="num">Розкроєно</th>{% endif %}
+        <th class="num">Пошито</th><th>Кількість</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for size in model.sizes %}
+      <tr>
+        <td>{{ size.name }}</td>
+        <td class="num">{{ size.percent|qty }}</td>
+        {% if model.type != "ready_made" %}<td class="num">{{ size.cut_stock|qty }}</td>{% endif %}
+        <td class="num">{{ size.sewn_stock|qty }}</td>
+        <td>
+          <input type="hidden" name="size_id" value="{{ size.id }}">
+          <input name="quantity" inputmode="decimal" aria-label="Кількість, {{ size.name }}">
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">У моделі ще немає розмірів.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="filters">
+    <input name="comment" maxlength="200" placeholder="Коментар (необов'язково)" aria-label="Коментар">
+    {% if warehouses %}<select name="warehouse_id" aria-label="Склад для пошитого">{{ place_options(warehouses) }}</select>{% endif %}
+  </div>
+  <div class="title-row">
+    {% for code, label in operations %}
+    <button type="submit" name="operation" value="{{ code }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+  </form>
+</article>
+
+{% if model.components or model.sewn_bom %}
+<article>
+  <header>Специфікації</header>
+  {% for component in model.components %}
+  <p><strong>{{ component.name }}</strong>:
+    {% for line in component.bom %}{{ line.item_name }} {{ line.qty_per_unit|qty }} {{ line.unit }}{{ ", " if not loop.last }}{% else %}без розхідників{% endfor %}</p>
+  {% endfor %}
+  {% if model.sewn_bom %}
+  <p><strong>Пошиття</strong>:
+    {% for line in model.sewn_bom %}{{ line.component_name or line.item_name }} {{ line.qty_per_unit|qty }}{{ " " ~ line.unit if line.unit }}{{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+</article>
+{% endif %}
+
+<article>
+  <header>Де лежить пошите</header>
+  <table>
+    <tbody>
+    {% for size in places %}
+      <tr><td>{{ size.size_name }}</td><td>{% for place in size.places %}{{ place.name }}: {{ place.quantity|qty }}{{ "; " if not loop.last }}{% endfor %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if warehouses and model.sizes %}
+  <form hx-post="/app/production/models/{{ model.id }}/transfers" hx-target="#model" class="filters">
+    <select name="size_id" aria-label="Розмір">
+      {% for size in model.sizes %}<option value="{{ size.id }}">{{ size.name }}</option>{% endfor %}
+    </select>
+    <select name="from_warehouse_id" aria-label="Звідки">{{ place_options(warehouses) }}</select>
+    <select name="to_warehouse_id" aria-label="Куди">{{ place_options(warehouses, warehouses[0].id) }}</select>
+    <input name="quantity" inputmode="decimal" placeholder="Кількість" aria-label="Кількість" required>
+    <input name="comment" maxlength="200" placeholder="Коментар" aria-label="Коментар">
+    <button type="submit" class="outline">Перемістити</button>
+  </form>
+  {% endif %}
+  {% if transfers %}
+  <h3>Переміщення</h3>
+  <table class="striped">
+    <thead><tr><th>Коли</th><th>Розмір</th><th>Звідки</th><th>Куди</th><th class="num">Кількість</th><th>Хто</th></tr></thead>
+    <tbody>
+    {% for move in transfers %}
+      <tr>
+        <td>{{ move.created_at|when }}</td><td>{{ move.size_name }}</td><td>{{ move.from_ }}</td><td>{{ move.to }}</td>
+        <td class="num">{{ move.quantity|qty }}</td><td>{{ move.username }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</article>
+
+<article>
+  <header>Журнал крою й пошиву <small><a href="/app/production/log">увесь журнал</a></small></header>
+  {% with show_model=False %}{% include "production/_log.html" %}{% endwith %}
+</article>

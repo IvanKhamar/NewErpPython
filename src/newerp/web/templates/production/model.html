@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ model.name }}{% endblock %}
+{% block content %}
+<p><a href="/app/production">← Моделі</a></p>
+<div class="title-row">
+  <h1>{{ model.name }} <small>{{ type_name }}</small></h1>
+  <span>
+    <a href="/app/production/models/{{ model.id }}/edit" role="button" class="outline">Змінити</a>
+    <button class="secondary outline" hx-post="/app/production/models/{{ model.id }}/deactivate"
+            hx-confirm="Приховати модель? Вона зникне зі списку й плану.">Приховати</button>
+  </span>
+</div>
+<div id="model">{% include "production/_model.html" %}</div>
+{% endblock %}

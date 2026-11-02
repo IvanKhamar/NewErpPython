@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Моделі{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Моделі</h1>
+  <a href="/app/production/models/new" role="button">Нова модель</a>
+</div>
+<form class="filters" action="/app/production" method="get"
+      hx-get="/app/production" hx-target="#models" hx-push-url="true" hx-trigger="change">
+  <select name="type" aria-label="Тип">
+    <option value="">Усі типи</option>
+    {% for code, name in types.items() %}
+    <option value="{{ code }}"{% if code == type %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <label><input type="checkbox" role="switch" name="low" value="1"{% if low %} checked{% endif %}> Лише ті, що треба шити</label>
+</form>
+<div id="models">{% include "production/_models.html" %}</div>
+{% endblock %}

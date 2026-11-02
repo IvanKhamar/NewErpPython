@@ -65,6 +65,10 @@ MENU = (
     MenuLink("Що дозамовити", "/app/stock/reorder", Policies.STOCK),
     MenuLink("Замовлення постачальникам", "/app/stock/purchase-orders", Policies.STOCK),
     MenuLink("Постачальники", "/app/stock/suppliers", Policies.STOCK),
+    MenuLink("Моделі", "/app/production", Policies.STOCK),
+    MenuLink("Пошите за складами", "/app/production/by-warehouse", Policies.STOCK),
+    MenuLink("План пошиву", "/app/production/plan", Policies.STOCK),
+    MenuLink("Журнал крою й пошиву", "/app/production/log", Policies.STOCK),
 )
 
 

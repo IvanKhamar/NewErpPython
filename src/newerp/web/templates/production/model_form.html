@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Змінити модель" if production_id else "Нова модель" }}{% endblock %}
+{% block content %}
+{% if production_id %}<p><a href="/app/production/models/{{ production_id }}">← Модель</a></p>
+{% else %}<p><a href="/app/production">← Моделі</a></p>{% endif %}
+<h1>{{ self.title() }}</h1>
+{{ messages(error) }}
+<form method="post">
+  <label>Назва <input name="name" value="{{ values.name or '' }}" maxlength="150" required></label>
+  <div class="grid">
+    <label>Тип
+      <select name="type">
+        {% for code, name in types.items() %}
+        <option value="{{ code }}"{% if code == values.type %} selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Мінімум пошитих <input name="min_total" value="{{ values.min_total or '' }}" inputmode="numeric"></label>
+    <label>Порядок <input name="sort_order" value="{{ values.sort_order or '' }}" inputmode="numeric"></label>
+  </div>
+  <table>
+    <thead><tr><th>Розмір</th><th>Частка, %</th></tr></thead>
+    <tbody>
+    {% for name, percent in sizes %}
+      <tr>
+        <td><input name="size_name" value="{{ name }}" maxlength="32" aria-label="Розмір"></td>
+        <td><input name="size_percent" value="{{ percent }}" inputmode="decimal" aria-label="Частка, %"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><small>Порожні рядки не зберігаються. Частка — яку долю крою дає розмір.</small></p>
+  <button type="submit">{{ "Зберегти" if production_id else "Створити" }}</button>
+</form>
+{% endblock %}

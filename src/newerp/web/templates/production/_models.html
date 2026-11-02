@@ -1,0 +1,24 @@
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>Модель</th><th>Тип</th><th class="num">Розкроєно</th><th class="num">Пошито</th><th class="num">Мінімум</th>
+      <th class="num">Бракує</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for model in models %}
+    <tr>
+      <td><a href="/app/production/models/{{ model.id }}">{{ model.name }}</a></td>
+      <td>{{ types.get(model.type, model.type) }}</td>
+      <td class="num">{{ model.total_cut|qty }}</td>
+      <td class="num">{{ model.total_sewn|qty }}</td>
+      <td class="num">{{ model.min_total }}</td>
+      <td class="num">{% if model.deficit %}<span class="chip few">{{ model.deficit|qty }}</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

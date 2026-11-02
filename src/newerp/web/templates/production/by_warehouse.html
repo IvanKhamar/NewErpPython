@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Пошите за складами{% endblock %}
+{% block content %}
+<h1>Пошите за складами</h1>
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>Модель</th><th>Розмір</th><th class="num">Усього</th>
+      {% for place in report.places %}<th class="num">{{ place.name }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in report.rows %}
+    <tr>
+      <td><a href="/app/production/models/{{ row.production_id }}">{{ row.model_name }}</a></td>
+      <td>{{ row.size_name }}</td>
+      <td class="num">{{ row.total|qty }}</td>
+      {% for quantity in row.quantities %}<td class="num">{{ quantity|qty if quantity else "" }}</td>{% endfor %}
+    </tr>
+  {% else %}
+    <tr><td colspan="{{ 3 + report.places|length }}">Пошитих виробів ще немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
