@@ -1,0 +1,24 @@
+{% from "_macros.html" import messages %}
+<header>Оплата</header>
+{{ messages(error) }}
+{% if payments %}
+<table>
+  <tbody>
+  {% for payment in payments %}
+    <tr><td>{{ payment.timestamp|when }}</td><td>{{ payment.payer }}</td><td class="num">{{ payment.amount|money }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>На рахунок за це замовлення ще нічого не надходило.</p>
+{% endif %}
+<p>LiqPay: <strong>{{ status.label }}</strong>{% if status.amount %} · {{ status.amount|money }}{% endif %}
+  {%- if status.paid_at %} · {{ status.paid_at|when }}{% endif %}{% if status.is_test %} <small>(тестовий режим)</small>{% endif %}</p>
+{% if link %}
+<p class="ok">Посилання на {{ link.amount|money }} {{ link.currency }}{% if link.is_test %} (тестове){% endif %}:</p>
+<input readonly value="{{ link.url }}" aria-label="Посилання на оплату">
+{% endif %}
+<form hx-post="/app/payments/orders/{{ order_id }}/liqpay-link" hx-target="#order-payments" role="group">
+  <input name="amount" inputmode="decimal" placeholder="Сума (порожньо — залишок до оплати)" aria-label="Сума">
+  <button type="submit" class="outline">Посилання LiqPay</button>
+</form>

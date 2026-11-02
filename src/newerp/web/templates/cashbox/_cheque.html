@@ -1,0 +1,16 @@
+{% from "_macros.html" import messages %}
+<header>Фіскальний чек</header>
+{{ messages(error, (), saved) }}
+{% if cheque %}
+<p>{{ cheque.sum|money }} · {{ cheque.cashier or "" }} · {{ cheque.date_added|when }}<br>
+  {% if cheque.is_fiscalized %}Фіскалізовано{% if (cheque.receipt_url or '').startswith('https://') %}: <a href="{{ cheque.receipt_url }}" target="_blank" rel="noopener">чек</a>{% endif %}
+  {% else %}<span class="warning">Checkbox не прийняв чек — повторіть у <a href="/app/cashbox">касі</a>.</span>{% endif %}</p>
+{% else %}
+<form hx-post="/app/cashbox/orders/{{ order_id }}/cheque" hx-target="#cheque" role="group">
+  <select name="cashier_id" aria-label="Касир">
+    <option value="">Касир за кодом оплати</option>
+    {% for cashier in cashiers %}<option value="{{ cashier.id }}">{{ cashier.name }}</option>{% endfor %}
+  </select>
+  <button type="submit">Видати чек</button>
+</form>
+{% endif %}

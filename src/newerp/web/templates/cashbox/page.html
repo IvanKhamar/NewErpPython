@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Каса{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Каса</h1>
+  {% if can_setup %}<a href="/app/cashbox/cashiers/new" role="button" class="outline">Новий касир</a>{% endif %}
+</div>
+{% if setup.fake_mode %}<p class="warning">Ключів Checkbox немає: працює тестова заглушка, чеки не фіскальні.</p>{% endif %}
+<div id="cashbox">{% include "cashbox/_main.html" %}</div>
+{% endblock %}

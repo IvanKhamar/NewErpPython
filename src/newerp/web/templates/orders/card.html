@@ -31,7 +31,15 @@
   </div>
 </article>
 <article id="status">{% include "orders/_status.html" %}</article>
-{# The waybill comes from the delivery pages once the card is shown. #}
+{# The payments, cheque and waybill sections come from their own pages once the card is shown. #}
+<div class="grid">
+  <article id="order-payments" hx-get="/app/payments/orders/{{ order.id }}" hx-trigger="load">
+    <header>Оплата</header><p aria-busy="true">Завантаження…</p>
+  </article>
+  <article id="cheque" hx-get="/app/cashbox/orders/{{ order.id }}/cheque" hx-trigger="load">
+    <header>Фіскальний чек</header><p aria-busy="true">Завантаження…</p>
+  </article>
+</div>
 <article id="shipment" hx-get="/app/delivery/orders/{{ order.id }}/shipment" hx-trigger="load">
   <header>Доставка</header><p aria-busy="true">Завантаження…</p>
 </article>

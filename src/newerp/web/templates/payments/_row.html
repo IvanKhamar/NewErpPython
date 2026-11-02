@@ -1,0 +1,22 @@
+{% set base = "/app/payments/%d" % payment.id %}
+<tbody id="payment-{{ payment.id }}">
+  <tr>
+    <td>{{ payment.timestamp|when }}</td>
+    <td>{{ payment.payer }}<br><small>{{ payment.card }}</small></td>
+    <td>{{ payment.description }}</td>
+    <td class="num">{{ payment.amount|money }}</td>
+    <td>{% if payment.order_id %}<a href="/app/orders/{{ payment.order_id }}">№{{ payment.order_id }}</a>
+      <small>{{ payment.order_customer or "" }}</small>{% else %}—{% endif %}</td>
+    <td class="actions">
+      {% if payment.order_id %}
+      <button class="outline" hx-post="{{ base }}/order" hx-vals='{"order_id": ""}'
+              hx-target="#payment-{{ payment.id }}" hx-swap="outerHTML">Відв'язати</button>
+      {% else %}
+      <button hx-get="{{ base }}/suggestions" hx-target="#match-{{ payment.id }}">Знайти замовлення</button>
+      {% endif %}
+      <button class="secondary outline" hx-post="{{ base }}/visible" hx-vals='{"visible": "{{ "0" if payment.is_visible else "1" }}"}'
+              hx-target="#payment-{{ payment.id }}" hx-swap="outerHTML">{{ "Приховати" if payment.is_visible else "Повернути" }}</button>
+    </td>
+  </tr>
+  <tr><td colspan="6" id="match-{{ payment.id }}" class="match"></td></tr>
+</tbody>

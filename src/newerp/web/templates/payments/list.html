@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Надходження на рахунок{% endblock %}
+{% block content %}
+<h1>Надходження на рахунок</h1>
+<form class="filters" hx-post="/app/payments/import" hx-target="#import-result">
+  <input type="date" name="since" aria-label="Виписка з">
+  <input type="date" name="until" aria-label="Виписка по">
+  <button type="submit" class="outline">Завантажити виписку</button>
+</form>
+<p><small>Без дат — за вчора й сьогодні.</small></p>
+<div id="import-result"></div>
+<form class="filters" action="/app/payments" method="get"
+      hx-get="/app/payments" hx-target="#payments" hx-push-url="true" hx-trigger="change, submit">
+  <select name="linked" aria-label="Прив'язка">
+    <option value="">Усі</option>
+    <option value="no"{% if values.linked == "no" %} selected{% endif %}>Без замовлення</option>
+    <option value="yes"{% if values.linked == "yes" %} selected{% endif %}>Прив'язані</option>
+  </select>
+  <input type="date" name="since" value="{{ values.since }}" aria-label="З">
+  <input type="date" name="until" value="{{ values.until }}" aria-label="По">
+  <input type="search" name="search" value="{{ values.search }}" placeholder="Платник, призначення" aria-label="Пошук">
+  <label><input type="checkbox" role="switch" name="hidden" value="1"{% if values.hidden %} checked{% endif %}> Приховані</label>
+</form>
+<div id="payments">{% include "payments/_table.html" %}</div>
+{% endblock %}

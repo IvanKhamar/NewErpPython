@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Змінити касира" if cashier_id else "Новий касир" }}{% endblock %}
+{% block content %}
+<p><a href="/app/cashbox">← Каса</a></p>
+<h1>{{ self.title() }}</h1>
+{{ messages(error) }}
+<form method="post" action="/app/cashbox/cashiers/save">
+  <input type="hidden" name="cashier_id" value="{{ cashier_id or '' }}">
+  <div class="grid">
+    <label>Ім'я <input name="name" value="{{ values.name or '' }}" maxlength="100" required></label>
+    <label>Опис <input name="description" value="{{ values.description or '' }}" maxlength="255"></label>
+  </div>
+  <div class="grid">
+    <label>Код оплати <input name="payment_code" value="{{ values.payment_code or '' }}" maxlength="32"
+                             placeholder="cod, liqpay…"></label>
+    <label>Автозакриття зміни <input type="time" name="auto_close_time" value="{{ values.auto_close_time or '' }}"></label>
+  </div>
+  <div class="grid">
+    <label>Склад
+      <select name="warehouse_id">
+        <option value="">—</option>
+        {% for entry in setup.warehouses %}
+        <option value="{{ entry.id }}"{% if entry.id|string == values.warehouse_id %} selected{% endif %}>{{ entry.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Реквізити
+      <select name="requisites_id">
+        <option value="">—</option>
+        {% for entry in setup.requisites %}
+        <option value="{{ entry.id }}"{% if entry.id|string == values.requisites_id %} selected{% endif %}>{{ entry.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label><input type="checkbox" name="is_active" value="1"{% if values.is_active %} checked{% endif %}> Працює</label>
+  <p><small>Ключі Checkbox касира задаються в налаштуваннях сервера, не тут.</small></p>
+  <button type="submit">Зберегти</button>
+</form>
+{% endblock %}

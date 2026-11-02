@@ -1,0 +1,14 @@
+{% from "_macros.html" import pager %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr><th>Коли</th><th>Платник</th><th>Призначення</th><th class="num">Сума</th><th>Замовлення</th><th></th></tr>
+  </thead>
+  {# One <tbody> per payment (a table may have many): its row and the matching panel are swapped together. #}
+  {% for payment in result.items %}{% include "payments/_row.html" %}
+  {% else %}
+  <tbody><tr><td colspan="6">Надходжень немає.</td></tr></tbody>
+  {% endfor %}
+</table>
+</div>
+{{ pager("/app/payments", "#payments", result, pages, previous_page, next_page, "надходжень") }}

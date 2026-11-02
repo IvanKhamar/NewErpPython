@@ -1,0 +1,131 @@
+{% from "_macros.html" import messages %}
+{# Everything below the title is one fragment: each button redraws it with the result. #}
+{{ messages(error, (), saved) }}
+{% if report_text %}<article><header>X-звіт</header><pre>{{ report_text }}</pre></article>{% endif %}
+<article>
+  <header>Касири</header>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Касир</th><th>Склад</th><th>Реквізити</th><th>Код оплати</th><th>Автозакриття</th><th>Зміна</th><th></th></tr></thead>
+    <tbody>
+    {% for cashier in setup.cashiers %}
+      <tr>
+        <td>{% if can_setup %}<a href="/app/cashbox/cashiers/{{ cashier.id }}/edit">{{ cashier.name }}</a>{% else %}{{ cashier.name }}{% endif %}
+          {% if not cashier.is_active %}<small>(вимкнений)</small>{% endif %}</td>
+        <td>{{ cashier.warehouse or "" }}</td>
+        <td>{{ cashier.requisites or "" }}</td>
+        <td>{{ cashier.payment_code }}</td>
+        <td>{{ "%02d:%02d" % (cashier.auto_close_time.hour, cashier.auto_close_time.minute) if cashier.auto_close_time else "" }}</td>
+        <td>{% if cashier.open_shift_id %}відкрита з {{ cashier.open_shift_start|when }}{% else %}закрита{% endif %}</td>
+        <td class="actions">
+          {% set base = "/app/cashbox/cashiers/%d" % cashier.id %}
+          {% if cashier.open_shift_id %}
+          <button class="outline" hx-post="{{ base }}/x-report" hx-target="#cashbox">X-звіт</button>
+          <button hx-post="{{ base }}/close" hx-target="#cashbox" hx-confirm="Закрити зміну й зняти Z-звіт?">Закрити зміну</button>
+          {% elif cashier.is_active and cashier.can_fiscalize %}
+          <button hx-post="{{ base }}/open" hx-target="#cashbox">Відкрити зміну</button>
+          {% elif not cashier.can_fiscalize %}<small>немає ключа Checkbox</small>{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">Касирів ще немає.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>
+
+<article>
+  <header>Чеки</header>
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead><tr><th>Коли</th><th>Замовлення</th><th>Клієнт</th><th>Касир</th><th class="num">Сума</th><th>Фіскальний</th><th></th></tr></thead>
+    <tbody>
+    {% for cheque in cheques.items %}
+      <tr>
+        <td>{{ cheque.date_added|when }}</td>
+        <td><a href="/app/orders/{{ cheque.order_id }}">№{{ cheque.order_id }}</a></td>
+        <td>{{ cheque.customer or "" }}</td>
+        <td>{{ cheque.cashier or "" }}</td>
+        <td class="num">{{ cheque.sum|money }}</td>
+        <td>{% if cheque.is_fiscalized %}{% if (cheque.receipt_url or '').startswith('https://') %}<a href="{{ cheque.receipt_url }}" target="_blank" rel="noopener">так</a>{% else %}так{% endif %}
+          {% else %}<span class="chip none">ні</span>{% endif %}</td>
+        <td class="actions">
+          {% if not cheque.is_fiscalized %}
+          <button class="outline" hx-post="/app/cashbox/cheques/{{ cheque.id }}/fiscalize" hx-target="#cashbox">Фіскалізувати</button>
+          <button class="secondary outline" hx-post="/app/cashbox/cheques/{{ cheque.id }}/delete" hx-target="#cashbox"
+                  hx-confirm="Видалити нефіскальний чек?">Видалити</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">Чеків ще немає.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>
+
+<div class="grid">
+  <article>
+    <header>Зміни</header>
+    <table>
+      <thead><tr><th>Касир</th><th>Відкрита</th><th>Закрита</th><th class="num">Чеків</th><th class="num">Сума</th><th></th></tr></thead>
+      <tbody>
+      {% for shift in shifts %}
+        <tr>
+          <td>{{ shift.cashier }}</td><td>{{ shift.date_start|when }}</td><td>{{ shift.date_end|when if shift.date_end else "" }}</td>
+          <td class="num">{{ shift.cheques }}</td><td class="num">{{ shift.cheques_sum|money }}</td>
+          <td>{% if not shift.date_end %}<button class="outline" hx-post="/app/cashbox/shifts/{{ shift.id }}/sync" hx-target="#cashbox">Звірити</button>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6">Змін ще не було.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  <article>
+    <header>Z-звіти</header>
+    <table>
+      <thead><tr><th>Коли</th><th>Касир</th><th>Хто закрив</th><th></th></tr></thead>
+      <tbody>
+      {% for report in reports %}
+        <tr>
+          <td>{{ report.date_added|when }}</td><td>{{ report.cashier }}</td><td>{{ report.closed_by or "" }}</td>
+          <td><a href="/app/cashbox/reports/{{ report.id }}/text" hx-get="/app/cashbox/reports/{{ report.id }}/text"
+                 hx-target="#report-{{ report.id }}">текст</a></td>
+        </tr>
+        <tr><td colspan="4" id="report-{{ report.id }}" class="report-text"></td></tr>
+      {% else %}
+        <tr><td colspan="4">Z-звітів ще немає.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</div>
+
+{% if can_setup %}
+<div class="grid">
+  {% for kind, title, entries in (("warehouses", "Склади (точки продажу)", setup.warehouses), ("requisites", "Реквізити (ФОП)", setup.requisites)) %}
+  <article>
+    <header>{{ title }}</header>
+    <table>
+      <tbody>
+      {% for entry in entries %}
+        <tr>
+          <td>{{ entry.name }}<br><small>{{ entry.description }}</small></td>
+          <td><button class="secondary outline" hx-post="/app/cashbox/directory/{{ kind }}/{{ entry.id }}/delete"
+                      hx-target="#cashbox" hx-confirm="Видалити «{{ entry.name }}»?">✕</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <form hx-post="/app/cashbox/directory/{{ kind }}" hx-target="#cashbox">
+      <input name="name" maxlength="100" placeholder="Назва" aria-label="Назва" required>
+      <input name="description" maxlength="255" placeholder="Опис чи адреса" aria-label="Опис">
+      <button type="submit" class="outline">Додати</button>
+    </form>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}

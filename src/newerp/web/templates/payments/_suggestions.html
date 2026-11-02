@@ -1,0 +1,25 @@
+{# Candidates for one payment (MatchPaymentDialog); a button links the payment and redraws its row. #}
+{% set base = "/app/payments/%d" % payment_id %}
+<form hx-get="{{ base }}/suggestions" hx-target="#match-{{ payment_id }}" role="group">
+  <input type="search" name="customer" value="{{ customer }}" placeholder="Прізвище, телефон чи № замовлення"
+         aria-label="Пошук замовлення">
+  <button type="submit" class="outline">Шукати</button>
+</form>
+<table>
+  <thead><tr><th>Замовлення</th><th>Клієнт</th><th class="num">Сума</th><th>Що збіглося</th><th></th></tr></thead>
+  <tbody>
+  {% for suggestion, reasons in rows %}
+    <tr>
+      <td><a href="/app/orders/{{ suggestion.order_id }}">№{{ suggestion.order_id }}</a><br>
+        <small>{{ suggestion.date_added|when }} · {{ suggestion.status }}</small></td>
+      <td>{{ suggestion.customer }}<br><small>{{ suggestion.telephone }}</small></td>
+      <td class="num">{{ suggestion.total|money }}{% if suggestion.prepayment %}<br><small>завдаток {{ suggestion.prepayment|money }}</small>{% endif %}</td>
+      <td>{{ reasons|join(", ") }}{% if suggestion.linked_payment_id %}<br><small class="warning">уже має платіж</small>{% endif %}</td>
+      <td><button hx-post="{{ base }}/order" hx-vals='{"order_id": "{{ suggestion.order_id }}"}'
+                  hx-target="#payment-{{ payment_id }}" hx-swap="outerHTML">Прив'язати</button></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Схожих замовлень не знайдено. Пошукайте за прізвищем чи номером.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
