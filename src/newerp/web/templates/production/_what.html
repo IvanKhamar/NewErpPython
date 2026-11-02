@@ -1,0 +1,11 @@
+<select name="what" aria-label="Деталь або розхідник">
+  <option value="">{{ "— прибрати рядок —" if what else "+ деталь чи розхідник…" }}</option>
+  {% if model.components %}
+  <optgroup label="Деталі крою">
+    {% for component in model.components %}<option value="c:{{ component.id }}"{% if what == "c:%d" % component.id %} selected{% endif %}>{{ component.name }}</option>{% endfor %}
+  </optgroup>
+  {% endif %}
+  <optgroup label="Розхідники">
+    {% for item in items %}<option value="i:{{ item.id }}"{% if what == "i:%d" % item.id %} selected{% endif %}>{{ item.name }} ({{ item.unit }})</option>{% endfor %}
+  </optgroup>
+</select>

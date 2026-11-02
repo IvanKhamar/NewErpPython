@@ -1,0 +1,43 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<form hx-post="/app/production/models/{{ model.id }}/links" hx-target="#links">
+  <label>Товари напряму (номери через кому)
+    <input name="product_ids" value="{{ model.product_ids|join(', ') }}" placeholder="101, 102">
+  </label>
+  <h3>Через категорії</h3>
+  <table>
+    <thead><tr><th>Номер категорії</th><th>Назва містить</th><th>Збіг</th></tr></thead>
+    <tbody>
+    {% for link in model.categories %}
+      <tr>
+        <td><input name="category_id" value="{{ link.category_id }}" inputmode="numeric" aria-label="Номер категорії"></td>
+        <td><input name="name_filter" value="{{ link.name_filter }}" placeholder="порожньо — уся категорія" aria-label="Назва містить"></td>
+        <td><select name="match_exact" aria-label="Збіг">
+          <option value="0">містить</option><option value="1"{% if link.match_exact %} selected{% endif %}>точно</option>
+        </select></td>
+      </tr>
+    {% endfor %}
+    {% for _ in empty_rows %}
+      <tr>
+        <td><input name="category_id" inputmode="numeric" placeholder="+ категорія" aria-label="Номер категорії"></td>
+        <td><input name="name_filter" placeholder="порожньо — уся категорія" aria-label="Назва містить"></td>
+        <td><select name="match_exact" aria-label="Збіг"><option value="0">містить</option><option value="1">точно</option></select></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><small>Порожній номер категорії — рядок не зберігається.</small></p>
+  <h3>Розміри → опція «Розмір»</h3>
+  <table>
+    <tbody>
+    {% for size in model.sizes %}
+      <tr>
+        <td>{{ size.name }}<input type="hidden" name="size_id" value="{{ size.id }}"></td>
+        <td><input name="option_value_id" value="{{ size.option_value_id or '' }}" inputmode="numeric"
+                   placeholder="option_value_id" aria-label="Опція розміру {{ size.name }}"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Зберегти</button>
+</form>

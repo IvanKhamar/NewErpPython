@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Інвентаризація · {{ model.name }}{% endblock %}
+{% block content %}
+<p><a href="/app/production/models/{{ model.id }}">← {{ model.name }}</a></p>
+<h1>Інвентаризація моделі: {{ model.name }}</h1>
+<p>Впишіть пораховане (не різницю). Порожнє поле — не рахували, воно не зміниться. На іншому складі рахують лише
+  пошите: крій і деталі лежать на основному.</p>
+<div id="stocktaking">{% include "production/_stocktaking.html" %}</div>
+{% endblock %}

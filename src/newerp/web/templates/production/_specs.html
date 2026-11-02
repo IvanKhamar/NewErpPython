@@ -1,0 +1,81 @@
+{% from "_macros.html" import messages %}
+{% set base = "/app/production/models/%d/specs" % model.id %}
+{% macro size_select(selected) -%}
+<select name="size_id" aria-label="Розмір">
+  <option value="">Усі розміри</option>
+  {% for size in model.sizes %}<option value="{{ size.id }}"{% if size.id == selected %} selected{% endif %}>{{ size.name }}</option>{% endfor %}
+</select>
+{%- endmacro %}
+{% macro item_options(selected) -%}
+{% for item in items %}<option value="{{ item.id }}"{% if item.id == selected %} selected{% endif %}>{{ item.name }} ({{ item.unit }})</option>{% endfor %}
+{%- endmacro %}
+{{ messages(error, (), saved) }}
+
+{% if model.type != "ready_made" %}
+<h2>Деталі крою</h2>
+{% for component in model.components %}
+<article>
+  <header class="title-row">
+    <form hx-post="{{ base }}/rename-component" hx-target="#specs" role="group">
+      <input type="hidden" name="component_id" value="{{ component.id }}">
+      <input name="name" value="{{ component.name }}" maxlength="64" aria-label="Назва деталі">
+      <input name="sort_order" value="{{ component.sort_order }}" inputmode="numeric" aria-label="Порядок" class="short">
+      <button type="submit" class="outline">Перейменувати</button>
+    </form>
+    <button class="secondary outline" hx-post="{{ base }}/delete-component" hx-vals='{{ {"component_id": component.id}|tojson }}'
+            hx-target="#specs" hx-confirm="Видалити деталь «{{ component.name }}»?">Видалити</button>
+  </header>
+  <p><small>Розкроєно в запасі:
+    {% for size in model.sizes %}{{ size.name }} {{ (component.stock.get(size.id) or 0)|qty }}{{ ", " if not loop.last }}{% endfor %}</small></p>
+  <form hx-post="{{ base }}/component-bom" hx-target="#specs">
+    <input type="hidden" name="component_id" value="{{ component.id }}">
+    <table>
+      <thead><tr><th>Розмір</th><th>Розхідник</th><th>На одну деталь</th></tr></thead>
+      <tbody>
+      {% for line in component.bom %}
+        <tr><td>{{ size_select(line.size_id) }}</td>
+          <td><select name="item_id" aria-label="Розхідник"><option value="">— прибрати рядок —</option>{{ item_options(line.item_id) }}</select></td>
+          <td><input name="qty" value="{{ line.qty_per_unit|qty }}" inputmode="decimal" aria-label="Кількість"></td></tr>
+      {% endfor %}
+      {% for _ in empty_rows %}
+        <tr><td>{{ size_select(None) }}</td>
+          <td><select name="item_id" aria-label="Розхідник"><option value="">+ розхідник…</option>{{ item_options(None) }}</select></td>
+          <td><input name="qty" inputmode="decimal" aria-label="Кількість"></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if not component.bom %}<p class="warning">Специфікацію крою не задано — тканина при крої не списується.</p>{% endif %}
+    <button type="submit" class="outline">Зберегти специфікацію крою</button>
+  </form>
+</article>
+{% endfor %}
+<form hx-post="{{ base }}/add-component" hx-target="#specs" role="group">
+  <input name="name" maxlength="64" placeholder="Нова деталь (перед, спинка, рукав…)" aria-label="Нова деталь" required>
+  <button type="submit">Додати деталь</button>
+</form>
+{% endif %}
+
+<h2>Специфікація пошиву</h2>
+<p>На один пошитий виріб: деталі крою із запасу й розхідники напряму (нитки, ґудзики, бірки).</p>
+<form hx-post="{{ base }}/sewn-bom" hx-target="#specs">
+  <table>
+    <thead><tr><th>Розмір</th><th>Деталь або розхідник</th><th>На один виріб</th></tr></thead>
+    <tbody>
+    {% for line in model.sewn_bom %}
+      {% with what = ("c:%d" % line.component_id) if line.component_id else ("i:%d" % line.item_id) %}
+      <tr><td>{{ size_select(line.size_id) }}</td>
+        <td>{% include "production/_what.html" %}</td>
+        <td><input name="qty" value="{{ line.qty_per_unit|qty }}" inputmode="decimal" aria-label="Кількість"></td></tr>
+      {% endwith %}
+    {% endfor %}
+    {% for _ in empty_rows %}
+      {% with what = "" %}
+      <tr><td>{{ size_select(None) }}</td>
+        <td>{% include "production/_what.html" %}</td>
+        <td><input name="qty" inputmode="decimal" aria-label="Кількість"></td></tr>
+      {% endwith %}
+    {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit" class="outline">Зберегти специфікацію пошиву</button>
+</form>

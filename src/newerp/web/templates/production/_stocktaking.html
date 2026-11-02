@@ -1,0 +1,50 @@
+{% from "_macros.html" import messages, place_options %}
+{{ messages(error) }}
+{% if result %}
+<p class="ok" role="status">Записано.
+  {% for change in result.cut %}Крій {{ change.size_name }}: {{ change.before|qty }} → {{ change.after|qty }}. {% endfor %}
+  {% for change in result.sewn %}Пошите {{ change.size_name }}: {{ change.before|qty }} → {{ change.after|qty }}. {% endfor %}
+  {% if result.components %}Змінено запасів деталей: {{ result.components }}.{% endif %}
+  {% if not result.cut and not result.sewn and not result.components %}Усе зійшлося, змін немає.{% endif %}</p>
+{% endif %}
+<form hx-post="/app/production/models/{{ model.id }}/stocktaking" hx-target="#stocktaking">
+  {% if warehouses %}<label>Де рахуємо <select name="warehouse_id">{{ place_options(warehouses) }}</select></label>{% endif %}
+  <table>
+    <thead><tr><th>Розмір</th>{% if model.type != "ready_made" %}<th>Крій: облік → пораховано</th>{% endif %}<th>Пошите: облік → пораховано</th></tr></thead>
+    <tbody>
+    {% for size in model.sizes %}
+      <tr>
+        <td>{{ size.name }}<input type="hidden" name="size_id" value="{{ size.id }}"></td>
+        {% if model.type != "ready_made" %}
+        <td>{{ size.cut_stock|qty }} → <input name="cut" inputmode="decimal" aria-label="Крій {{ size.name }}" class="short"></td>
+        {% else %}<input type="hidden" name="cut" value="">{% endif %}
+        <td>{{ size.sewn_stock|qty }} <small>(усього)</small> → <input name="sewn" inputmode="decimal" aria-label="Пошите {{ size.name }}" class="short"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if model.components %}
+  <h3>Запас розкроєних деталей</h3>
+  <table>
+    <thead><tr><th>Деталь</th>{% for size in model.sizes %}<th>{{ size.name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for component in model.components %}
+      <tr>
+        <td>{{ component.name }}</td>
+        {% for size in model.sizes %}
+        <td>{{ (component.stock.get(size.id) or 0)|qty }} →
+          <input type="hidden" name="part_component_id" value="{{ component.id }}"><input type="hidden" name="part_size_id" value="{{ size.id }}">
+          <input name="part_actual" inputmode="decimal" aria-label="{{ component.name }} {{ size.name }}" class="short"></td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <input name="comment" maxlength="200" placeholder="Примітка (необов'язково)" aria-label="Примітка">
+  <button type="submit">Записати пораховане</button>
+</form>
+{% if places %}
+<p><small>Де лежить пошите:
+  {% for size in places %}{{ size.size_name }} — {% for place in size.places %}{{ place.name }} {{ place.quantity|qty }}{{ ", " if not loop.last }}{% endfor %}{{ "; " if not loop.last }}{% endfor %}</small></p>
+{% endif %}

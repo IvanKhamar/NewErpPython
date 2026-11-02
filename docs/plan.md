@@ -41,7 +41,7 @@ Compared with the .NET and Java versions:
 | 21 | Demo data: port of `DevDataSeeder` (Faker), logins `admin` / `sklad` / `manager1…5` | .NET `tools/NewErp.DevSeed` | done |
 | 22a | Web interface at `/app/` (Jinja2 + HTMX): login, menu by role, own password, dashboard, orders (list, card with status and manager, new order) | .NET Blazor `/app/`, Java Vaadin `newerp-web` | done |
 | 22b | Web: warehouse (items, stock by warehouse, stocktaking, reorder, suppliers, purchase orders) and production (models with the cut and sewn operations, sewn by warehouse, sewing plan, log) | the same | done |
-| 22b+ | Web: the production specifications (BOMs), product links and the model stocktaking (now only through the API) | the same | planned |
+| 22b+ | Web: the production specifications (BOMs), product links and the model stocktaking | the same | done |
 | 22c | Web: delivery (reminders, the waybill in the order card), cashbox, bank payments with matching, LiqPay links, returns, customers | the same | done |
 | 22c+ | Web: waybills abroad (Nova Post International), now only through the API | the same | planned |
 | 22d | Web: catalog and sort, pre-orders, marketing (birthdays, contact export, gift vouchers), partners, competitors, reports, users and bonuses | the same | done |

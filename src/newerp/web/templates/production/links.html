@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Товари й розміри · {{ model.name }}{% endblock %}
+{% block content %}
+<p><a href="/app/production/models/{{ model.id }}">← {{ model.name }}</a></p>
+<h1>Товари й розміри: {{ model.name }}</h1>
+<p>Які товари магазину шиються з цієї моделі (напряму або через категорію з фільтром назви) і якій опції «Розмір»
+  відповідає кожен розмір. Після збереження пошиті залишки передаються на вітрину.</p>
+<div id="links">{% include "production/_links.html" %}</div>
+{% endblock %}

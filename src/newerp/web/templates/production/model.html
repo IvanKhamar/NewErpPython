@@ -6,6 +6,9 @@
   <h1>{{ model.name }} <small>{{ type_name }}</small></h1>
   <span>
     <a href="/app/production/models/{{ model.id }}/edit" role="button" class="outline">Змінити</a>
+    <a href="/app/production/models/{{ model.id }}/specs" role="button" class="outline">Специфікації</a>
+    <a href="/app/production/models/{{ model.id }}/links" role="button" class="outline">Товари й розміри</a>
+    <a href="/app/production/models/{{ model.id }}/stocktaking" role="button" class="outline">Інвентаризація</a>
     <button class="secondary outline" hx-post="/app/production/models/{{ model.id }}/deactivate"
             hx-confirm="Приховати модель? Вона зникне зі списку й плану.">Приховати</button>
   </span>

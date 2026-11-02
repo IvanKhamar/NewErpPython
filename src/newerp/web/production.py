@@ -1,5 +1,5 @@
 """Production pages: models and their card with the operations, sewn pieces by warehouse, sewing plan, log
-(Pages/Manufacturing). Specifications, product links and the model stocktaking are edited through the API for now."""
+(Pages/Manufacturing). The specifications, product links and model stocktaking are in production_specs."""
 
 from typing import Annotated, Any
 

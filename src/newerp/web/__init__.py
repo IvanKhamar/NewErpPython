@@ -22,6 +22,7 @@ from newerp.web import (
     partners,
     payments,
     production,
+    production_specs,
     reports,
     returns,
     stock,
@@ -33,7 +34,7 @@ from newerp.web.common import HERE, PageForbidden, Redirect, render
 def add_web(app: FastAPI) -> None:
     app.mount("/app/static", StaticFiles(directory=HERE / "static"), name="web-static")
     modules = (auth, home, orders, returns, customers, delivery, cashbox, payments, catalog, marketing, partners,
-               competitors, reports, stock, production, users)  # fmt: skip
+               competitors, reports, stock, production, production_specs, users)  # fmt: skip
     for module in modules:
         app.include_router(module.router)
 

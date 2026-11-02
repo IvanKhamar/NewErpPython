@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Специфікації · {{ model.name }}{% endblock %}
+{% block content %}
+<p><a href="/app/production/models/{{ model.id }}">← {{ model.name }}</a></p>
+<h1>Специфікації: {{ model.name }}</h1>
+<p>Деталі крою й розхідники на одиницю: при «Покроєно» списуються розхідники специфікації крою, при «Пошито» —
+  деталі й розхідники специфікації пошиву. Рядок для всіх розмірів діє, доки розмір не має свого.</p>
+<div id="specs">{% include "production/_specs.html" %}</div>
+{% endblock %}
