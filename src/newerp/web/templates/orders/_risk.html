@@ -3,3 +3,7 @@
   {{ risk.message }}
   {% for order_id in risk.cancelled_order_ids %}<a href="/app/orders/{{ order_id }}" target="_blank">№{{ order_id }}</a> {% endfor %}
 </p>
+{% if risk.shared_ip %}
+<p class="warning">З IP {{ risk.shared_ip.ip }} замовляли {{ risk.shared_ip.unique_clients }} різних клієнтів:
+  {{ risk.shared_ip.clients|join(", ") }}</p>
+{% endif %}

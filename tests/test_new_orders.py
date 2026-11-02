@@ -113,3 +113,14 @@ def test_composition_change_replaces_lines_and_totals(api):
 
 def test_storekeeper_cannot_create_orders(api):
     assert api(STOREKEEPER).post("/orders", json=request("+380501112255")).status_code == 403
+
+
+def test_risk_warns_about_different_customers_from_one_ip(api, db):
+    with db.cursor() as cursor:
+        cursor.execute("UPDATE dd_order SET ip = '198.51.100.7' WHERE order_id IN (1, 2, 6)")
+    risk = api(MANAGER).get("/orders/customer-risk?telephone=0935554433").json()  # the customer of order 6
+    shared = risk["sharedIp"]
+    assert (shared["ip"], shared["uniqueClients"]) == ("198.51.100.7", 3)
+    assert len(shared["clients"]) == 3
+    with db.cursor() as cursor:
+        cursor.execute("UPDATE dd_order SET ip = '' WHERE order_id IN (1, 2, 6)")

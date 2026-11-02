@@ -19,12 +19,22 @@ from newerp.application.orders.models import (
     OrderMethodsDto,
     ProductOptionValueDto,
     ProductPickDto,
+    SharedIpDto,
     UpdateOrderCompositionRequest,
     UpdateOrderCompositionResult,
 )
 from newerp.application.orders.ports import NewOrderStore, OrderEvents, OrderStatusHandler, OrderStore
 from newerp.domain.common import DomainError, plain
-from newerp.domain.orders import RISK_LOOKBACK_YEARS, CustomerRisk, OrderDraft, OrderDraftLine, OrderStatusChange
+from newerp.domain.orders import (
+    RISK_LOOKBACK_YEARS,
+    CustomerRisk,
+    OrderDraft,
+    OrderDraftLine,
+    OrderStatusChange,
+    shared_ip,
+)
+
+MAX_CHECKED_IPS = 3  # the latest addresses of the customer's site orders
 
 
 class OrderService:
@@ -146,7 +156,17 @@ class NewOrderService:
         found = await self._store.find_customer_orders(
             phone_key, firstname if has_name else None, lastname if has_name else None, email or None, since
         )
-        return _risk_dto(CustomerRisk.of(found))
+        risk = _risk_dto(CustomerRisk.of(found))
+        # A manual order has no IP, so the customer's earlier site orders give it; the busiest address is shown.
+        warnings = [
+            warning
+            for ip in (await self._store.order_ips([order_id for order_id, _ in found]))[:MAX_CHECKED_IPS]
+            if (warning := shared_ip(ip, await self._store.orders_from_ip(ip, since))) is not None
+        ]
+        if warnings:
+            top = max(warnings, key=lambda w: w.unique_clients)
+            risk.shared_ip = SharedIpDto(ip=top.ip, unique_clients=top.unique_clients, clients=list(top.clients))
+        return risk
 
     async def create(self, request: CreateOrderRequest, user_id: int) -> CreateOrderResult:
         lines = _draft_lines(request.lines)

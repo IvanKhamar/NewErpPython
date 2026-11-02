@@ -136,6 +136,14 @@ class CreateOrderRequest(Dto):
     comment: str | None = ""
 
 
+class SharedIpDto(Dto):
+    """Different customers ordered from one IP of this customer's earlier site orders (Python first)."""
+
+    ip: str
+    unique_clients: int
+    clients: list[str]
+
+
 class CustomerRiskDto(Dto):
     level: CustomerRiskLevel
     total_orders: int
@@ -143,6 +151,7 @@ class CustomerRiskDto(Dto):
     cancelled_order_ids: list[int]
     suspicion_rate: Money
     message: str
+    shared_ip: SharedIpDto | None = None
 
 
 class CreateOrderResult(Dto):

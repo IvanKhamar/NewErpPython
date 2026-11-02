@@ -1,6 +1,7 @@
 """Order rules: status changes, manual order drafts, customer risk."""
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_HALF_EVEN, Decimal
@@ -148,3 +149,31 @@ class CustomerRisk:
         """Last 9 digits: "+38 (067) 123-45-67" and "0671234567" count as one number."""
         digits = re.sub(r"[^0-9]", "", telephone or "")
         return digits[-9:] if len(digits) >= 9 else None
+
+
+# ── Different customers from one IP (the old site's "IP analysis" of the fraud check) ──
+
+SHARED_IP_MIN_CLIENTS = 3  # from this many different customers on one address it is worth a look
+SHARED_IP_LISTED = 10
+
+
+@dataclass(frozen=True)
+class SharedIp:
+    ip: str
+    unique_clients: int
+    clients: tuple[str, ...]  # "Name Surname (phone)", up to SHARED_IP_LISTED
+
+
+def shared_ip(ip: str, orders: Iterable[tuple[str, str, str]]) -> SharedIp | None:
+    """
+    orders: (first name, last name, phone) of the orders placed from this IP. Customers are told apart by the name
+    and the phone digits, as the old site grouped them; a warning comes from SHARED_IP_MIN_CLIENTS different ones on.
+    """
+    clients: dict[tuple[str, str], str] = {}
+    for first, last, phone in orders:
+        name = f"{first.strip()} {last.strip()}".strip()
+        key = (name.casefold(), re.sub(r"[^0-9]", "", phone))
+        clients.setdefault(key, f"{name} ({phone.strip()})")
+    if len(clients) < SHARED_IP_MIN_CLIENTS:
+        return None
+    return SharedIp(ip, len(clients), tuple(list(clients.values())[:SHARED_IP_LISTED]))

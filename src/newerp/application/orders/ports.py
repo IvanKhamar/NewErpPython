@@ -68,6 +68,14 @@ class NewOrderStore(Protocol):
 
     async def get_products(self, product_ids: list[int]) -> list[ProductPickDto]: ...
 
+    async def order_ips(self, order_ids: list[int]) -> list[str]:
+        """The non-empty IPs of these orders, the latest first (NewErp's own orders have none)."""
+        ...
+
+    async def orders_from_ip(self, ip: str, since: datetime) -> list[tuple[str, str, str]]:
+        """(first name, last name, phone) of placed orders from this IP since then."""
+        ...
+
     async def current_specials(self, product_ids: list[int], today: date) -> dict[int, SpecialPrice]:
         """The first sale price on today per product (by priority, then price), as the old site picked it."""
         ...

@@ -209,6 +209,24 @@ class SqlNewOrderStore:
             or (email is not None and same(mail, email))
         ]
 
+    async def order_ips(self, order_ids: list[int]) -> list[str]:
+        if not order_ids:
+            return []
+        rows = await self._session.scalars(
+            select(DdOrder.ip)
+            .where(DdOrder.order_id.in_(order_ids), DdOrder.ip != "")
+            .order_by(DdOrder.date_added.desc())
+        )
+        return list(dict.fromkeys(rows))
+
+    async def orders_from_ip(self, ip: str, since: datetime) -> list[tuple[str, str, str]]:
+        rows = await self._session.execute(
+            select(DdOrder.firstname, DdOrder.lastname, DdOrder.telephone).where(
+                DdOrder.ip == ip, DdOrder.order_status_id > 0, DdOrder.date_added >= since
+            )
+        )
+        return [(first, last, phone) for first, last, phone in rows]
+
     async def list_methods(self) -> OrderMethodsDto:
         async def methods(code, name) -> list[OrderMethodDto]:
             rows = await self._session.execute(

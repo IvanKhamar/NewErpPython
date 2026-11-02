@@ -59,7 +59,7 @@ Compared with the old PHP CRM (missing in all three new versions; from the .NET 
 | 29 | Check against the real database and the real keys: `tools/check_live.py schema` compares every table and column of `db/reconstructed.sql` with the database (information_schema), `integrations` makes one read-only call to Nova Poshta, PrivatBank and LiqPay (Checkbox and SMSClub have none, so only "configured" is shown). Read-only, keys never printed | tool done; the owner runs it with the real access |
 | 30 | UTM report `GET /reports/utm` (period, group, source/medium/campaign, by source; the "Звідки (UTM)" tab) and `GET /orders/{id}/remarketing` (tags and sent pixel events, a section of the order card) from the storefront module's `dd_remarketing_orders` (reconstructed). The pixels themselves stay in the storefront (Python first) | done |
 | 31 | Reports on what the storefront records: `GET /reports/online` (dd_customer_online), `/reports/product-views` (dd_product.viewed against pieces sold), `/reports/rewards` (dd_customer_reward balances), `/reports/taxes` (tax lines of dd_order_total by period); tabs on `/app/reports` (Python first) | done |
-| 32 | "Different customers from one IP" in the customer risk check | planned (manager orders have no customer IP) |
+| 32 | "Different customers from one IP" in the customer risk check: the IPs of the customer's earlier site orders (a manual order has none), 3+ different customers on one → `sharedIp` with up to 10 of them, shown under the risk (Python first) | done |
 
 Security (found in the review of 2026-11-02; HSTS was added then):
 
