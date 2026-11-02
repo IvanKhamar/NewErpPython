@@ -141,6 +141,24 @@ def rank(payment: BankPayment, candidates: Iterable[OrderCandidate]) -> list[Sco
     return sorted(scored, key=lambda s: (s.score, s.order.date_added), reverse=True)
 
 
+def is_confident(candidate: ScoredCandidate) -> bool:
+    """
+    Sure enough to link without a person: the purpose names the order (its number or its phone), the sum fits (the
+    total, the advance or the rest), and the order has no payment yet. A surname and a sum are not enough: the same
+    sum from a namesake happens.
+    """
+    names_order = bool(candidate.reasons & (MatchReason.ORDER_NUMBER | MatchReason.PHONE))
+    sum_fits = bool(candidate.reasons & (MatchReason.TOTAL | MatchReason.PREPAYMENT))
+    return names_order and sum_fits and candidate.order.linked_payment_id is None
+
+
+def confident_match(ranked: Iterable[ScoredCandidate]) -> OrderCandidate | None:
+    """The order to link automatically: only when exactly one candidate is confident (two confident ones are a
+    question for a person)."""
+    confident = [c for c in ranked if is_confident(c)]
+    return confident[0].order if len(confident) == 1 else None
+
+
 class LiqPayState(IntEnum):
     NOT_FOUND = 0
     WAITING = 1

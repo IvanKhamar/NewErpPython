@@ -27,7 +27,7 @@ def test_suggest_link_hide_payment(api):
 def test_import_without_bank_keys_reports_not_configured(api):
     result = api(ADMIN).post("/payments/bank/import").json()
 
-    assert result == {"clientConfigured": False, "fetched": 0, "added": 0, "skipped": 0}
+    assert result == {"clientConfigured": False, "fetched": 0, "added": 0, "skipped": 0, "autoLinked": 0}
 
 
 def test_liqpay_without_keys_gives_a_test_link_and_not_paid(api):

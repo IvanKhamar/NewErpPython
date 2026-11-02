@@ -15,6 +15,8 @@ from newerp.domain.payments import (
     LiqPayState,
     MatchReason,
     OrderCandidate,
+    ScoredCandidate,
+    confident_match,
     interpret_liqpay,
     liqpay_description,
     order_numbers_in,
@@ -25,6 +27,8 @@ from newerp.domain.payments import (
 SUGGESTION_LIMIT = 10
 SUGGESTION_DAYS = 60  # orders up to this many days before the payment
 MAX_IMPORT_DAYS = 31
+AUTO_MATCH_DAYS = 31  # automatic matching of older payments looks this far back by default
+AUTO_MATCH_LIMIT = 500
 
 
 class BankPaymentDto(Dto):
@@ -78,6 +82,19 @@ class BankImportResult(Dto):
     fetched: int
     added: int
     skipped: int
+    auto_linked: int = 0  # new payments linked to their order at once (one confident candidate; Python first)
+
+
+class AutoMatchLink(Dto):
+    payment_id: int
+    order_id: int
+
+
+class AutoMatchResult(Dto):
+    """checked: unlinked payments looked at; links: those that had exactly one confident order."""
+
+    checked: int
+    links: list[AutoMatchLink]
 
 
 class PaymentSuggestionDto(Dto):
@@ -169,18 +186,46 @@ class BankPaymentService:
                 incoming.setdefault(t.id, t)
         existing = await self._repository.existing_app_codes(list(incoming))
         added = [t for t in incoming.values() if t.id not in existing]
-        for t in added:
-            self._repository.add(
-                BankPayment(t.id, t.account, t.amount, t.balance, _describe(t), t.payer, t.date, t.time)
-            )
+        payments = [
+            BankPayment(t.id, t.account, t.amount, t.balance, _describe(t), t.payer, t.date, t.time) for t in added
+        ]
+        for payment in payments:
+            self._repository.add(payment)
         await self._repository.save_changes()
+        linked = [p for p in payments if await self._auto_link(p)]
         return BankImportResult(
-            client_configured=True, fetched=len(transactions), added=len(added), skipped=len(transactions) - len(added)
-        )
+            client_configured=True, fetched=len(transactions), added=len(added), skipped=len(transactions) - len(added),
+            auto_linked=len(linked),
+        )  # fmt: skip
 
-    async def suggest(self, payment_id: int, customer: str | None) -> list[PaymentSuggestionDto]:
-        """Orders the payment probably belongs to (by sum, number and phone in the purpose), the best first."""
-        payment = await self._require(payment_id)
+    async def auto_match(self, from_: date | None, to: date | None) -> AutoMatchResult:
+        """The same automatic matching for payments already loaded and still without an order (by default the last
+        AUTO_MATCH_DAYS days), for example after the orders were entered later than the payments came."""
+        end = to or self._clock.now().date()
+        start = from_ or end - timedelta(days=AUTO_MATCH_DAYS)
+        if start > end:
+            raise DomainError("Початок періоду пізніше за кінець.")
+        unlinked = await self._repository.list_payments(
+            BankPaymentFilter(from_=start, to=end, linked=False, page_size=AUTO_MATCH_LIMIT)
+        )
+        links = []
+        for row in unlinked.items:
+            payment = await self._require(row.id)
+            if await self._auto_link(payment):
+                links.append(AutoMatchLink(payment_id=payment.id, order_id=payment.order_id))
+        return AutoMatchResult(checked=len(unlinked.items), links=links)
+
+    async def _auto_link(self, payment: BankPayment) -> bool:
+        """Links the payment when exactly one order is a confident match; saves at once, so the next payment of the
+        same run sees that order as taken."""
+        order = confident_match(await self._ranked(payment, None))
+        if order is None:
+            return False
+        payment.link_to(order.order_id)
+        await self._repository.save_changes()
+        return True
+
+    async def _ranked(self, payment: BankPayment, customer: str | None) -> list[ScoredCandidate]:
         amounts = list(dict.fromkeys([payment.amount, Decimal(math.floor(payment.amount))]))
         query = CandidateQuery(
             amounts=amounts,
@@ -190,7 +235,12 @@ class BankPaymentService:
             to=payment.timestamp + timedelta(days=1),
             limit=SUGGESTION_LIMIT * 5,
         )
-        candidates = await self._repository.find_candidates(query)
+        return rank(payment, await self._repository.find_candidates(query))
+
+    async def suggest(self, payment_id: int, customer: str | None) -> list[PaymentSuggestionDto]:
+        """Orders the payment probably belongs to (by sum, number and phone in the purpose), the best first."""
+        payment = await self._require(payment_id)
+        ranked = await self._ranked(payment, customer)
         return [
             PaymentSuggestionDto(
                 order_id=s.order.order_id,
@@ -204,7 +254,7 @@ class BankPaymentService:
                 reasons=s.reasons,
                 score=s.score,
             )  # fmt: skip
-            for s in rank(payment, candidates)[:SUGGESTION_LIMIT]
+            for s in ranked[:SUGGESTION_LIMIT]
         ]
 
     async def link(self, payment_id: int, request: LinkPaymentRequest) -> BankPaymentDto:

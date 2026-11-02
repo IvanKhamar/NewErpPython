@@ -9,6 +9,8 @@
 </form>
 <p><small>Без дат — за вчора й сьогодні.</small></p>
 <div id="import-result"></div>
+<p><button class="outline" hx-post="/app/payments/auto-match" hx-target="#import-result">Зіставити автоматично</button>
+  <small>Прив'язує платіж, лише коли замовлення одне й у призначенні його номер чи телефон, а сума збігається.</small></p>
 <form class="filters" action="/app/payments" method="get"
       hx-get="/app/payments" hx-target="#payments" hx-push-url="true" hx-trigger="change, submit">
   <select name="linked" aria-label="Прив'язка">

@@ -10,6 +10,7 @@ from newerp.api.deps import ClockDep, Session, get_order_queries
 from newerp.api.security import Policies, require_roles
 from newerp.application.common import PagedResult
 from newerp.application.payments import (
+    AutoMatchResult,
     BankImportResult,
     BankPaymentDto,
     BankPaymentFilter,
@@ -73,6 +74,15 @@ async def list_payments(
 @router.post("/import", summary="Завантажити виписку (типово вчора й сьогодні); без ключів — clientConfigured = false")
 async def import_statement(service: Bank, from_: From = None, to: date | None = None) -> BankImportResult:
     return await service.import_statement(from_, to)
+
+
+@router.post(
+    "/auto-match",
+    summary="Прив'язати платежі без замовлення, у яких рівно одне впевнене замовлення: у призначенні його номер чи "
+    "телефон, сума збігається, іншого платежу в нього немає (типово за 31 день; Python first)",
+)
+async def auto_match(service: Bank, from_: From = None, to: date | None = None) -> AutoMatchResult:
+    return await service.auto_match(from_, to)
 
 
 @router.get("/{payment_id}/suggestions", summary="Замовлення, яким імовірно належить платіж, найкращі першими")

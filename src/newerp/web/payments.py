@@ -87,7 +87,10 @@ async def import_statement(request: Request, bank: Bank, since: Field = "", unti
     if not result.client_configured:
         text = "Ключів ПриватБанку немає: виписку не завантажено."
     else:
-        text = f"Отримано {result.fetched}, нових {result.added}, уже були {result.skipped}. Оновіть сторінку."
+        text = (
+            f"Отримано {result.fetched}, нових {result.added}, уже були {result.skipped}, "
+            f"прив'язано автоматично {result.auto_linked}. Оновіть сторінку."
+        )
     return render(request, "_note.html", text=text)
 
 
@@ -164,3 +167,15 @@ async def liqpay_link(request: Request, order_id: int, bank: Bank, liqpay: LiqPa
     except BUSINESS_ERRORS as error:
         return await _order_payments(request, order_id, bank, liqpay, error=str(error))
     return await _order_payments(request, order_id, bank, liqpay, link=link)
+
+
+@router.post("/auto-match")
+async def auto_match(request: Request, bank: Bank, session: Session) -> HTMLResponse:
+    """Links the payments without an order that have exactly one confident order (the last month)."""
+    try:
+        result = await bank.auto_match(None, None)
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    links = ", ".join(f"платіж {link.payment_id} → №{link.order_id}" for link in result.links)
+    text = f"Перевірено платежів без замовлення: {result.checked}, прив'язано: {len(result.links)}"
+    return render(request, "_note.html", text=f"{text}{': ' + links if links else ''}. Оновіть сторінку.")
