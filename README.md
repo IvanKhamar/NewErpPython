@@ -4,10 +4,9 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 321 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 325 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
-Blazor app of the .NET version; a few editors are still API-only. What is still missing: the table at the end of the
-plan.
+Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 
 ## What it does
 
@@ -31,16 +30,13 @@ swaps in the fragments the server returns, so there is no JavaScript build. Page
 as the API and use the same login cookie and roles; the menu shows each role only its modules.
 
 - Orders: the list, new orders, and the order card with the status, the manager, payments with a LiqPay link, the
-  fiscal cheque, the Nova Poshta waybill, a gift voucher and returns.
+  fiscal cheque, the Nova Poshta waybill (or one abroad), a gift voucher and returns.
 - Sales: returns, customers, delivery reminders, products and their sort by sales, pre-orders, birthdays, the contact
   export, gift vouchers, partners and their feeds, competitor prices, reports.
 - Money: the cashbox (shifts, X and Z reports, cheques) and matching bank payments to orders.
 - Warehouse and production: consumables, stocktaking with an Excel sheet, reorder and purchase orders; models with the
-  cut and sewn operations, the sewing plan and the log.
+  cut and sewn operations, specifications (BOMs), product links and stocktaking, the sewing plan and the log.
 - Admin: users with temporary passwords, the managers' bonuses.
-
-Still only in the API: the production specifications (BOMs) and product links, the model stocktaking, and waybills
-abroad.
 
 Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
 hourly Nova Poshta tracking refresh. Orders also go to Kafka as `OrderCreated` and `OrderStatusChanged` events

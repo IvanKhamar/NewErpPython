@@ -1,6 +1,6 @@
 """Delivery pages: reminders, refresh without a key, the waybill section of the order card (test waybills)."""
 
-from tests.seed import ADMIN, BRANCH_1_REF, KYIV_REF, MANAGER, SHIPPING_ORDER_ID, STOREKEEPER, WAITING_TTN
+from tests.seed import ADMIN, BRANCH_1_REF, KYIV_REF, MANAGER, ORDER_ID, SHIPPING_ORDER_ID, STOREKEEPER, WAITING_TTN
 
 HTMX = {"HX-Request": "true"}
 
@@ -54,3 +54,28 @@ def test_order_card_creates_prints_and_deletes_a_test_waybill(api):
     assert "Не вдалося надрукувати" in printed.text
     assert "ТТН видалено." in client.post(f"{url}/delete", headers=HTMX).text
     assert client.get(f"/orders/{SHIPPING_ORDER_ID}/shipment").status_code == 204
+
+
+def test_waybill_abroad_from_the_order_card(api):
+    client = api(MANAGER)
+    url = f"/app/delivery/orders/{ORDER_ID}/international"
+    form_html = client.get(url, headers=HTMX).text
+    assert 'value="Тарас"' in form_html
+    assert '<option value="PL">' in form_html
+    hints = client.get("/app/delivery/hs-codes?item_hs_code=су&country_code=PL", headers=HTMX).text
+    assert 'value="6204491000"' in hints
+
+    form = {"first_name": "Anna", "last_name": "Kowalska", "phone": "+48 600 100 200", "email": "anna@example.com",
+            "country_code": "PL", "region": "", "city": "Kraków", "street": "Floriańska", "building": "5", "flat": "",
+            "post_code": "31-019", "incoterm": "DAP", "payer_fees_customs": "Recipient", "export_reason": "Selling",
+            "cargo_category": "parcel", "declared_cost": "1500", "currency": "UAH",
+            "item_name": ["Сукня лляна", ""], "item_name_eng": ["Linen dress", ""], "item_hs_code": ["6204.49.10", ""],
+            "item_weight": ["450", ""], "item_amount": ["1", ""], "item_cost": ["1500", ""],
+            "box": "Маленька"}  # fmt: skip
+    incomplete = client.post(url, data=form | {"last_name": ""}, headers=HTMX)
+    assert "Не заповнені або некоректні поля: Прізвище" in incomplete.text
+    created = client.post(url, data=form, headers=HTMX)
+    assert created.headers["HX-Retarget"] == "#shipment"
+    assert "Міжнародну накладну створено." in created.text
+    assert client.get(f"/orders/{ORDER_ID}/shipment").json()["carrier"] == "international"
+    client.post(f"/app/delivery/orders/{ORDER_ID}/shipment/delete", headers=HTMX)

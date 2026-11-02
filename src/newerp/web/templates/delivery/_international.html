@@ -1,0 +1,90 @@
+{# A waybill abroad (CreateInternationalShipmentDialog); it replaces the domestic form in the order card. #}
+{% macro choice(name, label, options, selected) -%}
+<label>{{ label }}
+  <select name="{{ name }}">{% for option in options %}<option{% if option == selected %} selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+</label>
+{%- endmacro %}
+<header class="title-row">
+  <span>Міжнародна накладна (Nova Post International)</span>
+  <button class="outline" hx-get="/app/delivery/orders/{{ order_id }}/shipment" hx-target="#shipment">Доставка по Україні</button>
+</header>
+{% if not form.can_create %}
+<p class="warning">Ключ API Nova Post International не задано: створити накладну не можна.</p>
+{% else %}
+{% if form.test %}<p class="warning">Тестовий режим: накладна буде тестовою.</p>{% endif %}
+{% set r = form.recipient %}
+<form hx-post="/app/delivery/orders/{{ order_id }}/international" hx-target="#international-result">
+  <h4>Отримувач</h4>
+  <div class="grid">
+    <input name="last_name" value="{{ r.last_name or '' }}" placeholder="Прізвище" aria-label="Прізвище">
+    <input name="first_name" value="{{ r.first_name or '' }}" placeholder="Ім'я" aria-label="Ім'я">
+    <input name="phone" value="{{ r.phone or '' }}" placeholder="Телефон" aria-label="Телефон">
+    <input name="email" value="{{ r.email or '' }}" placeholder="Email" aria-label="Email">
+  </div>
+  <div class="grid">
+    <select name="country_code" aria-label="Країна">
+      <option value="">Країна…</option>
+      {% for country in countries %}<option value="{{ country.code }}"{% if country.code == r.country_code %} selected{% endif %}>{{ country.name }}</option>{% endfor %}
+    </select>
+    <input name="region" value="{{ r.region or '' }}" placeholder="Штат / область (США, Канада, Ірландія)" aria-label="Штат або область">
+    <input name="city" value="{{ r.city or '' }}" placeholder="Населений пункт" aria-label="Населений пункт">
+    <input name="post_code" value="{{ r.post_code or '' }}" placeholder="Індекс" aria-label="Індекс">
+  </div>
+  <div class="grid">
+    <input name="street" value="{{ r.street or '' }}" placeholder="Вулиця" aria-label="Вулиця">
+    <input name="building" value="{{ r.building or '' }}" placeholder="Будинок" aria-label="Будинок">
+    <input name="flat" value="{{ r.flat or '' }}" placeholder="Квартира" aria-label="Квартира">
+  </div>
+  <h4>Митниця</h4>
+  <div class="grid">
+    {{ choice("incoterm", "Умови поставки", choices.incoterms, form.terms.incoterm) }}
+    {{ choice("payer_fees_customs", "Мито сплачує", choices.payers, form.terms.payer_fees_customs) }}
+    {{ choice("export_reason", "Причина експорту", choices.reasons, form.terms.export_reason) }}
+    {{ choice("cargo_category", "Категорія вантажу", choices.cargo, form.terms.cargo_category) }}
+    <label>Декларована вартість, {{ form.currency }}
+      <input name="declared_cost" value="{{ form.declared_cost|qty }}" inputmode="decimal">
+    </label>
+  </div>
+  <input type="hidden" name="currency" value="{{ form.currency }}">
+  <h4>Товари</h4>
+  <p><small>Код УКТЗЕД: почніть вводити назву англійською чи українською — підказки з'являться під полем.</small></p>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Назва</th><th>Англійська назва</th><th>Код УКТЗЕД</th><th>Вага, г</th><th>Кількість</th><th>Вартість</th></tr></thead>
+    <tbody>
+    {% for item in form.items + [None] %}
+      <tr>
+        <td><input name="item_name" value="{{ item.name or '' if item else '' }}" aria-label="Назва"></td>
+        <td><input name="item_name_eng" value="{{ item.name_eng or '' if item else '' }}" aria-label="Англійська назва"></td>
+        <td>
+          <input name="item_hs_code" value="{{ item.hs_code or '' if item else '' }}" list="hs-codes-{{ loop.index }}"
+                 aria-label="Код УКТЗЕД" data-no-submit
+                 hx-get="/app/delivery/hs-codes" hx-include="[name=country_code]" hx-trigger="keyup changed delay:300ms"
+                 hx-target="#hs-codes-{{ loop.index }}">
+          <datalist id="hs-codes-{{ loop.index }}"></datalist>
+        </td>
+        <td><input name="item_weight" value="{{ item.weight_grams if item else '' }}" inputmode="numeric" aria-label="Вага, г" class="short"></td>
+        <td><input name="item_amount" value="{{ item.amount|qty if item and item.amount is number else '' }}" inputmode="decimal" aria-label="Кількість" class="short"></td>
+        <td><input name="item_cost" value="{{ item.cost|qty if item and item.cost is number else '' }}" inputmode="decimal" aria-label="Вартість" class="short"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <h4>Місце</h4>
+  <div class="grid">
+    <label>Коробка
+      <select name="box">
+        {% for preset in form.seat_presets %}<option value="{{ preset.name }}">{{ preset.name }}</option>{% endfor %}
+        <option value="">Свої розміри</option>
+      </select>
+    </label>
+    <label>Вага, кг <input name="weight" inputmode="decimal"></label>
+    <label>Ширина, см <input name="width" inputmode="decimal"></label>
+    <label>Довжина, см <input name="length" inputmode="decimal"></label>
+    <label>Висота, см <input name="height" inputmode="decimal"></label>
+  </div>
+  <div id="international-result"></div>
+  <button type="submit">Створити міжнародну накладну</button>
+</form>
+{% endif %}

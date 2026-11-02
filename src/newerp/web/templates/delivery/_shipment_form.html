@@ -1,5 +1,8 @@
 {% from "_macros.html" import messages %}
-<header>Доставка Новою Поштою</header>
+<header class="title-row">
+  <span>Доставка Новою Поштою</span>
+  <button class="outline" hx-get="/app/delivery/orders/{{ order_id }}/international" hx-target="#shipment">Міжнародна накладна</button>
+</header>
 {{ messages(error, (), saved) }}
 {% if not form.can_create %}
 <p class="warning">Ключ API Нової Пошти не налаштовано, а тестові ТТН вимкнено: створити ТТН не можна.</p>
