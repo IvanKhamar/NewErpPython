@@ -7,7 +7,9 @@ from fastapi.responses import HTMLResponse
 
 from newerp.api.reports import get_service
 from newerp.api.security import Policies
+from newerp.api.stock import Repository as StockRepository
 from newerp.application.reports import ReportService
+from newerp.application.stock.ports import StockItemFilter
 from newerp.web.common import WebUser, render
 
 router = APIRouter(prefix="/app", include_in_schema=False)
@@ -15,10 +17,15 @@ router = APIRouter(prefix="/app", include_in_schema=False)
 
 @router.get("/")
 async def home(
-    request: Request, user: WebUser, reports: Annotated[ReportService, Depends(get_service)]
+    request: Request,
+    user: WebUser,
+    reports: Annotated[ReportService, Depends(get_service)],
+    stock: StockRepository,
 ) -> HTMLResponse:
+    # The storekeeper sees at once what is below its minimum (the low-stock alert in the app).
+    low = await stock.list_items(StockItemFilter(below_minimum_only=True)) if user.role in Policies.STOCK else []
     if user.role not in Policies.ORDERS:
-        return render(request, "home.html")
+        return render(request, "home.html", low=low)
 
     dashboard = await reports.dashboard()
     tiles = [
@@ -33,4 +40,4 @@ async def home(
     # The 30-day chart: each bar's height in percent of the best day.
     best = max((day.total for day in dashboard.last30_days), default=0)
     bars = [(day, int(day.total * 100 / best) if best else 0) for day in dashboard.last30_days]
-    return render(request, "home.html", dashboard=dashboard, tiles=tiles, bars=bars)
+    return render(request, "home.html", dashboard=dashboard, tiles=tiles, bars=bars, low=low)

@@ -2,6 +2,17 @@
 {% block title %}Головна{% endblock %}
 {% block content %}
 <h1>Вітаємо, {{ user.full_name }}</h1>
+{% if low %}
+<article class="low-stock">
+  <header class="warning">Мало на складі: {{ low|length }} поз. нижче мінімуму · <a href="/app/stock/reorder">що дозамовити</a></header>
+  <ul>
+    {% for item in low[:10] %}
+    <li><a href="/app/stock/items/{{ item.id }}">{{ item.name }}</a> — {{ item.quantity|qty }} {{ item.unit }} (мін. {{ item.min_quantity|qty }})</li>
+    {% endfor %}
+    {% if low|length > 10 %}<li><a href="/app/stock?low=1">усі {{ low|length }}</a></li>{% endif %}
+  </ul>
+</article>
+{% endif %}
 {% if dashboard %}
 <section class="tiles">
   {% for title, tile, is_money in tiles %}

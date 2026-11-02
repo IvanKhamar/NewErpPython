@@ -510,3 +510,29 @@ def _first_duplicate(values: Iterable[int]) -> int | None:
             return value
         seen.add(value)
     return None
+
+
+# ═══ Low-stock alerts ═══
+
+
+@dataclass(frozen=True)
+class LowStockLine:
+    name: str
+    quantity: Decimal
+    minimum: Decimal
+    unit: str
+
+
+def low_stock_text(lines: Sequence[LowStockLine], max_length: int) -> str:
+    """One SMS: "Мало на складі: Льон 12 м (мін. 30); …". What does not fit is counted at the end."""
+    head = "Мало на складі: "
+    parts = [f"{line.name} {plain(line.quantity)} {line.unit} (мін. {plain(line.minimum)})" for line in lines]
+    text = head
+    for shown, part in enumerate(parts):
+        rest = len(parts) - shown - 1
+        tail = f"; ще {rest} поз." if rest else ""
+        candidate = text + ("; " if shown else "") + part
+        if len(candidate + tail) > max_length:
+            return text + f"; ще {len(parts) - shown} поз."
+        text = candidate
+    return text

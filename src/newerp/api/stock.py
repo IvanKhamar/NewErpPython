@@ -7,7 +7,9 @@ from newerp.api.deps import ClockDep, Session
 from newerp.api.errors import problem
 from newerp.api.files import read_upload, xlsx_file
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.api.sms import get_sender
 from newerp.application.common import CreatedId, LookupItem
+from newerp.application.stock.alerts import LowStockAlertOptions, LowStockAlertResult, LowStockAlertService
 from newerp.application.stock.models import (
     AdjustStockRequest,
     ApplyStocktakingRequest,
@@ -311,3 +313,22 @@ async def apply_stocktaking(
 
 
 router.include_router(stocktaking)
+
+
+# ── Low-stock alerts (Python first) ──
+
+
+def get_low_stock_alerts(repository: Repository, clock: ClockDep) -> LowStockAlertService:
+    stock = get_settings().stock
+    return LowStockAlertService(repository, get_sender(), LowStockAlertOptions(tuple(stock.alert_phones)), clock)
+
+
+@router.post(
+    "/alerts/low-stock",
+    tags=["Склад: розхідники"],
+    summary="Надіслати SMS про розхідники, що за добу впали нижче мінімуму (те саме робить щоденна задача)",
+)
+async def send_low_stock_alert(
+    service: Annotated[LowStockAlertService, Depends(get_low_stock_alerts)],
+) -> LowStockAlertResult:
+    return await service.send()

@@ -19,6 +19,7 @@ from newerp.application.catalog.pre_orders import PreOrderService
 from newerp.application.common import SystemClock
 from newerp.application.competitors import CompetitorService
 from newerp.application.delivery.services import DeliveryService
+from newerp.application.stock.alerts import LowStockAlertOptions, LowStockAlertService
 from newerp.config import Settings, get_settings
 from newerp.infrastructure.cashbox.checkbox import checkbox_client
 from newerp.infrastructure.cashbox.repository import SqlCashboxRepository
@@ -26,6 +27,8 @@ from newerp.infrastructure.catalog.pre_orders import SqlPreOrderStore
 from newerp.infrastructure.competitors import HttpPageFetcher, SqlCompetitorStore
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
 from newerp.infrastructure.delivery.repositories import SqlShipmentRepository
+from newerp.infrastructure.sms import sms_sender
+from newerp.infrastructure.stock.repositories import SqlStockRepository
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -97,7 +100,24 @@ def delivery_refresh_tracking() -> dict:
     return asyncio.run(with_session(work))
 
 
-def daily_at(setting: str) -> crontab | None:
+@app.task(name="stock.low_stock_alert")
+def stock_low_stock_alert() -> dict:
+    """An SMS about the consumables that fell below their minimum since yesterday's run (Python first)."""
+
+    async def work(session: AsyncSession) -> dict:
+        options = LowStockAlertOptions(tuple(settings.stock.alert_phones))
+        service = LowStockAlertService(
+            SqlStockRepository(session), sms_sender(settings.sms_club), options, SystemClock()
+        )
+        result = await service.send()
+        if result.items:
+            logger.info("Мало на складі: позицій %s, SMS надіслано %s з %s", result.items, result.sent, result.phones)
+        return result.model_dump(by_alias=True)
+
+    return asyncio.run(with_session(work))
+
+
+def daily_at(setting: str, name: str = "competitors.check_time") -> crontab | None:
     """crontab for "HH:mm" (like a cron line "mm HH * * *"); "-" or a wrong value: no schedule."""
     text = setting.strip()
     if text == "-":
@@ -105,7 +125,7 @@ def daily_at(setting: str) -> crontab | None:
     try:
         at = datetime.strptime(text, "%H:%M")
     except ValueError:
-        logger.error("competitors.check_time «%s» — не час HH:mm; перевірку цін вимкнено", text)
+        logger.error("%s «%s» — не час HH:mm; задачу вимкнено", name, text)
         return None
     return crontab(hour=at.hour, minute=at.minute)
 
@@ -126,6 +146,9 @@ def beat_schedule_for(config: Settings) -> dict[str, dict]:
         }
     if (check_at := daily_at(config.competitors.check_time)) is not None:
         schedule["competitors-check"] = {"task": "competitors.check", "schedule": check_at}
+    # Without phones there is no one to tell.
+    if config.stock.alert_phones and (alert_at := daily_at(config.stock.alert_time, "stock.alert_time")) is not None:
+        schedule["stock-low-stock-alert"] = {"task": "stock.low_stock_alert", "schedule": alert_at}
     # Without a key the stub has no waybills to track.
     if config.nova_poshta.tracking_key is not None and config.nova_poshta.tracking_interval_minutes > 0:
         schedule["delivery-refresh-tracking"] = {

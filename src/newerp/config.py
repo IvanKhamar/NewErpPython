@@ -18,6 +18,9 @@ class BonusSettings(BaseModel):
 class StockSettings(BaseModel):
     # Reorder up to this many minimums: 2 means "bring the quantity up to 2 × minimum".
     reorder_target_factor: Decimal = Decimal(2)
+    # Low-stock alerts: phones for the daily SMS (env NEWERP_STOCK__ALERT_PHONES as JSON) and when it goes ("-": never).
+    alert_phones: list[str] = []
+    alert_time: str = "08:00"
 
 
 class ProductionSettings(BaseModel):

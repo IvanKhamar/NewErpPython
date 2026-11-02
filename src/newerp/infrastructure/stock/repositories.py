@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import exists, func, select
@@ -62,6 +63,20 @@ class SqlStockRepository:
     async def get_item_dto(self, item_id: int) -> StockItemDto | None:
         items = await self._project(stock_items.c.item_id == item_id)
         return items[0] if items else None
+
+    async def fell_below_minimum(self, since: datetime) -> list[int]:
+        i, m = stock_items.c, stock_log.c
+        crossed = (
+            select(m.item_id)
+            .where(m.date_added >= since, m.stock_before >= i.min_stock, m.stock_after < i.min_stock)
+            .where(m.item_id == i.item_id)
+        )
+        rows = await self._session.scalars(
+            select(i.item_id)
+            .where(i.status.is_(True), i.min_stock > 0, i.stock < i.min_stock, exists(crossed))
+            .order_by(i.name)
+        )
+        return list(rows)
 
     async def list_movements(self, item_id: int) -> list[StockMovementDto]:
         m = stock_log.c

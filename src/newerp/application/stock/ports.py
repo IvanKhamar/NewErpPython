@@ -2,6 +2,7 @@
 (like one DbContext in .NET)."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -43,6 +44,10 @@ class StockRepository(Protocol):
     async def get_item_dto(self, item_id: int) -> StockItemDto | None: ...
 
     async def list_movements(self, item_id: int) -> list[StockMovementDto]: ...
+
+    async def fell_below_minimum(self, since: datetime) -> list[int]:
+        """Active items with a minimum that a movement since `since` took below it, and that are still below."""
+        ...
 
     async def category_exists(self, category_id: int) -> bool: ...
 
