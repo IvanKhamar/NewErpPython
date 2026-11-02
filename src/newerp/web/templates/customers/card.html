@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "_macros.html" import chip %}
+{% block title %}{{ customer.firstname }} {{ customer.lastname }}{% endblock %}
+{% block content %}
+<p><a href="/app/customers">← Покупці</a></p>
+<h1>{{ customer.firstname }} {{ customer.lastname }}</h1>
+{% set stats = customer.stats %}
+<p class="{{ {'Red': 'error', 'Yellow': 'warning'}.get(stats.risk_level, 'ok') }}">{{ stats.risk_message }}</p>
+<div class="grid">
+  <article>
+    <header>Контакти</header>
+    <p>{{ customer.telephone }}{% if customer.email %}<br>{{ customer.email }}{% endif %}</p>
+    <p>Група: {{ customer.group_name or "—" }}<br>З нами з {{ customer.date_added|when }}
+      {%- if not customer.status %}<br>Обліковий запис вимкнено{% endif %}
+      {%- if customer.newsletter %}<br>Підписаний на розсилку{% endif %}</p>
+    {% for address in customer.addresses %}
+    <p>{{ address.city }}, {{ address.name }}{% if address.is_default %} <small>(основна)</small>{% endif %}</p>
+    {% endfor %}
+  </article>
+  <article>
+    <header>Підсумки</header>
+    <p>Замовлень: {{ stats.order_count }}, скасовано: {{ stats.cancelled_count }}<br>
+      Витратив: {{ stats.spent|money }}<br>
+      {% if stats.first_order %}Перше: {{ stats.first_order|when }}<br>Останнє: {{ stats.last_order|when }}{% endif %}</p>
+  </article>
+</div>
+<article>
+  <header>Замовлення</header>
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead><tr><th>№</th><th>Дата</th><th>Статус</th><th class="num">Сума</th><th></th></tr></thead>
+    <tbody>
+    {% for order in customer.orders %}
+      <tr>
+        <td><a href="/app/orders/{{ order.id }}">{{ order.id }}</a></td>
+        <td>{{ order.date_added|when }}</td>
+        <td>{{ chip(None, order.status_name) }}</td>
+        <td class="num">{{ order.total|money }} {{ order.currency_code }}</td>
+        <td>{% if order.by_phone %}<small>за телефоном</small>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Замовлень немає.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>
+<article id="notes">{% include "customers/_notes.html" %}</article>
+{% endblock %}

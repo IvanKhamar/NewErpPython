@@ -1,0 +1,10 @@
+{% from "_macros.html" import messages %}
+<header>Нотатки</header>
+<form hx-post="/app/customers/{{ customer.id }}/notes" hx-target="#notes">
+  <textarea name="comment" rows="2" maxlength="1000" placeholder="Нова нотатка" aria-label="Нова нотатка"></textarea>
+  <button type="submit">Додати</button>
+</form>
+{{ messages(error, (), saved) }}
+{% for note in customer.notes %}
+<p><small>{{ note.date_added|when }}</small><br><span class="pre">{{ note.comment }}</span></p>
+{% endfor %}

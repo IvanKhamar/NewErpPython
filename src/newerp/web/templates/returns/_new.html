@@ -1,0 +1,29 @@
+{# A new return from the order card (CreateReturnDialog.razor); on success the browser goes to the return card. #}
+<form hx-post="/app/returns/new" hx-target="#return-result">
+  <input type="hidden" name="order_id" value="{{ order.id }}">
+  <div class="grid">
+    <select name="product_id" aria-label="Товар">
+      {% for line in order.products %}
+      <option value="{{ line.product_id }}">{{ line.name }} {{ line.model }} ({{ line.quantity }} шт.)</option>
+      {% endfor %}
+    </select>
+    <input name="quantity" value="1" inputmode="numeric" aria-label="Кількість">
+    <label><input type="checkbox" name="opened" value="1"> Розпакований</label>
+  </div>
+  <div class="grid">
+    <select name="reason_id" aria-label="Причина">
+      <option value="">Причина не вказана</option>
+      {% for reason in lookups.reasons %}<option value="{{ reason.id }}">{{ reason.name }}</option>{% endfor %}
+    </select>
+    <select name="status_id" aria-label="Статус">
+      {% for status in lookups.statuses %}<option value="{{ status.id }}">{{ status.name }}</option>{% endfor %}
+    </select>
+    <select name="action_id" aria-label="Дія">
+      <option value="">Дія ще не вирішена</option>
+      {% for action in lookups.actions %}<option value="{{ action.id }}">{{ action.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <textarea name="comment" rows="2" maxlength="1000" placeholder="Коментар" aria-label="Коментар"></textarea>
+  <div id="return-result"></div>
+  <button type="submit">Оформити повернення</button>
+</form>

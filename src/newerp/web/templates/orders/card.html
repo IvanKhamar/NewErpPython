@@ -31,4 +31,11 @@
   </div>
 </article>
 <article id="status">{% include "orders/_status.html" %}</article>
+<article>
+  {# The return form loads the first time the section is opened. #}
+  <details hx-get="/app/returns/new?order={{ order.id }}" hx-trigger="toggle once" hx-target="find .return-form">
+    <summary>Повернення товару</summary>
+    <div class="return-form"></div>
+  </details>
+</article>
 {% endblock %}

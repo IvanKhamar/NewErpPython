@@ -1,0 +1,39 @@
+{% from "_macros.html" import messages %}
+<div class="grid">
+  <article>
+    <header>Що повертають</header>
+    <p><strong>{{ item.product }}</strong> {{ item.model }} · {{ item.quantity }} шт.{% if item.opened %} · розпакований{% endif %}</p>
+    <p>Замовлення <a href="/app/orders/{{ item.order_id }}">№{{ item.order_id }}</a><br>
+      {{ item.customer }} · {{ item.telephone }}{% if item.email %} · {{ item.email }}{% endif %}</p>
+    <p>Причина: {{ item.reason_name or "—" }}<br>Статус: <strong>{{ item.status_name or item.status_id }}</strong><br>
+      Дія: {{ item.action_name or "—" }}</p>
+  </article>
+  <article>
+    <header>Новий статус</header>
+    <form hx-post="/app/returns/{{ item.id }}/history" hx-target="#return">
+      <select name="status_id" aria-label="Статус">
+        {% for status in lookups.statuses %}
+        <option value="{{ status.id }}"{% if status.id == item.status_id %} selected{% endif %}>{{ status.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="action_id" aria-label="Дія">
+        <option value="">Дія не змінюється</option>
+        {% for action in lookups.actions %}<option value="{{ action.id }}">{{ action.name }}</option>{% endfor %}
+      </select>
+      <textarea name="comment" rows="2" maxlength="1000" placeholder="Коментар" aria-label="Коментар"></textarea>
+      <button type="submit">Записати</button>
+    </form>
+    {{ messages(error, (), saved) }}
+  </article>
+</div>
+<article>
+  <header>Журнал</header>
+  <table>
+    <thead><tr><th>Коли</th><th>Статус</th><th>Коментар</th></tr></thead>
+    <tbody>
+    {% for entry in item.history %}
+      <tr><td>{{ entry.date_added|when }}</td><td>{{ entry.status_name or entry.status_id }}</td><td class="pre">{{ entry.comment }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</article>

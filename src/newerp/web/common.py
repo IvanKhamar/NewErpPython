@@ -59,6 +59,8 @@ MENU = (
     MenuLink("Головна", "/app/", Roles.ALL),
     MenuLink("Замовлення", "/app/orders", Policies.ORDERS),
     MenuLink("Нове замовлення", "/app/orders/new", Policies.ORDERS),
+    MenuLink("Повернення", "/app/returns", Policies.ORDERS),
+    MenuLink("Покупці", "/app/customers", Policies.ORDERS),
     MenuLink("Розхідники", "/app/stock", Policies.STOCK),
     MenuLink("За складами", "/app/stock/by-warehouse", Policies.STOCK),
     MenuLink("Інвентаризація", "/app/stock/stocktaking", Policies.STOCK),

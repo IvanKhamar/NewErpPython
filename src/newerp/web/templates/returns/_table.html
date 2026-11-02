@@ -1,0 +1,28 @@
+{% from "_macros.html" import pager %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>№</th><th>Дата</th><th>Замовлення</th><th>Клієнт</th><th>Товар</th><th class="num">Кількість</th>
+      <th>Статус</th><th>Дія</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for item in result.items %}
+    <tr>
+      <td><a href="/app/returns/{{ item.id }}">{{ item.id }}</a></td>
+      <td>{{ item.date_added|when }}</td>
+      <td><a href="/app/orders/{{ item.order_id }}">{{ item.order_id }}</a></td>
+      <td>{{ item.customer }}<br><small>{{ item.telephone }}</small></td>
+      <td>{{ item.product }} <small>{{ item.model }}</small></td>
+      <td class="num">{{ item.quantity }}</td>
+      <td>{{ item.status_name or item.status_id }}</td>
+      <td>{{ item.action_name or "" }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ pager("/app/returns", "#returns", result, pages, previous_page, next_page, "повернень") }}

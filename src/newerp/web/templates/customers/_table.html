@@ -1,0 +1,24 @@
+{% from "_macros.html" import pager %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr><th>№</th><th>Покупець</th><th>Телефон</th><th>E-mail</th><th>Група</th><th class="num">Замовлень</th><th>З нами з</th></tr>
+  </thead>
+  <tbody>
+  {% for customer in result.items %}
+    <tr>
+      <td>{{ customer.id }}</td>
+      <td><a href="/app/customers/{{ customer.id }}">{{ customer.name }}</a>{% if not customer.status %} <small>(вимкнений)</small>{% endif %}</td>
+      <td>{{ customer.telephone }}</td>
+      <td>{{ customer.email }}</td>
+      <td>{{ customer.group_name or "" }}</td>
+      <td class="num">{{ customer.order_count }}</td>
+      <td>{{ customer.date_added|when }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ pager("/app/customers", "#customers", result, pages, previous_page, next_page, "покупців") }}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Покупці{% endblock %}
+{% block content %}
+<h1>Покупці</h1>
+<form class="filters" action="/app/customers" method="get"
+      hx-get="/app/customers" hx-target="#customers" hx-push-url="true" hx-trigger="change, submit">
+  <input type="search" name="search" value="{{ search }}" placeholder="Ім'я, e-mail, телефон, номер" aria-label="Пошук">
+  <select name="group" aria-label="Група">
+    <option value="">Усі групи</option>
+    {% for group in groups %}
+    <option value="{{ group.id }}"{% if group.id == group_id %} selected{% endif %}>{{ group.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Знайти</button>
+</form>
+<div id="customers">{% include "customers/_table.html" %}</div>
+{% endblock %}

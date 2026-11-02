@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Повернення{% endblock %}
+{% block content %}
+<h1>Повернення</h1>
+<p><small>Нове повернення оформлюють у картці замовлення.</small></p>
+<form class="filters" action="/app/returns" method="get"
+      hx-get="/app/returns" hx-target="#returns" hx-push-url="true" hx-trigger="change, submit">
+  <select name="status" aria-label="Статус">
+    <option value="">Усі статуси</option>
+    {% for status in statuses %}
+    <option value="{{ status.id }}"{% if status.id == status_id %} selected{% endif %}>{{ status.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="search" name="search" value="{{ search }}" placeholder="Клієнт, телефон, товар, модель" aria-label="Пошук">
+  <button type="submit">Знайти</button>
+</form>
+<div id="returns">{% include "returns/_table.html" %}</div>
+{% endblock %}

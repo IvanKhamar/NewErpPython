@@ -11,6 +11,19 @@
 {% endfor %}
 {%- endmacro %}
 
+{# Previous/next links of a paged table; HTMX replaces only the target and puts the page into the address. #}
+{% macro pager(url, target, result, pages, previous_page, next_page, noun) -%}
+<div class="pager">
+  {% if previous_page %}
+  <a href="{{ url }}?{{ previous_page }}" hx-get="{{ url }}?{{ previous_page }}" hx-target="{{ target }}" hx-push-url="true">← Попередня</a>
+  {% endif %}
+  <span>Сторінка {{ result.page }} з {{ pages }} · {{ noun }}: {{ result.total_count }}</span>
+  {% if next_page %}
+  <a href="{{ url }}?{{ next_page }}" hx-get="{{ url }}?{{ next_page }}" hx-target="{{ target }}" hx-push-url="true">Наступна →</a>
+  {% endif %}
+</div>
+{%- endmacro %}
+
 {# Business errors and warnings of other modules under a form. #}
 {% macro messages(error=None, warnings=(), saved_text=None) -%}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}

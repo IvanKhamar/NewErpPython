@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Повернення №{{ item.id }}{% endblock %}
+{% block content %}
+<p><a href="/app/returns">← Повернення</a></p>
+<h1>Повернення №{{ item.id }} <small>від {{ item.date_added|when }}</small></h1>
+<div id="return">{% include "returns/_card.html" %}</div>
+{% endblock %}
