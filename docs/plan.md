@@ -44,7 +44,7 @@ Compared with the .NET and Java versions:
 | 22b+ | Web: the production specifications (BOMs), product links and the model stocktaking (now only through the API) | the same | planned |
 | 22c | Web: delivery (reminders, the waybill in the order card), cashbox, bank payments with matching, LiqPay links, returns, customers | the same | done |
 | 22c+ | Web: waybills abroad (Nova Post International), now only through the API | the same | planned |
-| 22d | Web: catalog and sort, pre-orders, marketing, partners, competitors, reports, users and bonuses | the same | planned |
+| 22d | Web: catalog and sort, pre-orders, marketing (birthdays, contact export, gift vouchers), partners, competitors, reports, users and bonuses | the same | done |
 
 Compared with the old PHP CRM (missing in all three new versions; from the .NET README, "Обмеження" and "Далі"):
 

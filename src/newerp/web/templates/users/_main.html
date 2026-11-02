@@ -1,0 +1,58 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+{% if password %}
+{# Shown once: the server keeps only the hash, so this page is the only place the password is seen. #}
+<article class="temporary-password">
+  <p>Тимчасовий пароль — передайте його працівнику; більше він ніде не з'явиться:</p>
+  <p><code>{{ password.temporary_password }}</code></p>
+</article>
+{% endif %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Логін</th><th>Ім'я</th><th>E-mail</th><th>Роль</th><th>Останній вхід</th><th></th></tr></thead>
+  <tbody>
+  {% for user in users %}
+    {% set base = "/app/users/%d" % user.user_id %}
+    <tr>
+      <td>{{ user.username }}{% if not user.active_on_old_site %} <small>(вимкнений на сайті)</small>{% endif %}</td>
+      <td>{{ user.full_name }}</td>
+      <td>{{ user.email }}</td>
+      <td>
+        <form hx-post="{{ base }}/access" hx-target="#users" hx-trigger="change" class="inline">
+          <select name="role" aria-label="Роль {{ user.username }}">
+            {% if not user.has_access %}<option value="" selected>Без доступу</option>{% endif %}
+            {% for code, name in roles.items() %}
+            <option value="{{ code }}"{% if user.has_access and user.role == code %} selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </td>
+      <td>{{ user.last_login_at|when if user.last_login_at else "" }}</td>
+      <td class="actions">
+        {% if user.has_access %}
+        <button class="outline" hx-post="{{ base }}/reset-password" hx-target="#users"
+                hx-confirm="Скинути пароль {{ user.username }} на тимчасовий?">Скинути пароль</button>
+        <button class="secondary outline" hx-post="{{ base }}/revoke" hx-target="#users"
+                hx-confirm="Забрати доступ у {{ user.username }}?">Забрати доступ</button>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<article>
+  <header>Новий працівник</header>
+  <form hx-post="/app/users/new" hx-target="#users">
+    <div class="grid">
+      <input name="username" maxlength="20" placeholder="Логін" aria-label="Логін" required>
+      <input name="first_name" maxlength="32" placeholder="Ім'я" aria-label="Ім'я" required>
+      <input name="last_name" maxlength="32" placeholder="Прізвище" aria-label="Прізвище">
+      <input name="email" type="email" maxlength="96" placeholder="E-mail" aria-label="E-mail">
+      <select name="role" aria-label="Роль">
+        {% for code, name in roles.items() %}<option value="{{ code }}"{% if code == "Manager" %} selected{% endif %}>{{ name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit">Додати з тимчасовим паролем</button>
+  </form>
+</article>

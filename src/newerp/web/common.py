@@ -83,6 +83,8 @@ MENU = (
     MenuLink("Пошите за складами", "/app/production/by-warehouse", Policies.STOCK),
     MenuLink("План пошиву", "/app/production/plan", Policies.STOCK),
     MenuLink("Журнал крою й пошиву", "/app/production/log", Policies.STOCK),
+    MenuLink("Бонуси", "/app/bonuses", Policies.BONUSES),
+    MenuLink("Користувачі", "/app/users", Policies.USERS),
 )
 
 
