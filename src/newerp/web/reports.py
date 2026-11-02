@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from newerp.api.deps import get_order_queries
 from newerp.api.remarketing import Service as Remarketing
+from newerp.api.remarketing import StoreReports
 from newerp.api.reports import Service
 from newerp.api.security import Policies
 from newerp.application.remarketing import UtmFilter
@@ -19,7 +20,8 @@ from newerp.web.common import BUSINESS_ERRORS, number, page_roles, render
 router = APIRouter(prefix="/app/reports", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.ORDERS))])
 Queries = Annotated[SqlOrderQueries, Depends(get_order_queries)]
 
-VIEWS = {"sales": "Продажі", "products": "Товари", "statuses": "Статуси", "utm": "Звідки (UTM)"}
+VIEWS = {"sales": "Продажі", "products": "Товари", "statuses": "Статуси", "utm": "Звідки (UTM)", "taxes": "Податки",
+         "views": "Перегляди", "online": "На сайті", "rewards": "Бонусні бали"}  # fmt: skip
 GROUPS = {ReportGrouping.DAY: "днях", ReportGrouping.WEEK: "тижнях", ReportGrouping.MONTH: "місяцях",
           ReportGrouping.YEAR: "роках"}  # fmt: skip
 
@@ -36,6 +38,7 @@ async def reports_page(
     request: Request,
     service: Service,
     remarketing: Remarketing,
+    store: StoreReports,
     queries: Queries,
     view: str = "sales",
     since: str = "",
@@ -63,6 +66,14 @@ async def reports_page(
         elif view == "utm":
             utm = UtmFilter(source or None, medium or None, campaign or None, by_source=bool(by_source))
             report = await remarketing.utm_report(report_filter, utm)
+        elif view == "taxes":
+            report = await store.taxes(report_filter)
+        elif view == "views":
+            report = await store.product_views()
+        elif view == "online":
+            report = await store.online()
+        elif view == "rewards":
+            report = await store.rewards()
         else:
             report = await service.statuses(report_filter)
     except BUSINESS_ERRORS as exc:

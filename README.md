@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 353 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 355 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
 Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 
@@ -22,7 +22,7 @@ Blazor app of the .NET version. What is still missing: the table at the end of t
 | Marketing | `/marketing` (birthday coupons, coupons with exclusions, contact export), gift vouchers, `/sms` |
 | After-sales | `/returns`, `/customers` |
 | Partners | `/partners` and their XML feed `/feeds/{code}.xml` |
-| Reports | `/reports` (sales, products, statuses, UTM, dashboard), revenue feed `/feeds/revenue.json` |
+| Reports | `/reports` (sales, products, statuses, UTM, taxes, product views, online, reward points, dashboard), revenue feed `/feeds/revenue.json` |
 | Competitors | `/competitors`: product pages on competitors' sites, price checks, comparison |
 
 The web interface at `/app/` (in Ukrainian, like the other versions) renders HTML on the server with Jinja2; HTMX

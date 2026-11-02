@@ -1,4 +1,5 @@
-"""UTM report and the remarketing data of an order (Python first). Access as to orders."""
+"""UTM report, the remarketing data of an order and reports on what the storefront records (Python first). Access as
+to orders."""
 
 from typing import Annotated
 
@@ -8,7 +9,16 @@ from newerp.api.deps import ClockDep, Session
 from newerp.api.reports import Filter
 from newerp.api.security import Policies, require_roles
 from newerp.application.remarketing import OrderRemarketingDto, RemarketingService, UtmFilter, UtmReportDto
+from newerp.application.store_reports import (
+    CustomerRewardDto,
+    OnlineVisitorDto,
+    ProductViewsDto,
+    StoreReportService,
+    TaxReportDto,
+)
+from newerp.config import get_settings
 from newerp.infrastructure.remarketing import SqlRemarketingStore
+from newerp.infrastructure.store_reports import SqlStoreReportStore
 
 orders_access = [Depends(require_roles(*Policies.ORDERS))]
 router = APIRouter(prefix="/reports", tags=["Звіти"], dependencies=orders_access)
@@ -41,3 +51,33 @@ async def utm_report(
 @order_router.get("/remarketing", summary="Мітки UTM замовлення й час, коли пікселі вітрини надіслали події")
 async def order_remarketing(order_id: int, service: Service) -> OrderRemarketingDto:
     return await service.for_order(order_id)
+
+
+# ═══ What the storefront records (Python first) ═══
+
+
+def get_store_reports(session: Session, clock: ClockDep) -> StoreReportService:
+    return StoreReportService(SqlStoreReportStore(session, get_settings().language_id), clock)
+
+
+StoreReports = Annotated[StoreReportService, Depends(get_store_reports)]
+
+
+@router.get("/online", summary="Хто зараз на сайті (вітрина пише, якщо увімкнено Customers Online; година)")
+async def online(service: StoreReports) -> list[OnlineVisitorDto]:
+    return await service.online()
+
+
+@router.get("/product-views", summary="Найпереглядуваніші товари: перегляди, продано штук і продажі на 100 переглядів")
+async def product_views(service: StoreReports) -> list[ProductViewsDto]:
+    return await service.product_views()
+
+
+@router.get("/rewards", summary="Бонусні бали покупців: залишок (нараховано мінус витрачено), найбільші зверху")
+async def rewards(service: StoreReports) -> list[CustomerRewardDto]:
+    return await service.rewards()
+
+
+@router.get("/taxes", summary="Податки з підсумків замовлень (рядки tax) за період і назвою податку")
+async def taxes(report_filter: Filter, service: StoreReports) -> TaxReportDto:
+    return await service.taxes(report_filter)

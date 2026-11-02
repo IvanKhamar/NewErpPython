@@ -1,0 +1,44 @@
+{# Reports without a period: what the storefront records now (the filters above do not apply). #}
+<div class="overflow-auto">
+{% if values.view == "views" %}
+<p><small>Лічильник переглядів веде вітрина; продано — штук в оформлених замовленнях за весь час.</small></p>
+<table class="striped">
+  <thead><tr><th>Товар</th><th>Модель</th><th class="num">Переглядів</th><th class="num">Продано</th><th class="num">На 100 переглядів</th></tr></thead>
+  <tbody>
+  {% for row in report %}
+    <tr><td><a href="/app/catalog/products/{{ row.product_id }}">{{ row.name }}</a></td><td>{{ row.model }}</td>
+      <td class="num">{{ row.viewed }}</td><td class="num">{{ row.sold }}</td>
+      <td class="num">{{ row.percent|qty if row.percent is number else "" }}</td></tr>
+  {% else %}
+    <tr><td colspan="5">Переглядів ще немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif values.view == "online" %}
+<p><small>Записи веде вітрина, якщо в налаштуваннях увімкнено «Customers Online», і сама видаляє старші за годину.</small></p>
+<table class="striped">
+  <thead><tr><th>Коли</th><th>Хто</th><th>IP</th><th>Сторінка</th><th>Звідки прийшов</th></tr></thead>
+  <tbody>
+  {% for row in report %}
+    <tr><td>{{ row.date_added|when }}</td>
+      <td>{% if row.customer_id %}<a href="/app/customers/{{ row.customer_id }}">{{ row.customer or row.customer_id }}</a>{% else %}гість{% endif %}</td>
+      <td>{{ row.ip }}</td><td class="wrap">{{ row.url }}</td><td class="wrap">{{ row.referer }}</td></tr>
+  {% else %}
+    <tr><td colspan="5">Зараз на сайті нікого (або облік вимкнено).</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<table class="striped">
+  <thead><tr><th>Покупець</th><th class="num">Балів</th><th>Остання зміна</th></tr></thead>
+  <tbody>
+  {% for row in report %}
+    <tr><td><a href="/app/customers/{{ row.customer_id }}">{{ row.customer or row.customer_id }}</a></td>
+      <td class="num">{{ row.points }}</td><td>{{ row.last_change|when }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">Бонусних балів ні в кого немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</div>
