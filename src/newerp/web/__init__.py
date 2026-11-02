@@ -9,13 +9,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from newerp.web import auth, home, orders
+from newerp.web import auth, home, orders, stock
 from newerp.web.common import HERE, PageForbidden, Redirect, render
 
 
 def add_web(app: FastAPI) -> None:
     app.mount("/app/static", StaticFiles(directory=HERE / "static"), name="web-static")
-    for module in (auth, home, orders):
+    for module in (auth, home, orders, stock):
         app.include_router(module.router)
 
     @app.exception_handler(Redirect)

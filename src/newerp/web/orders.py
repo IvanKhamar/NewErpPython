@@ -2,7 +2,6 @@
 
 import math
 import re
-from decimal import Decimal, InvalidOperation
 from typing import Annotated, Any
 from urllib.parse import urlencode
 
@@ -10,7 +9,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from starlette.datastructures import FormData
 
-from newerp.api.deps import get_new_order_service, get_order_queries, get_order_service
+from newerp.api.deps import Session, get_new_order_service, get_order_queries, get_order_service
 from newerp.api.security import Policies
 from newerp.application.orders.models import (
     AssignManagerRequest,
@@ -25,9 +24,8 @@ from newerp.application.orders.models import (
     ProductPickDto,
 )
 from newerp.application.orders.services import NewOrderService, OrderService
-from newerp.domain.common import DomainError
 from newerp.infrastructure.orders.queries import SqlOrderQueries
-from newerp.web.common import BUSINESS_ERRORS, WebUser, is_fragment, number, page_roles, render
+from newerp.web.common import BUSINESS_ERRORS, WebUser, decimal_field, is_fragment, number, page_roles, render, undo
 
 router = APIRouter(prefix="/app/orders", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.ORDERS))])
 Queries = Annotated[SqlOrderQueries, Depends(get_order_queries)]
@@ -167,16 +165,6 @@ def _text(form: FormData, name: str) -> str:
     return value.strip() if isinstance(value, str) else ""
 
 
-def _amount(value: str, field: str) -> Decimal:
-    try:
-        amount = Decimal((value or "0").replace(",", ".").replace(" ", ""))
-    except InvalidOperation:
-        amount = Decimal("NaN")
-    if not amount.is_finite():
-        raise DomainError(f"{field}: потрібне число, наприклад 150 або 99,50.")
-    return amount
-
-
 def _create_request(form: FormData, methods: OrderMethodsDto) -> CreateOrderRequest:
     """The form fields as the same request the API takes as JSON. The lines come as repeated fields."""
     columns = [form.getlist(name) for name in ("product_id", "option_id", "quantity", "price")]
@@ -185,7 +173,7 @@ def _create_request(form: FormData, methods: OrderMethodsDto) -> CreateOrderRequ
             product_id=number(str(product)) or 0,
             product_option_value_id=number(str(option)),
             quantity=number(str(quantity)) or 0,
-            price=_amount(str(price), "Ціна"),
+            price=decimal_field(str(price), "Ціна"),
         )
         for product, option, quantity, price in zip(*columns, strict=True)
     ]
@@ -210,20 +198,21 @@ def _create_request(form: FormData, methods: OrderMethodsDto) -> CreateOrderRequ
         payment_code=_text(form, "payment_code"),
         payment_method=payment.get(_text(form, "payment_code"), ""),
         lines=lines,
-        shipping_cost=_amount(_text(form, "shipping_cost"), "Доставка"),
-        discount=_amount(_text(form, "discount"), "Знижка"),
-        prepayment=_amount(_text(form, "prepayment"), "Передоплата"),
+        shipping_cost=decimal_field(_text(form, "shipping_cost"), "Доставка"),
+        discount=decimal_field(_text(form, "discount"), "Знижка"),
+        prepayment=decimal_field(_text(form, "prepayment"), "Передоплата"),
         comment=_text(form, "comment"),
     )
 
 
 @router.post("/new")
-async def create_order(request: Request, user: WebUser, service: NewOrders) -> HTMLResponse:
+async def create_order(request: Request, user: WebUser, service: NewOrders, session: Session) -> HTMLResponse:
     form = await request.form()
     try:
         result = await service.create(_create_request(form, await service.list_methods()), user.user_id)
     except BUSINESS_ERRORS as error:
-        return render(request, "orders/_error.html", error=str(error))  # under the form, which keeps its values
+        # Shown under the form, which keeps its values.
+        return render(request, "_error.html", error=await undo(session, error))
     response = render(request, "orders/_created.html", result=result)
     # On success the whole form is replaced, so the same order cannot be sent twice.
     response.headers["HX-Retarget"] = "#new-order"
@@ -254,7 +243,13 @@ async def order_card(request: Request, order_id: int, queries: Queries) -> HTMLR
 
 @router.post("/{order_id}/status")
 async def change_status(
-    request: Request, order_id: int, user: WebUser, queries: Queries, service: Orders, status_id: Field = ""
+    request: Request,
+    order_id: int,
+    user: WebUser,
+    queries: Queries,
+    service: Orders,
+    session: Session,
+    status_id: Field = "",
 ) -> HTMLResponse:
     warnings: list[str] = []
     error = None
@@ -262,7 +257,7 @@ async def change_status(
         change = ChangeOrderStatusRequest(status_id=number(status_id) or 0)
         warnings = (await service.change_status(order_id, change, user.user_id)).warnings
     except BUSINESS_ERRORS as exc:
-        error = str(exc)
+        error = await undo(session, exc)
     order = await queries.get(order_id)
     if order is None:
         return render(request, "not_found.html", status_code=404)
@@ -272,13 +267,19 @@ async def change_status(
 
 @router.post("/{order_id}/manager")
 async def assign_manager(
-    request: Request, order_id: int, user: WebUser, queries: Queries, service: Orders, manager_id: Field = ""
+    request: Request,
+    order_id: int,
+    user: WebUser,
+    queries: Queries,
+    service: Orders,
+    session: Session,
+    manager_id: Field = "",
 ) -> HTMLResponse:
     error = None
     try:
         await service.assign_manager(order_id, AssignManagerRequest(manager_id=number(manager_id) or 0), user.user_id)
     except BUSINESS_ERRORS as exc:
-        error = str(exc)
+        error = await undo(session, exc)
     order = await queries.get(order_id)
     if order is None:
         return render(request, "not_found.html", status_code=404)

@@ -1,0 +1,8 @@
+{# A line of a draft purchase order; the lines go to the server as repeated fields. #}
+<tr>
+  <td><input type="hidden" name="item_id" value="{{ item_id }}"><a href="/app/stock/items/{{ item_id }}">{{ name }}</a></td>
+  <td><input name="quantity" value="{{ quantity }}" inputmode="decimal" aria-label="Кількість, {{ unit }}"></td>
+  <td>{{ unit }}</td>
+  <td><input name="price" value="{{ price }}" inputmode="decimal" aria-label="Ціна"></td>
+  <td><button type="button" class="outline secondary" data-remove-row aria-label="Прибрати">✕</button></td>
+</tr>

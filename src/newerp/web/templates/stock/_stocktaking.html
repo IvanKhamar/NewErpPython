@@ -1,0 +1,39 @@
+{% from "_macros.html" import messages %}
+{{ messages(error) }}
+{% if result %}
+<p class="ok" role="status">Залишки оновлено: пораховано позицій {{ result.counted }}, змінено {{ result.changed }},
+  різниця у вартості {{ result.value|money }}.</p>
+{% elif preview %}
+{% for problem in preview.errors %}<p class="error">{{ problem }}</p>{% endfor %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Розхідник</th><th class="num">За обліком</th><th class="num">Фактично</th><th class="num">Різниця</th></tr></thead>
+  <tbody>
+  {% for line in preview.lines %}
+    <tr>
+      <td>{{ line.name }}</td>
+      <td class="num">{{ line.booked|qty }} {{ line.unit }}</td>
+      <td class="num">{{ line.actual|qty }} {{ line.unit }}</td>
+      <td class="num {{ 'down' if line.difference < 0 else 'up' if line.difference > 0 }}">
+        {{ "+" if line.difference > 0 }}{{ line.difference|qty }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">В аркуші немає жодної порахованої позиції.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if preview.lines and not preview.errors %}
+<form hx-post="/app/stock/stocktaking" hx-target="#apply-result" role="group">
+  <input type="hidden" name="warehouse_id" value="{{ warehouse_id or '' }}">
+  {% for line in preview.lines %}
+  <input type="hidden" name="item_id" value="{{ line.item_id }}"><input type="hidden" name="actual" value="{{ line.actual|qty }}">
+  {% endfor %}
+  <input name="comment" maxlength="200" placeholder="Примітка (необов'язково)" aria-label="Примітка">
+  <button type="submit">Застосувати</button>
+</form>
+<div id="apply-result"></div>
+{% elif preview.errors %}
+<p>Виправте аркуш і завантажте його ще раз.</p>
+{% endif %}
+{% endif %}

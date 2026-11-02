@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import place_options %}
+{% block title %}Інвентаризація{% endblock %}
+{% block content %}
+<h1>Інвентаризація розхідників</h1>
+<p>Вивантажте аркуш, впишіть у стовпчик «Фактично» те, що порахували, і завантажте його назад. Спершу буде видно
+  різниці; залишки зміняться лише після підтвердження.</p>
+<article>
+  <header>1. Аркуш для підрахунку</header>
+  <form action="/app/stock/stocktaking/sheet.xlsx" method="get" class="filters">
+    <select name="warehouse" aria-label="Де рахуємо">{{ place_options(warehouses) }}</select>
+    <select name="category" aria-label="Категорія">
+      <option value="">Усі категорії</option>
+      {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="outline">Вивантажити аркуш</button>
+  </form>
+</article>
+<article>
+  <header>2. Пораховане</header>
+  <form hx-post="/app/stock/stocktaking/preview" hx-encoding="multipart/form-data" hx-target="#preview" class="filters">
+    <select name="warehouse_id" aria-label="Де рахували">{{ place_options(warehouses) }}</select>
+    <input type="file" name="file" accept=".xlsx" aria-label="Заповнений аркуш" required>
+    <button type="submit">Перевірити</button>
+  </form>
+  <div id="preview"></div>
+</article>
+{% endblock %}

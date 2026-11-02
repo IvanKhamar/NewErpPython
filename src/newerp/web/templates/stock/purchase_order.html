@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Замовлення постачальнику №{{ order.id }}{% endblock %}
+{% block content %}
+<p><a href="/app/stock/purchase-orders">← Замовлення постачальникам</a></p>
+<div id="purchase">{% include "stock/_purchase_order.html" %}</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+<div class="overflow-auto">
+<table class="striped">
+  <thead>
+    <tr>
+      <th>Назва</th><th>Категорія</th><th>Постачальник</th><th class="num">Залишок</th><th class="num">Мінімум</th>
+      <th class="num">Ціна</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for item in items %}
+    <tr>
+      <td><a href="/app/stock/items/{{ item.id }}">{{ item.name }}</a></td>
+      <td>{{ item.category_name or "" }}</td>
+      <td>{{ item.supplier_name or "" }}</td>
+      <td class="num">{{ item.quantity|qty }} {{ item.unit }}
+        {% if item.quantity == 0 %}<span class="chip none">немає</span>
+        {% elif item.is_below_minimum %}<span class="chip few">мало</span>{% endif %}</td>
+      <td class="num">{{ item.min_quantity|qty }}</td>
+      <td class="num">{{ item.price|money if item.price > 0 else "" }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

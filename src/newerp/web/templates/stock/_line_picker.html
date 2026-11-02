@@ -1,0 +1,19 @@
+{# Lines of a purchase order being edited, and a select that adds one more (the server renders the row). #}
+<div class="overflow-auto">
+<table>
+  <thead><tr><th>Позиція</th><th>Кількість</th><th></th><th>Ціна</th><th></th></tr></thead>
+  <tbody id="lines">
+  {% for line in lines %}
+    {% with item_id=line.item_id, name=line.item_name, unit=line.unit, quantity=line.quantity|qty, price=line.price|qty %}
+    {% include "stock/_purchase_line.html" %}
+    {% endwith %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{# A GET from HTMX sends only this select's value, not the form around it; app.js resets it after the row comes. #}
+<select name="add" aria-label="Додати позицію" hx-get="/app/stock/purchase-orders/line" hx-target="#lines"
+        hx-swap="beforeend" data-reset>
+  <option value="">+ Додати позицію…</option>
+  {% for item in items %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+</select>

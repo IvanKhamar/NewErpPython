@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }}{% endblock %}
+{% block content %}
+<p><a href="/app/stock">← Розхідники</a></p>
+<div class="title-row">
+  <h1>{{ item.name }}</h1>
+  <a href="/app/stock/items/{{ item.id }}/edit" role="button" class="outline">Змінити</a>
+</div>
+<div id="item">{% include "stock/_item.html" %}</div>
+{% endblock %}

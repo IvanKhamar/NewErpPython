@@ -19,3 +19,8 @@ th.num, td.num { text-align: right; }
 .error, .down { color: #c62828; }
 .warning { color: #b26a00; }
 .ok, .up { color: #2e7d32; }
+.chip.none, .chip.cancelled { background: #ef9a9a; }
+.chip.few { background: #ffcc80; }
+.chip.ordered { background: #90caf9; }
+.chip.received { background: #a5d6a7; }
+pre { white-space: pre-wrap; padding: 0.8rem; }

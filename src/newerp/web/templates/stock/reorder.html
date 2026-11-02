@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}Що дозамовити{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Що дозамовити</h1>
+  {% if report.suppliers %}<strong>Разом: {{ report.total|money }}</strong>{% endif %}
+</div>
+<p>Позиції нижче мінімуму, згруповані за постачальниками. Кількість — до мінімуму із запасом, мінус те, що вже
+  замовлено.</p>
+{{ messages(error) }}
+{% for group in report.suppliers %}
+<article>
+  <header class="title-row">
+    <span><strong>{{ group.supplier_name }}</strong> {{ [group.phone, group.email]|select|join(" · ") }}</span>
+    <span>{{ group.total|money }}</span>
+  </header>
+  <div class="overflow-auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Позиція</th><th class="num">Залишок</th><th class="num">Мінімум</th><th class="num">Уже замовлено</th>
+        <th class="num">Замовити</th><th class="num">Сума</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for line in group.lines %}
+      <tr>
+        <td><a href="/app/stock/items/{{ line.item_id }}">{{ line.name }}</a></td>
+        <td class="num">{{ line.quantity|qty }} {{ line.unit }}</td>
+        <td class="num">{{ line.min_quantity|qty }}</td>
+        <td class="num">{{ line.on_order|qty if line.on_order else "" }}</td>
+        <td class="num"><strong>{{ line.suggested|qty }} {{ line.unit }}</strong></td>
+        <td class="num">{{ line.sum|money if line.sum else "" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <details>
+    <summary>Текст для постачальника</summary>
+    <pre>{{ group.message_text }}</pre>
+  </details>
+  {% if group.supplier_id %}
+  <form method="post" action="/app/stock/reorder/{{ group.supplier_id }}">
+    <button type="submit">Створити замовлення</button>
+  </form>
+  {% else %}
+  <p><small>Вкажіть постачальника в картці позиції («Змінити»), і її можна буде замовити.</small></p>
+  {% endif %}
+</article>
+{% else %}
+<p class="ok">Усі розхідники вище мінімуму — дозамовляти нічого.</p>
+{% endfor %}
+{% endblock %}

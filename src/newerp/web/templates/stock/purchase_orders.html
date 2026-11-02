@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Замовлення постачальникам{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Замовлення постачальникам</h1>
+  <span>
+    <a href="/app/stock/reorder" role="button" class="outline">Що дозамовити</a>
+    <a href="/app/stock/purchase-orders/new" role="button">Нове замовлення</a>
+  </span>
+</div>
+{# hx-select takes only the table out of the page that comes back. #}
+<form class="filters" action="/app/stock/purchase-orders" method="get" hx-get="/app/stock/purchase-orders"
+      hx-target="#purchase-orders" hx-select="#purchase-orders" hx-swap="outerHTML" hx-push-url="true"
+      hx-trigger="change, submit">
+  <select name="status" aria-label="Статус">
+    <option value="">Усі статуси</option>
+    {% for code, name in statuses.items() %}
+    <option value="{{ code }}"{% if code == status %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</form>
+<div class="overflow-auto" id="purchase-orders">
+<table class="striped">
+  <thead><tr><th>№</th><th>Постачальник</th><th>Статус</th><th>Створено</th><th class="num">Позицій</th><th class="num">Сума</th></tr></thead>
+  <tbody>
+  {% for order in orders %}
+    <tr>
+      <td><a href="/app/stock/purchase-orders/{{ order.id }}">{{ order.id }}</a></td>
+      <td>{{ order.supplier_name or "" }}</td>
+      <td><span class="chip {{ order.status }}">{{ statuses.get(order.status, order.status) }}</span></td>
+      <td>{{ order.created_at|when }}</td>
+      <td class="num">{{ order.line_count }}</td>
+      <td class="num">{{ order.total|money }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Замовлень немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

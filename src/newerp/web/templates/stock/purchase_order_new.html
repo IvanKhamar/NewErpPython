@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Нове замовлення постачальнику{% endblock %}
+{% block content %}
+<p><a href="/app/stock/purchase-orders">← Замовлення постачальникам</a></p>
+<h1>Нове замовлення постачальнику</h1>
+<form hx-post="/app/stock/purchase-orders/new" hx-target="#form-result">
+  <div class="grid">
+    <label>Постачальник
+      <select name="supplier_id" required>
+        <option value="">—</option>
+        {% for supplier in suppliers %}<option value="{{ supplier.id }}">{{ supplier.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Коментар <input name="comment" maxlength="255"></label>
+  </div>
+  {% with lines=[] %}{% include "stock/_line_picker.html" %}{% endwith %}
+  <div id="form-result"></div>
+  <button type="submit">Створити чернетку</button>
+</form>
+{% endblock %}

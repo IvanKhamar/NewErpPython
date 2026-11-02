@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Змінити розхідник" if item_id else "Новий розхідник" }}{% endblock %}
+{% block content %}
+{% if item_id %}<p><a href="/app/stock/items/{{ item_id }}">← Розхідник</a></p>
+{% else %}<p><a href="/app/stock">← Розхідники</a></p>{% endif %}
+<h1>{{ self.title() }}</h1>
+{{ messages(error) }}
+{# A plain form: on success the server redirects to the card, on an error it shows this page again with the values. #}
+<form method="post">
+  <label>Назва <input name="name" value="{{ values.name or '' }}" maxlength="150" required></label>
+  <div class="grid">
+    <label>Одиниця <input name="unit" value="{{ values.unit or '' }}" maxlength="16" required></label>
+    <label>Мінімальний залишок <input name="min_quantity" value="{{ values.min_quantity or '' }}" inputmode="decimal"></label>
+    <label>Ціна за одиницю <input name="price" value="{{ values.price or '' }}" inputmode="decimal"></label>
+  </div>
+  <div class="grid">
+    <label>Категорія
+      <select name="category_id">
+        <option value="">—</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}"{% if category.id|string == values.category_id %} selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Постачальник
+      <select name="supplier_id">
+        <option value="">—</option>
+        {% for supplier in suppliers %}
+        <option value="{{ supplier.id }}"{% if supplier.id|string == values.supplier_id %} selected{% endif %}>{{ supplier.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label>Для чого <input name="used_for" value="{{ values.used_for or '' }}" maxlength="255"></label>
+  {% if not item_id %}<p><small>Залишок додається потім, приходом у картці розхідника.</small></p>{% endif %}
+  <button type="submit">Зберегти</button>
+</form>
+{% endblock %}

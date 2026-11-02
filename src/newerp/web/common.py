@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote, urlsplit
@@ -11,6 +11,7 @@ from urllib.parse import quote, urlsplit
 from fastapi import Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.api.deps import UserLoginStoreDep
 from newerp.api.errors import NotAuthenticated
@@ -36,8 +37,14 @@ def when(value: datetime | date) -> str:
     return f"{value:%d.%m.%Y %H:%M}" if isinstance(value, datetime) else f"{value:%d.%m.%Y}"
 
 
+def qty(value: Decimal | int) -> str:
+    """A stock quantity without trailing zeros: 12.500 → "12,5"."""
+    return f"{value:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
 templates.env.filters["money"] = money
 templates.env.filters["when"] = when
+templates.env.filters["qty"] = qty
 
 
 @dataclass(frozen=True)
@@ -52,6 +59,12 @@ MENU = (
     MenuLink("Головна", "/app/", Roles.ALL),
     MenuLink("Замовлення", "/app/orders", Policies.ORDERS),
     MenuLink("Нове замовлення", "/app/orders/new", Policies.ORDERS),
+    MenuLink("Розхідники", "/app/stock", Policies.STOCK),
+    MenuLink("За складами", "/app/stock/by-warehouse", Policies.STOCK),
+    MenuLink("Інвентаризація", "/app/stock/stocktaking", Policies.STOCK),
+    MenuLink("Що дозамовити", "/app/stock/reorder", Policies.STOCK),
+    MenuLink("Замовлення постачальникам", "/app/stock/purchase-orders", Policies.STOCK),
+    MenuLink("Постачальники", "/app/stock/suppliers", Policies.STOCK),
 )
 
 
@@ -71,6 +84,26 @@ def is_fragment(request: Request) -> bool:
 def number(value: str | None) -> int | None:
     """A form or query field as an id: empty or not a number → None (an empty <select> sends "")."""
     return int(value) if value and value.isascii() and value.isdigit() else None
+
+
+def decimal_field(value: str, field: str) -> Decimal:
+    """A number typed in a form: a comma is allowed (99,50); empty is 0."""
+    try:
+        amount = Decimal((value or "0").replace(",", ".").replace(" ", ""))
+    except InvalidOperation:
+        amount = Decimal("NaN")
+    if not amount.is_finite():
+        raise DomainError(f"{field}: потрібне число, наприклад 150 або 99,50.")
+    return amount
+
+
+async def undo(session: AsyncSession, error: Exception) -> str:
+    """
+    A business rule refused the change. The services commit only at the end, so nothing is written, but the loaded
+    objects may hold half of the change: the rollback reloads them, and the page shows what is saved.
+    """
+    await session.rollback()
+    return str(error)
 
 
 def local_path(target: str | None) -> str:

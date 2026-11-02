@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}Постачальники й категорії{% endblock %}
+{% block content %}
+<h1>Постачальники й категорії</h1>
+{{ messages(error) }}
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Назва</th><th>Телефон</th><th>Email</th><th>Що постачає</th><th>Примітки</th></tr></thead>
+  <tbody>
+  {% for supplier in suppliers %}
+    <tr>
+      <td>{{ supplier.name }}</td><td>{{ supplier.phone }}</td><td>{{ supplier.email }}</td>
+      <td>{{ supplier.categories }}</td><td>{{ supplier.notes }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Постачальників ще немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="grid">
+  <article>
+    <header>Новий постачальник</header>
+    <form method="post" action="/app/stock/suppliers">
+      <input name="name" value="{{ values.name or '' }}" maxlength="150" placeholder="Назва" aria-label="Назва" required>
+      <input name="phone" value="{{ values.phone or '' }}" maxlength="32" placeholder="Телефон" aria-label="Телефон">
+      <input name="email" value="{{ values.email or '' }}" maxlength="96" placeholder="Email" aria-label="Email">
+      <input name="categories" value="{{ values.categories or '' }}" maxlength="255" placeholder="Що постачає"
+             aria-label="Що постачає">
+      <input name="notes" value="{{ values.notes or '' }}" maxlength="255" placeholder="Примітки" aria-label="Примітки">
+      <button type="submit">Додати постачальника</button>
+    </form>
+  </article>
+  <article>
+    <header>Категорії розхідників</header>
+    <ul>{% for category in categories %}<li>{{ category.name }}</li>{% endfor %}</ul>
+    <form method="post" action="/app/stock/categories" role="group">
+      <input name="category_name" value="{{ values.category_name or '' }}" maxlength="100" placeholder="Нова категорія"
+             aria-label="Нова категорія" required>
+      <button type="submit">Додати</button>
+    </form>
+  </article>
+</div>
+{% endblock %}

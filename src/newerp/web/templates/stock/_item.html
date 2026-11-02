@@ -1,0 +1,92 @@
+{% from "_macros.html" import messages, place_options %}
+{# The whole card is one fragment: each form below replaces it with the saved state and a message. #}
+{{ messages(error, (), saved) }}
+<div class="grid">
+  <article>
+    <header>Залишок</header>
+    <p class="tile-value{% if item.is_below_minimum %} warning{% endif %}" data-test="quantity">{{ item.quantity|qty }} {{ item.unit }}</p>
+    {% if item.is_below_minimum %}<p class="warning">Нижче мінімуму — варто дозамовити.</p>{% endif %}
+    <table>
+      <tbody>
+        <tr><td>Категорія</td><td>{{ item.category_name or "—" }}</td></tr>
+        <tr><td>Постачальник</td><td>{{ item.supplier_name or "—" }}</td></tr>
+        <tr><td>Ціна</td><td>{{ item.price|money if item.price > 0 else "—" }}</td></tr>
+        <tr><td>Для чого</td><td>{{ item.used_for or "—" }}</td></tr>
+      </tbody>
+    </table>
+    <form hx-post="/app/stock/items/{{ item.id }}/min-quantity" hx-target="#item" role="group">
+      <input name="min_quantity" value="{{ item.min_quantity|qty }}" inputmode="decimal"
+             aria-label="Мінімальний залишок, {{ item.unit }}">
+      <button type="submit" class="outline">Зберегти мінімум</button>
+    </form>
+  </article>
+  <article>
+    <header>Прихід або витрата</header>
+    <form hx-post="/app/stock/items/{{ item.id }}/adjustments" hx-target="#item">
+      <fieldset>
+        <label><input type="radio" name="kind" value="in" checked> Прихід</label>
+        <label><input type="radio" name="kind" value="out"> Витрата</label>
+      </fieldset>
+      <input name="quantity" inputmode="decimal" placeholder="Кількість, {{ item.unit }}" aria-label="Кількість" required>
+      <input name="reason" maxlength="200" placeholder="Причина: прихід від постачальника, брак…" aria-label="Причина">
+      {% if warehouses %}<select name="warehouse_id" aria-label="Де">{{ place_options(warehouses) }}</select>{% endif %}
+      <button type="submit">Записати</button>
+    </form>
+  </article>
+</div>
+<article>
+  <header>Де лежить</header>
+  <table>
+    <tbody>
+    {% for place in placement.places %}
+      <tr><td>{{ place.name }}</td><td class="num">{{ place.quantity|qty }} {{ item.unit }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if warehouses %}
+  <form hx-post="/app/stock/items/{{ item.id }}/transfers" hx-target="#item" class="filters">
+    <select name="from_warehouse_id" aria-label="Звідки">{{ place_options(warehouses) }}</select>
+    <select name="to_warehouse_id" aria-label="Куди">{{ place_options(warehouses, warehouses[0].id) }}</select>
+    <input name="quantity" inputmode="decimal" placeholder="Кількість" aria-label="Кількість" required>
+    <input name="comment" maxlength="200" placeholder="Коментар" aria-label="Коментар">
+    <button type="submit" class="outline">Перемістити</button>
+  </form>
+  {% endif %}
+</article>
+<article>
+  <header>Журнал руху</header>
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead><tr><th>Коли</th><th class="num">Зміна</th><th class="num">Стало</th><th>Причина</th><th>Хто</th></tr></thead>
+    <tbody>
+    {% for movement in movements %}
+      <tr>
+        <td>{{ movement.created_at|when }}</td>
+        <td class="num {{ 'up' if movement.delta > 0 else 'down' }}">{{ "+" if movement.delta > 0 }}{{ movement.delta|qty }}</td>
+        <td class="num">{{ movement.quantity_after|qty }}</td>
+        <td>{{ movement.reason }}</td>
+        <td>{{ movement.username }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">Руху ще не було.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if transfers %}
+  <h3>Переміщення</h3>
+  <div class="overflow-auto">
+  <table class="striped">
+    <thead><tr><th>Коли</th><th>Звідки</th><th>Куди</th><th class="num">Кількість</th><th>Коментар</th><th>Хто</th></tr></thead>
+    <tbody>
+    {% for move in transfers %}
+      <tr>
+        <td>{{ move.created_at|when }}</td><td>{{ move.from_ }}</td><td>{{ move.to }}</td>
+        <td class="num">{{ move.quantity|qty }}</td><td>{{ move.comment }}</td><td>{{ move.username }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</article>

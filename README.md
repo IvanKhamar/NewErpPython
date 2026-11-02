@@ -4,9 +4,9 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 289 tests, CI with ruff,
-import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` has the dashboard and the order
-pages so far. What is still missing: the table at the end of the plan.
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 296 tests, CI with ruff,
+import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` has the dashboard, the order
+and the warehouse pages so far. What is still missing: the table at the end of the plan.
 
 ## What it does
 
@@ -28,7 +28,8 @@ pages so far. What is still missing: the table at the end of the plan.
 The web interface at `/app/` (in Ukrainian, like the other versions) renders HTML on the server with Jinja2; HTMX
 swaps in the fragments the server returns, so there is no JavaScript build. Pages call the same application services
 as the API and use the same login cookie and roles. So far: login, the dashboard, the order list with filters, the
-order card (status, manager) and new orders.
+order card (status, manager), new orders, and the warehouse: consumables, stocktaking with an Excel sheet, reorder and
+purchase orders.
 
 Celery beat tasks: closing cashbox shifts, settling pre-orders, the daily competitor price check (07:00) and the
 hourly Nova Poshta tracking refresh. Orders also go to Kafka as `OrderCreated` and `OrderStatusChanged` events

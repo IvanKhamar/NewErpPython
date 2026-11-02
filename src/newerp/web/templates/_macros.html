@@ -3,6 +3,14 @@
 <span class="chip"{% if color %} style="background: {{ color }}"{% endif %}>{{ name or "—" }}</span>
 {%- endmacro %}
 
+{# The options of a warehouse <select>: the main warehouse is the empty value (WarehouseSelect.razor). #}
+{% macro place_options(warehouses, selected=None) -%}
+<option value="">Основний склад</option>
+{% for warehouse in warehouses %}
+<option value="{{ warehouse.id }}"{% if warehouse.id == selected %} selected{% endif %}>{{ warehouse.name }}</option>
+{% endfor %}
+{%- endmacro %}
+
 {# Business errors and warnings of other modules under a form. #}
 {% macro messages(error=None, warnings=(), saved_text=None) -%}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}

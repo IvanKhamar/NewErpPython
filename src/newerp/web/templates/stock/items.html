@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Розхідники{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Розхідники</h1>
+  <a href="/app/stock/items/new" role="button">Новий розхідник</a>
+</div>
+<form class="filters" action="/app/stock" method="get"
+      hx-get="/app/stock" hx-target="#items" hx-push-url="true" hx-trigger="change, submit">
+  <input type="search" name="search" value="{{ search }}" placeholder="Пошук за назвою" aria-label="Пошук">
+  <select name="category" aria-label="Категорія">
+    <option value="">Усі категорії</option>
+    {% for category in categories %}
+    <option value="{{ category.id }}"{% if category.id == category_id %} selected{% endif %}>{{ category.name }}</option>
+    {% endfor %}
+  </select>
+  <label><input type="checkbox" role="switch" name="low" value="1"{% if low %} checked{% endif %}> Лише нижче мінімуму</label>
+</form>
+<div id="items">{% include "stock/_items.html" %}</div>
+{% endblock %}

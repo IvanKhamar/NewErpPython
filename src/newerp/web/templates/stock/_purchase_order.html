@@ -1,0 +1,70 @@
+{% from "_macros.html" import messages, place_options %}
+{% set base = "/app/stock/purchase-orders/%d" % order.id %}
+<div class="title-row">
+  <h1>Замовлення №{{ order.id }} <span class="chip {{ order.status }}">{{ status_name }}</span></h1>
+  <strong>{{ order.total|money }}</strong>
+</div>
+<p>{{ order.supplier_name or "" }}{% if order.supplier_phone %} · {{ order.supplier_phone }}{% endif %}<br>
+  Створено {{ order.created_at|when }}{% if order.ordered_at %} · надіслано {{ order.ordered_at|when }}{% endif %}
+  {%- if order.closed_at %} · закрито {{ order.closed_at|when }}{% endif %}
+  {%- if order.comment %}<br>{{ order.comment }}{% endif %}</p>
+{{ messages(error, (), saved) }}
+
+{% if order.status == "draft" %}
+<form hx-post="{{ base }}/lines" hx-target="#purchase">
+  {% with lines=order.lines %}{% include "stock/_line_picker.html" %}{% endwith %}
+  <button type="submit" class="outline">Зберегти зміни</button>
+</form>
+<div class="title-row">
+  <button hx-post="{{ base }}/ordered" hx-target="#purchase">Позначити, що надіслано постачальнику</button>
+  <button hx-post="{{ base }}/cancel" hx-target="#purchase" hx-confirm="Скасувати замовлення?" class="secondary outline">
+    Скасувати замовлення</button>
+</div>
+{% else %}
+<form hx-post="{{ base }}/receive" hx-target="#purchase">
+<div class="overflow-auto">
+<table>
+  <thead>
+    <tr>
+      <th>Позиція</th><th class="num">Замовлено</th><th class="num">Ціна</th><th class="num">Сума</th>
+      <th class="num">Отримано</th><th class="num">Чекаємо</th>{% if order.status == "ordered" %}<th>Приїхало зараз</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for line in order.lines %}
+    <tr>
+      <td><a href="/app/stock/items/{{ line.item_id }}">{{ line.item_name }}</a></td>
+      <td class="num">{{ line.quantity|qty }} {{ line.unit }}</td>
+      <td class="num">{{ line.price|money }}</td>
+      <td class="num">{{ line.sum|money }}</td>
+      <td class="num">{{ line.received|qty }}</td>
+      <td class="num">{{ line.remaining|qty }}</td>
+      {% if order.status == "ordered" %}
+      <td>
+        <input type="hidden" name="line_id" value="{{ line.id }}">
+        <input name="quantity" value="{{ line.remaining|qty }}" inputmode="decimal" aria-label="Приїхало зараз"
+               {% if not line.remaining %}readonly{% endif %}>
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if order.status == "ordered" %}
+<div role="group">
+  <select name="warehouse_id" aria-label="Куди прийняти">{{ place_options(warehouses) }}</select>
+  <button type="submit">Прийняти на склад</button>
+</div>
+{% endif %}
+</form>
+{% if order.status == "ordered" %}
+<button hx-post="{{ base }}/cancel" hx-target="#purchase" hx-confirm="Скасувати замовлення?" class="secondary outline">
+  Скасувати замовлення</button>
+{% endif %}
+{% endif %}
+
+<details>
+  <summary>Текст для постачальника</summary>
+  <pre>{{ order.message_text }}</pre>
+</details>
