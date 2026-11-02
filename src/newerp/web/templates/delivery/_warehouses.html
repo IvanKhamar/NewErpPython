@@ -1,0 +1,5 @@
+<select name="warehouse_ref" aria-label="Відділення чи поштомат">
+  {% for warehouse in warehouses %}
+  <option value="{{ warehouse.ref }}"{% if warehouse.ref == selected %} selected{% endif %}>{{ warehouse.name }}</option>
+  {% else %}<option value="">Відділень не знайдено</option>{% endfor %}
+</select>

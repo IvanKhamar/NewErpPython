@@ -31,6 +31,10 @@
   </div>
 </article>
 <article id="status">{% include "orders/_status.html" %}</article>
+{# The waybill comes from the delivery pages once the card is shown. #}
+<article id="shipment" hx-get="/app/delivery/orders/{{ order.id }}/shipment" hx-trigger="load">
+  <header>Доставка</header><p aria-busy="true">Завантаження…</p>
+</article>
 <article>
   {# The return form loads the first time the section is opened. #}
   <details hx-get="/app/returns/new?order={{ order.id }}" hx-trigger="toggle once" hx-target="find .return-form">

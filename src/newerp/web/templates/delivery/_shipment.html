@@ -1,0 +1,19 @@
+{% from "_macros.html" import messages %}
+{% set base = "/app/delivery/orders/%d/shipment" % order_id %}
+<header>ТТН <code>{{ shipment.number }}</code> <span class="chip {{ tones[shipment.tone] }}">{{ shipment.status or "Створено" }}</span></header>
+{{ messages(error, (), saved) }}
+<p>{{ shipment.carrier }} · {{ shipment.recipient_address }}<br>
+  Вартість доставки: {{ shipment.cost|money }}{% if shipment.redelivery %} · зворотна доставка{% endif %}
+  {%- if shipment.date_created %}<br>Створено {{ shipment.date_created|when }}{% endif %}
+  {%- if shipment.date_scheduled %} · очікується {{ shipment.date_scheduled|when }}{% endif %}
+  {%- if shipment.date_payed_keeping %}<br>Платне зберігання з {{ shipment.date_payed_keeping|when }}{% endif %}</p>
+<div class="title-row">
+  <span>
+    <a href="{{ base }}/print?kind=Document" target="_blank" rel="noopener">Друкувати накладну</a> ·
+    <a href="{{ base }}/print?kind=Markings" target="_blank" rel="noopener">Маркування</a>
+  </span>
+  {% if not shipment.is_final %}
+  <button class="secondary outline" hx-post="{{ base }}/delete" hx-target="#shipment"
+          hx-confirm="Видалити ТТН у Новій Пошті?">Видалити ТТН</button>
+  {% endif %}
+</div>

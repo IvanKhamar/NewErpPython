@@ -1,0 +1,23 @@
+{% from "_macros.html" import messages %}
+{{ messages(error) }}
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Замовлення</th><th>Клієнт</th><th>Телефон</th><th>ТТН</th><th>Статус</th><th>Платне з</th><th>Менеджер</th><th></th></tr></thead>
+  <tbody>
+  {% for reminder in reminders %}
+    <tr>
+      <td><a href="/app/orders/{{ reminder.order_id }}">№{{ reminder.order_id }}</a></td>
+      <td>{{ reminder.customer }}</td>
+      <td>{{ reminder.telephone }}</td>
+      <td><code>{{ reminder.number }}</code></td>
+      <td>{{ reminder.status }}</td>
+      <td>{{ reminder.date_payed_keeping|when }}</td>
+      <td>{{ reminder.manager_name or "" }}</td>
+      <td><button class="outline" hx-post="/app/delivery/reminders/{{ reminder.order_id }}/done" hx-target="#reminders">Нагадано</button></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">Нікому нагадувати не треба.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

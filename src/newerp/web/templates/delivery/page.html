@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Доставка{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Доставка</h1>
+  <span>
+    <button class="outline" hx-post="/app/delivery/warehouses/refresh" hx-target="#refresh-result">Оновити довідник відділень</button>
+    <button hx-post="/app/delivery/tracking/refresh" hx-target="#refresh-result">Оновити статуси ТТН</button>
+  </span>
+</div>
+<div id="refresh-result"></div>
+<h2>Нагадати забрати посилку</h2>
+<p>Посилки, у яких за 0–3 дні почнеться платне зберігання. Після дзвінка позначте, що клієнту нагадали.</p>
+<div id="reminders">{% include "delivery/_reminders.html" %}</div>
+{% endblock %}

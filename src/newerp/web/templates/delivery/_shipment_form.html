@@ -1,0 +1,72 @@
+{% from "_macros.html" import messages %}
+<header>Доставка Новою Поштою</header>
+{{ messages(error, (), saved) }}
+{% if not form.can_create %}
+<p class="warning">Ключ API Нової Пошти не налаштовано, а тестові ТТН вимкнено: створити ТТН не можна.</p>
+{% else %}
+{% if form.test_mode %}<p class="warning">Ключа API немає: буде створено тестову ТТН, без відправлення.</p>{% endif %}
+<details>
+  <summary>Створити ТТН</summary>
+  {# The form is filled from the order; the city and branch come from the directory (CreateShipmentDialog). #}
+  <form hx-post="/app/delivery/orders/{{ order_id }}/shipment" hx-target="#shipment-result">
+    <div class="grid">
+      <input name="last_name" value="{{ form.last_name }}" placeholder="Прізвище" aria-label="Прізвище" required>
+      <input name="first_name" value="{{ form.first_name }}" placeholder="Ім'я" aria-label="Ім'я" required>
+      <input name="middle_name" placeholder="По батькові" aria-label="По батькові">
+      <input name="phone" value="{{ form.phone }}" placeholder="Телефон" aria-label="Телефон" required>
+    </div>
+    <div class="grid">
+      <label>Місто
+        <input name="city_search" value="{{ form.city_name }}" placeholder="Почніть вводити назву" data-no-submit
+               hx-get="/app/delivery/cities" hx-trigger="keyup changed delay:400ms" hx-target="#city-options">
+        <span id="city-options">{% with cities=[form.city] if form.city else [], autoload=False %}{% include "delivery/_cities.html" %}{% endwith %}</span>
+      </label>
+      <label>Відділення чи поштомат
+        <input name="warehouse_search" value="" placeholder="Номер чи адреса (необов'язково)" data-no-submit
+               hx-get="/app/delivery/warehouses" hx-include="[name=city_ref]" hx-trigger="keyup changed delay:400ms"
+               hx-target="#warehouse-options">
+        <span id="warehouse-options">{% with warehouses=[form.warehouse] if form.warehouse else [], selected=form.warehouse.ref if form.warehouse %}{% include "delivery/_warehouses.html" %}{% endwith %}</span>
+      </label>
+    </div>
+    <div class="grid">
+      <label>Оголошена вартість <input name="declared_cost" value="{{ form.declared_cost|qty }}" inputmode="decimal"></label>
+      <label>Накладений платіж <input name="cash_on_delivery" value="{{ form.cash_on_delivery|qty }}" inputmode="decimal"></label>
+      <label><input type="checkbox" name="sender_pays" value="1"> Доставку оплачує відправник</label>
+    </div>
+    <div class="grid">
+      <label>Коробка
+        <select name="box">
+          {% for preset in form.seat_presets %}
+          <option value="{{ preset.name }}">{{ preset.name }} ({{ preset.seat.width|qty }}×{{ preset.seat.length|qty }}×{{ preset.seat.height|qty }} см)</option>
+          {% endfor %}
+          <option value="">Свої розміри (нижче)</option>
+        </select>
+      </label>
+      <label>Вага, кг <input name="weight" inputmode="decimal"></label>
+      <label>Ширина, см <input name="width" inputmode="decimal"></label>
+      <label>Довжина, см <input name="length" inputmode="decimal"></label>
+      <label>Висота, см <input name="height" inputmode="decimal"></label>
+    </div>
+    {% if form.senders|length > 1 or form.dropoff_points|length > 1 %}
+    <div class="grid">
+      {% if form.senders|length > 1 %}
+      <label>Відправник
+        <select name="sender_id">
+          {% for sender in form.senders %}<option value="{{ sender.id }}"{% if sender.is_default %} selected{% endif %}>{{ sender.name }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      {% if form.dropoff_points|length > 1 %}
+      <label>Звідки відправляємо
+        <select name="dropoff_point_id">
+          {% for point in form.dropoff_points %}<option value="{{ point.id }}"{% if point.is_default %} selected{% endif %}>{{ point.name }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div id="shipment-result"></div>
+    <button type="submit">Створити ТТН</button>
+  </form>
+</details>
+{% endif %}

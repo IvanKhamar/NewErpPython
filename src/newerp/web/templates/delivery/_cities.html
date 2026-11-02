@@ -1,0 +1,6 @@
+{# The city select; a new choice loads its branches (on "load" too, when it came from a search). #}
+<select name="city_ref" aria-label="Місто" hx-get="/app/delivery/warehouses" hx-target="#warehouse-options"
+        hx-include="[name=warehouse_search]" hx-trigger="change{{ ', load' if autoload }}">
+  {% for city in cities %}<option value="{{ city.ref }}">{{ city.name }}</option>
+  {% else %}<option value="">Міст не знайдено</option>{% endfor %}
+</select>
