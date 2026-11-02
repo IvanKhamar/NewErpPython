@@ -1,0 +1,21 @@
+{% from "_macros.html" import pager %}
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>№</th><th>Товар</th><th>Модель</th><th class="num">Ціна</th><th class="num">Залишок</th><th></th></tr></thead>
+  <tbody>
+  {% for product in result.items %}
+    <tr>
+      <td>{{ product.id }}</td>
+      <td><a href="/app/catalog/products/{{ product.id }}">{{ product.name }}</a></td>
+      <td>{{ product.model }}</td>
+      <td class="num">{{ product.price|money }}</td>
+      <td class="num">{{ product.quantity }}</td>
+      <td>{% if not product.enabled %}<span class="chip none">вимкнений</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ pager("/app/catalog/products", "#products", result, pages, previous_page, next_page, "товарів") }}

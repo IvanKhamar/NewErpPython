@@ -1,0 +1,41 @@
+{% from "_macros.html" import messages %}
+{% set label_ids = product.labels|map(attribute="id")|list %}
+{% set category_ids = product.categories|map(attribute="id")|list %}
+{{ messages(error, (), saved) }}
+<div class="grid">
+  <article>
+    <header>Розміри</header>
+    <table>
+      <tbody>
+      {% for size in product.sizes %}
+        <tr><td>{{ size.name }}</td><td class="num">{{ size.quantity }} шт.</td></tr>
+      {% else %}
+        <tr><td>Без розмірів</td><td class="num">{{ product.quantity }} шт.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p><small>Залишки змінюються замовленнями й виробництвом, не тут.</small></p>
+  </article>
+  <article>
+    <header>На вітрині</header>
+    {# date_modified goes back with the form: if someone changed the product meanwhile, the save is refused (409). #}
+    <form hx-post="/app/catalog/products/{{ product.id }}" hx-target="#product">
+      <input type="hidden" name="date_modified" value="{{ product.date_modified.isoformat() }}">
+      <label>Ціна <input name="price" value="{{ product.price|qty }}" inputmode="decimal"></label>
+      <label><input type="checkbox" role="switch" name="enabled" value="1"{% if product.enabled %} checked{% endif %}> Увімкнений</label>
+      <fieldset>
+        <legend>Мітки</legend>
+        {% for label in labels %}
+        <label><input type="checkbox" name="label_id" value="{{ label.id }}"{% if label.id in label_ids %} checked{% endif %}> {{ label.name }}</label>
+        {% endfor %}
+      </fieldset>
+      <fieldset class="columns">
+        <legend>Категорії</legend>
+        {% for category in categories %}
+        <label><input type="checkbox" name="category_id" value="{{ category.id }}"{% if category.id in category_ids %} checked{% endif %}> {{ category.name }}</label>
+        {% endfor %}
+      </fieldset>
+      <button type="submit">Зберегти</button>
+    </form>
+  </article>
+</div>

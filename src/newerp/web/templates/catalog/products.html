@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Товари{% endblock %}
+{% block content %}
+<h1>Товари</h1>
+<form class="filters" action="/app/catalog/products" method="get"
+      hx-get="/app/catalog/products" hx-target="#products" hx-push-url="true" hx-trigger="change, submit">
+  <input type="search" name="search" value="{{ values.search }}" placeholder="Назва чи модель" aria-label="Пошук">
+  <select name="category" aria-label="Категорія">
+    <option value="">Усі категорії</option>
+    {% for category in categories %}
+    <option value="{{ category.id }}"{% if category.id == values.category %} selected{% endif %}>{{ category.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="label" aria-label="Мітка">
+    <option value="">Усі мітки</option>
+    {% for label in labels %}
+    <option value="{{ label.id }}"{% if label.id == values.label %} selected{% endif %}>{{ label.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="enabled" aria-label="Увімкнені">
+    <option value="">Увімкнені й вимкнені</option>
+    <option value="yes"{% if values.enabled == "yes" %} selected{% endif %}>Лише увімкнені</option>
+    <option value="no"{% if values.enabled == "no" %} selected{% endif %}>Лише вимкнені</option>
+  </select>
+</form>
+<div id="products">{% include "catalog/_products.html" %}</div>
+{% endblock %}

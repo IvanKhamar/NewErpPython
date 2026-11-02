@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Передзамовлення{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Передзамовлення</h1>
+  <button class="outline" hx-post="/app/preorders/settle" hx-target="#settle-result">Списати продане наперед</button>
+</div>
+<p>Ліміт — скільки штук розміру вітрина продає наперед, коли на складі його немає (0 — не продавати).</p>
+<div id="settle-result"></div>
+<form class="filters" action="/app/preorders" method="get"
+      hx-get="/app/preorders" hx-target="#pre-orders" hx-push-url="true" hx-trigger="change, submit">
+  <input type="search" name="search" value="{{ search }}" placeholder="Товар чи модель" aria-label="Пошук">
+  <label><input type="checkbox" role="switch" name="quota" value="1"{% if quota %} checked{% endif %}> Лише з лімітом</label>
+</form>
+<div id="pre-orders">{% include "catalog/_pre_orders.html" %}</div>
+{% endblock %}

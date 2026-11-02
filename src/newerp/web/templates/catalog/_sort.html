@@ -1,0 +1,87 @@
+{% from "_macros.html" import messages %}
+{% set chosen_value = group_value(chosen) if chosen else "" %}
+{{ messages(error, (), saved) }}
+{# The group and the period: a change shows the new order without writing it. #}
+<form class="filters" hx-get="/app/catalog/sort" hx-target="#sort" hx-trigger="change">
+  <select name="group" aria-label="Група">
+    {% for group in groups %}
+    <option value="{{ group_value(group) }}"{% if group_value(group) == chosen_value %} selected{% endif %}>{{ group.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="days" aria-label="Період продажів">
+    {% for value, name in (("30", "30 днів"), ("90", "90 днів"), ("180", "пів року"), ("365", "рік")) %}
+    <option value="{{ value }}"{% if value == days %} selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</form>
+<div class="title-row">
+  <button hx-post="/app/catalog/sort/recalculate" hx-vals='{{ {"group": chosen_value, "days": days}|tojson }}'
+          hx-target="#sort">Записати порядок групи</button>
+  <button class="outline" hx-post="/app/catalog/sort/recalculate-all" hx-vals='{{ {"group": chosen_value, "days": days}|tojson }}'
+          hx-target="#sort" hx-confirm="Перерахувати всі групи?">Перерахувати всі групи</button>
+</div>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th class="num">Нова</th><th class="num">Зараз</th><th>Товар</th><th class="num">Продано</th><th></th></tr></thead>
+  <tbody>
+  {% for row in preview %}
+    <tr>
+      <td class="num">{{ row.new_position }}</td>
+      <td class="num {{ 'up' if row.new_position < row.current_position else 'down' if row.new_position > row.current_position }}">{{ row.current_position }}</td>
+      <td><a href="/app/catalog/products/{{ row.product_id }}">{{ row.name }}</a></td>
+      <td class="num">{{ row.sales }}</td>
+      <td>{% if row.pinned %}<span class="chip ordered">закріплено</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">У групі немає товарів.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="grid">
+  <article>
+    <header>Закріплені позиції</header>
+    <form hx-post="/app/catalog/sort/pin" hx-target="#sort" role="group">
+      <input type="hidden" name="group" value="{{ chosen_value }}"><input type="hidden" name="days" value="{{ days }}">
+      <input name="position" inputmode="numeric" placeholder="Позиція" aria-label="Позиція">
+      <input name="product_id" inputmode="numeric" placeholder="№ товару" aria-label="Номер товару">
+      <button type="submit" class="outline">Закріпити в групі</button>
+    </form>
+    <table>
+      <tbody>
+      {% for pin in pins %}
+        <tr>
+          <td>{{ pin.key }}</td><td class="num">{{ pin.position }}</td><td>{{ pin.product_name }}</td>
+          <td><button class="secondary outline" hx-post="/app/catalog/sort/unpin"
+                      hx-vals='{{ {"pin_id": pin.id, "group": chosen_value, "days": days}|tojson }}'
+                      hx-target="#sort">✕</button></td>
+        </tr>
+      {% else %}
+        <tr><td>Закріплень немає.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  <article>
+    <header>Знімки</header>
+    <table>
+      <tbody>
+      {% for snapshot in snapshots %}
+        <tr>
+          <td>{{ snapshot.created_at|when }}</td><td>{{ snapshot.note }}</td>
+          <td><button class="outline" hx-post="/app/catalog/sort/restore"
+                      hx-vals='{{ {"snapshot_id": snapshot.id, "group": chosen_value, "days": days}|tojson }}'
+                      hx-target="#sort" hx-confirm="Повернути порядок зі знімка?">Повернути</button></td>
+        </tr>
+      {% else %}
+        <tr><td>Знімків ще немає.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <form hx-post="/app/catalog/sort/metric" hx-target="#sort" hx-trigger="change">
+      <input type="hidden" name="group" value="{{ chosen_value }}"><input type="hidden" name="days" value="{{ days }}">
+      <label><input type="checkbox" role="switch" name="panel_only" value="1"{% if metric.panel_only %} checked{% endif %}>
+        Панель допродажу: лише продажі через панель</label>
+    </form>
+  </article>
+</div>

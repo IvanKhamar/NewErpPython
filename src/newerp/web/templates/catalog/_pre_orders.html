@@ -1,0 +1,27 @@
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Товар</th><th>Розмір</th><th class="num">Залишок</th><th>Вітрина</th><th>Ліміт і дата</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    {% set name, tone = availability[row.availability] %}
+    <tr>
+      <td><a href="/app/catalog/products/{{ row.product_id }}">{{ row.product_name }}</a> <small>{{ row.model }}</small></td>
+      <td>{{ row.size }}</td>
+      <td class="num">{{ row.quantity }}</td>
+      <td><span class="chip {{ tone }}">{{ name }}</span></td>
+      <td>
+        {# Each row saves on its own; the answer is the message under it. #}
+        <form hx-post="/app/preorders/{{ row.product_option_value_id }}" hx-target="#saved-{{ row.product_option_value_id }}" role="group">
+          <input name="quota" value="{{ row.quota }}" inputmode="numeric" aria-label="Ліміт">
+          <input type="date" name="date_available" value="{{ row.date_available.isoformat() if row.date_available else '' }}" aria-label="Очікується">
+          <button type="submit" class="outline">Зберегти</button>
+        </form>
+        <div id="saved-{{ row.product_option_value_id }}"></div>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Нічого не знайдено</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

@@ -25,3 +25,4 @@ th.num, td.num { text-align: right; }
 .chip.received { background: #a5d6a7; }
 pre { white-space: pre-wrap; padding: 0.8rem; }
 .pre { white-space: pre-line; }
+fieldset.columns { columns: 2; }
