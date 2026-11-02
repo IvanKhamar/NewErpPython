@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 335 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 338 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
 Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 
@@ -19,7 +19,7 @@ Blazor app of the .NET version. What is still missing: the table at the end of t
 | Delivery | `/orders/{id}/shipment`, `/delivery`: Nova Poshta waybills, tracking, pickup reminders, international |
 | Money | `/cashbox` (Checkbox fiscal receipts, shifts), `/payments` (PrivatBank, LiqPay) |
 | Catalog | `/catalog/products`, `/catalog/sort` (sort by sales, pins), `/preorders` |
-| Marketing | `/marketing` (birthday coupons, contact export), gift vouchers, `/sms` |
+| Marketing | `/marketing` (birthday coupons, coupons with exclusions, contact export), gift vouchers, `/sms` |
 | After-sales | `/returns`, `/customers` |
 | Partners | `/partners` and their XML feed `/feeds/{code}.xml` |
 | Reports | `/reports` (sales, products, statuses, dashboard), revenue feed `/feeds/revenue.json` |
@@ -32,7 +32,7 @@ as the API and use the same login cookie and roles; the menu shows each role onl
 - Orders: the list, new orders, and the order card with the status, the manager, payments with a LiqPay link, the
   fiscal cheque, the Nova Poshta waybill (or one abroad), a gift voucher and returns.
 - Sales: returns, customers, delivery reminders, products and their sort by sales, pre-orders, birthdays, the contact
-  export, gift vouchers, partners and their feeds, competitor prices, reports.
+  export, gift vouchers, coupons, partners and their feeds, competitor prices, reports.
 - Money: the cashbox (shifts, X and Z reports, cheques) and matching bank payments to orders.
 - Warehouse and production: consumables, stocktaking with an Excel sheet, reorder and purchase orders; models with the
   cut and sewn operations, specifications (BOMs), product links and stocktaking, the sewing plan and the log.

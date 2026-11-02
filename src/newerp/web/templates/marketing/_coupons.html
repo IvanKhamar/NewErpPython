@@ -1,0 +1,20 @@
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Код</th><th>Назва</th><th class="num">Знижка</th><th class="num">Від суми</th><th>Діє</th><th class="num">Використано</th><th></th></tr></thead>
+  <tbody>
+  {% for coupon in coupons %}
+    <tr>
+      <td><a href="/app/marketing/coupons/{{ coupon.id }}"><code>{{ coupon.code }}</code></a></td>
+      <td>{{ coupon.name }}</td>
+      <td class="num">{{ coupon.discount|qty }}{{ "%" if coupon.type == "P" else " грн" }}</td>
+      <td class="num">{{ coupon.total|money if coupon.total else "" }}</td>
+      <td>{{ coupon.date_start|when if coupon.date_start else "…" }} — {{ coupon.date_end|when if coupon.date_end else "…" }}</td>
+      <td class="num">{{ coupon.used }}{% if coupon.uses_total %} з {{ coupon.uses_total }}{% endif %}</td>
+      <td>{% if not coupon.active %}<span class="chip none">вимкнений</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">Купонів не знайдено.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

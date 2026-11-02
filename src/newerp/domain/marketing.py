@@ -245,3 +245,69 @@ def _is_money(amount: Decimal | None) -> bool:
 
 def _text(value: str | None) -> str:
     return (value or "").strip()
+
+
+# ═══ Coupons (admin of the old site's coupons, with what they do not work on) ═══
+
+
+@dataclass(frozen=True)
+class Coupon:
+    """A checked coupon, as the OpenCart admin form checks it. type: "P" percent, "F" fixed sum. The lists say what
+    it works on (empty: the whole cart) and, the old site's own addition, what it never works on."""
+
+    name: str
+    code: str
+    type: str
+    discount: Decimal
+    total: Decimal
+    logged: bool
+    shipping: bool
+    start: date
+    end: date
+    uses_total: int
+    uses_customer: int
+    active: bool
+    product_ids: tuple[int, ...]
+    category_ids: tuple[int, ...]
+    excluded_product_ids: tuple[int, ...]
+    excluded_category_ids: tuple[int, ...]
+
+    @staticmethod
+    def of(
+        name: str | None, code: str | None, type: str | None, discount: Decimal | None, total: Decimal | None,
+        logged: bool, shipping: bool, start: date | None, end: date | None, uses_total: int, uses_customer: int,
+        active: bool, product_ids: Iterable[int], category_ids: Iterable[int], excluded_product_ids: Iterable[int],
+        excluded_category_ids: Iterable[int],
+    ) -> "Coupon":  # fmt: skip
+        clean_name = (name or "").strip()
+        if not 3 <= len(clean_name) <= 128:
+            raise DomainError("Назва купона — від 3 до 128 символів.")
+        clean_code = require_coupon_code(code)
+        if type not in ("P", "F"):
+            raise DomainError("Тип знижки — відсоток (P) або сума (F).")
+        if not _is_money(discount):
+            raise DomainError("Знижка — більше 0, не більше двох знаків після коми.")
+        if type == "P" and discount > 100:
+            raise DomainError("Знижка у відсотках — не більше 100.")
+        if total is None or total < 0:
+            raise DomainError("Мінімальна сума замовлення не може бути від'ємною.")
+        if start is None or end is None:
+            raise DomainError("Вкажіть, з якого й до якого дня діє купон.")
+        if end < start:
+            raise DomainError("Купон не може закінчитися раніше, ніж почнеться.")
+        if uses_total < 0 or uses_customer < 0:
+            raise DomainError("Кількість використань не може бути від'ємною (0 — без обмеження).")
+        products, categories = _ids(product_ids), _ids(category_ids)
+        excluded_products, excluded_categories = _ids(excluded_product_ids), _ids(excluded_category_ids)
+        both = (set(products) & set(excluded_products)) or (set(categories) & set(excluded_categories))
+        if both:
+            raise DomainError(f"№{min(both)} не може бути водночас серед тих, на які купон діє, і виключених.")
+        return Coupon(
+            clean_name, clean_code, type, discount, total, logged, shipping, start, end, uses_total, uses_customer,
+            active, products, categories, excluded_products, excluded_categories,
+        )  # fmt: skip
+
+
+def _ids(values: Iterable[int]) -> tuple[int, ...]:
+    """Positive ids without repeats, in the given order."""
+    return tuple(dict.fromkeys(v for v in values if v > 0))

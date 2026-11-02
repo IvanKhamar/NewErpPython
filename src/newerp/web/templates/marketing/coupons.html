@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Купони{% endblock %}
+{% block content %}
+<div class="title-row">
+  <h1>Купони</h1>
+  <a href="/app/marketing/coupons/new" role="button">Новий купон</a>
+</div>
+<p>Знижки за кодом на сайті. Купон може діяти лише на вибрані товари й категорії, а виключені не знижує ніколи.</p>
+<form class="filters" action="/app/marketing/coupons" method="get"
+      hx-get="/app/marketing/coupons" hx-target="#coupons" hx-push-url="true" hx-trigger="submit, search">
+  <input type="search" name="search" value="{{ search }}" placeholder="Код чи назва" aria-label="Пошук">
+  <button type="submit">Знайти</button>
+</form>
+<div id="coupons">{% include "marketing/_coupons.html" %}</div>
+{% endblock %}

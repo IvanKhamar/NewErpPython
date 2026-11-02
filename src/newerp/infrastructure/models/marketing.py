@@ -92,3 +92,49 @@ class DdSubscribe(Base):
     subscribe_id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(96))
     date_added: Mapped[datetime]
+
+
+class DdCouponProduct(Base):
+    """A product a coupon works on (none: the whole cart)."""
+
+    __tablename__ = "dd_coupon_product"
+
+    coupon_product_id: Mapped[int] = mapped_column(primary_key=True)
+    coupon_id: Mapped[int]
+    product_id: Mapped[int]
+
+
+class DdCouponCategory(Base):
+    __tablename__ = "dd_coupon_category"
+
+    coupon_id: Mapped[int] = mapped_column(primary_key=True)
+    category_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdCouponProductExclude(Base):
+    """The old site's own table: a product the coupon does not work on."""
+
+    __tablename__ = "dd_coupon_product_exclude"
+
+    coupon_id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdCouponCategoryExclude(Base):
+    __tablename__ = "dd_coupon_category_exclude"
+
+    coupon_id: Mapped[int] = mapped_column(primary_key=True)
+    category_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class DdCouponHistory(Base):
+    """A use of a coupon in an order (the storefront writes it)."""
+
+    __tablename__ = "dd_coupon_history"
+
+    coupon_history_id: Mapped[int] = mapped_column(primary_key=True)
+    coupon_id: Mapped[int]
+    order_id: Mapped[int]
+    customer_id: Mapped[int]
+    amount: Mapped[Decimal] = mapped_column(Money)
+    date_added: Mapped[datetime]

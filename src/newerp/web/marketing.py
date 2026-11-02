@@ -8,11 +8,14 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from starlette.datastructures import FormData
 
+from newerp.api.catalog import Products
 from newerp.api.deps import Session
-from newerp.api.marketing import Marketing, Vouchers, contacts_csv
+from newerp.api.marketing import Coupons, Marketing, Vouchers, contacts_csv
 from newerp.api.security import Policies
 from newerp.application.marketing.campaigns import BirthdaySmsRequest, BulkSmsRequest
+from newerp.application.marketing.coupons import CouponCardDto, SaveCouponRequest
 from newerp.application.marketing.vouchers import SaveVoucherRequest
+from newerp.domain.common import DomainError
 from newerp.domain.marketing import BirthdayPeriod
 from newerp.web.common import BUSINESS_ERRORS, Redirect, decimal_field, number, page_roles, qty, render, undo
 
@@ -220,3 +223,123 @@ async def order_voucher_action(
     except BUSINESS_ERRORS as error:
         return await _order_voucher(request, order_id, vouchers, error=await undo(session, error))
     return await _order_voucher(request, order_id, vouchers, saved=saved)
+
+
+# ── Coupons: what they work on and what never ──
+
+
+@router.get("/coupons")
+async def coupon_list(request: Request, coupons: Coupons, search: str = "") -> HTMLResponse:
+    found = await coupons.list_coupons(search.strip() or None)
+    template = "marketing/_coupons.html" if "HX-Request" in request.headers else "marketing/coupons.html"
+    return render(request, template, coupons=found, search=search)
+
+
+def _id_list(value: str, field: str) -> list[int]:
+    """Product numbers typed as "101, 102"."""
+    ids = []
+    for part in value.replace(";", ",").split(","):
+        if part.strip():
+            if number(part.strip()) is None:
+                raise DomainError(f"{field}: «{part.strip()}» — не номер.")
+            ids.append(int(part.strip()))
+    return ids
+
+
+def _coupon_request(form: FormData) -> SaveCouponRequest:
+    def whole(name: str, field: str) -> int:
+        value = decimal_field(_text(form, name), field)
+        if value != value.to_integral_value():
+            raise DomainError(f"{field}: потрібне ціле число.")
+        return int(value)
+
+    def day(name: str) -> date | None:
+        try:
+            return date.fromisoformat(_text(form, name)) if _text(form, name) else None
+        except ValueError:
+            raise DomainError("Дата: потрібен формат 2026-11-30.") from None
+
+    return SaveCouponRequest(
+        name=_text(form, "name"),
+        code=_text(form, "code"),
+        type=_text(form, "type"),
+        discount=decimal_field(_text(form, "discount"), "Знижка"),
+        total=decimal_field(_text(form, "total"), "Мінімальна сума"),
+        logged=form.get("logged") == "1",
+        shipping=form.get("shipping") == "1",
+        date_start=day("date_start"),
+        date_end=day("date_end"),
+        uses_total=whole("uses_total", "Використань усього"),
+        uses_customer=whole("uses_customer", "Використань одним покупцем"),
+        active=form.get("active") == "1",
+        product_ids=_id_list(_text(form, "product_ids"), "Товари"),
+        excluded_product_ids=_id_list(_text(form, "excluded_product_ids"), "Виключені товари"),
+        category_ids=[number(str(v)) or 0 for v in form.getlist("category_id")],
+        excluded_category_ids=[number(str(v)) or 0 for v in form.getlist("excluded_category_id")],
+    )
+
+
+async def _coupon_form(request: Request, products: Products, values: dict[str, Any], coupon_id: int | None = None,
+                       error: str | None = None, **context: Any) -> HTMLResponse:  # fmt: skip
+    return render(request, "marketing/coupon.html", status_code=200 if error is None else 400, values=values,
+                  coupon_id=coupon_id, categories=await products.categories(), error=error, **context)  # fmt: skip
+
+
+def _card_values(card: CouponCardDto) -> dict[str, Any]:
+    """The form fields of a saved coupon, as the browser sends them."""
+    return {
+        "name": card.name, "code": card.code, "type": card.type, "discount": qty(card.discount),
+        "total": qty(card.total), "logged": "1" if card.logged else "", "shipping": "1" if card.shipping else "",
+        "date_start": card.date_start.isoformat() if card.date_start else "",
+        "date_end": card.date_end.isoformat() if card.date_end else "",
+        "uses_total": str(card.uses_total), "uses_customer": str(card.uses_customer),
+        "active": "1" if card.active else "",
+        "product_ids": ", ".join(str(p.id) for p in card.products),
+        "excluded_product_ids": ", ".join(str(p.id) for p in card.excluded_products),
+        "category_ids": [str(c.id) for c in card.categories],
+        "excluded_category_ids": [str(c.id) for c in card.excluded_categories],
+    }  # fmt: skip
+
+
+@router.get("/coupons/new")
+async def new_coupon_page(request: Request, products: Products) -> HTMLResponse:
+    today = date.today()
+    values = {"type": "P", "total": "0", "uses_total": "1", "uses_customer": "1", "active": "1",
+              "date_start": today.isoformat(), "date_end": today.replace(day=28).isoformat()}  # fmt: skip
+    return await _coupon_form(request, products, values)
+
+
+@router.get("/coupons/{coupon_id}")
+async def coupon_page(request: Request, coupon_id: int, coupons: Coupons, products: Products) -> HTMLResponse:
+    try:
+        card = await coupons.get(coupon_id)
+    except BUSINESS_ERRORS:
+        return render(request, "not_found.html", status_code=404)
+    return await _coupon_form(request, products, _card_values(card), coupon_id, card=card)
+
+
+@router.post("/coupons/save")
+async def save_coupon(request: Request, coupons: Coupons, products: Products, session: Session) -> HTMLResponse:
+    form = await request.form()
+    coupon_id = number(_text(form, "coupon_id"))
+    values: dict[str, Any] = dict(form) | {
+        "category_ids": [str(v) for v in form.getlist("category_id")],
+        "excluded_category_ids": [str(v) for v in form.getlist("excluded_category_id")],
+    }
+    try:
+        if coupon_id is None:
+            card = await coupons.create(_coupon_request(form))
+        else:
+            card = await coupons.update(coupon_id, _coupon_request(form))
+    except BUSINESS_ERRORS as error:
+        return await _coupon_form(request, products, values, coupon_id, await undo(session, error))
+    raise Redirect(f"/app/marketing/coupons/{card.id}")
+
+
+@router.post("/coupons/{coupon_id}/delete")
+async def delete_coupon(request: Request, coupon_id: int, coupons: Coupons, session: Session) -> HTMLResponse:
+    try:
+        await coupons.delete(coupon_id)
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    raise Redirect("/app/marketing/coupons")

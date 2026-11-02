@@ -68,6 +68,7 @@ MENU = (
     MenuLink("Дні народження", "/app/marketing/birthdays", Policies.ORDERS),
     MenuLink("Вивантаження контактів", "/app/marketing/export", Policies.ORDERS),
     MenuLink("Подарункові сертифікати", "/app/marketing/vouchers", Policies.ORDERS),
+    MenuLink("Купони", "/app/marketing/coupons", Policies.ORDERS),
     MenuLink("Партнери", "/app/partners", Policies.ORDERS),
     MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
     MenuLink("Звіти", "/app/reports", Policies.ORDERS),

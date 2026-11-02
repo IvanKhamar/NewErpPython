@@ -21,6 +21,7 @@ from newerp.application.marketing.campaigns import (
     MarketingOptions,
     MarketingService,
 )
+from newerp.application.marketing.coupons import CouponCardDto, CouponListItem, CouponService, SaveCouponRequest
 from newerp.application.marketing.vouchers import (
     OrderVoucherDto,
     RedeemVoucherRequest,
@@ -34,6 +35,7 @@ from newerp.application.marketing.vouchers import (
 from newerp.config import get_settings
 from newerp.domain.marketing import BirthdayPeriod, ContactField, ContactSource
 from newerp.infrastructure.marketing.campaigns import SqlMarketingStore
+from newerp.infrastructure.marketing.coupons import SqlCouponStore
 from newerp.infrastructure.marketing.vouchers import SqlVoucherStore
 from newerp.infrastructure.sms import SqlSmsLog
 
@@ -191,3 +193,44 @@ async def redeem_voucher(order_id: int, request: RedeemVoucherRequest, service: 
 )
 async def release_voucher(order_id: int, service: Vouchers) -> None:
     await service.release(order_id)
+
+
+# ═══ Coupons (Python first: the .NET and Java versions have only birthday coupons) ═══
+
+
+def get_coupons(session: Session, clock: ClockDep) -> CouponService:
+    return CouponService(SqlCouponStore(session, get_settings().language_id), clock)
+
+
+Coupons = Annotated[CouponService, Depends(get_coupons)]
+
+
+@router.get("/coupons", summary="Купони (новіші вгорі, до 500) з кількістю використань; search — код або назва")
+async def list_coupons(service: Coupons, search: str | None = None) -> list[CouponListItem]:
+    return await service.list_coupons(search)
+
+
+@router.get("/coupons/{coupon_id}", summary="Купон з товарами й категоріями, на які діє і на які ні, та історією")
+async def get_coupon(coupon_id: int, service: Coupons) -> CouponCardDto:
+    return await service.get(coupon_id)
+
+
+@router.post(
+    "/coupons",
+    summary="Новий купон: type P (відсоток) або F (сума), дати обов'язкові; списки товарів і категорій — на що діє "
+    "(порожньо — на весь кошик) і виключення",
+)
+async def create_coupon(request: SaveCouponRequest, service: Coupons) -> CouponCardDto:
+    return await service.create(request)
+
+
+@router.put("/coupons/{coupon_id}", summary="Змінити купон разом зі списками")
+async def update_coupon(coupon_id: int, request: SaveCouponRequest, service: Coupons) -> CouponCardDto:
+    return await service.update(coupon_id, request)
+
+
+@router.delete(
+    "/coupons/{coupon_id}", status_code=204, summary="Видалити купон, яким ще не користувались (інакше — вимкнути)"
+)
+async def delete_coupon(coupon_id: int, service: Coupons) -> None:
+    await service.delete(coupon_id)

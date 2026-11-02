@@ -581,3 +581,42 @@ CREATE TABLE `dd_product_special` (
   PRIMARY KEY (`product_special_id`),
   KEY `product_id` (`product_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Купони: на що діють і на що ні ═══
+
+-- Стандартні таблиці OpenCart, яких немає в нашому дампі.
+CREATE TABLE `dd_coupon_product` (
+  `coupon_product_id` int(11) NOT NULL AUTO_INCREMENT,
+  `coupon_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  PRIMARY KEY (`coupon_product_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_coupon_category` (
+  `coupon_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  PRIMARY KEY (`coupon_id`,`category_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_coupon_history` (
+  `coupon_history_id` int(11) NOT NULL AUTO_INCREMENT,
+  `coupon_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `amount` decimal(15,4) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`coupon_history_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Власні таблиці старого сайту (admin/model/marketing/coupon.php): товари й категорії, на які купон не діє.
+CREATE TABLE `dd_coupon_product_exclude` (
+  `coupon_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  PRIMARY KEY (`coupon_id`,`product_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_coupon_category_exclude` (
+  `coupon_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  PRIMARY KEY (`coupon_id`,`category_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

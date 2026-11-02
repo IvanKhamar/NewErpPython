@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_macros.html" import messages %}
+{% block title %}{{ "Купон " ~ card.code if card else "Новий купон" }}{% endblock %}
+{% block content %}
+<p><a href="/app/marketing/coupons">← Купони</a></p>
+<div class="title-row">
+  <h1>{{ self.title() }}</h1>
+  {% if card %}
+  <button class="secondary outline" hx-post="/app/marketing/coupons/{{ card.id }}/delete" hx-target="#delete-result"
+          hx-confirm="Видалити купон? Використаний можна лише вимкнути.">Видалити</button>
+  {% endif %}
+</div>
+<div id="delete-result"></div>
+{{ messages(error) }}
+<form method="post" action="/app/marketing/coupons/save">
+  <input type="hidden" name="coupon_id" value="{{ coupon_id or '' }}">
+  <div class="grid">
+    <label>Назва <input name="name" value="{{ values.name or '' }}" maxlength="128" required></label>
+    <label>Код <input name="code" value="{{ values.code or '' }}" maxlength="20" required placeholder="SALE10"></label>
+  </div>
+  <div class="grid">
+    <label>Тип
+      <select name="type">
+        <option value="P"{% if values.type == "P" %} selected{% endif %}>Відсоток</option>
+        <option value="F"{% if values.type == "F" %} selected{% endif %}>Сума, грн</option>
+      </select>
+    </label>
+    <label>Знижка <input name="discount" value="{{ values.discount or '' }}" inputmode="decimal" required></label>
+    <label>Від суми замовлення <input name="total" value="{{ values.total or '0' }}" inputmode="decimal"></label>
+  </div>
+  <div class="grid">
+    <label>Діє з <input type="date" name="date_start" value="{{ values.date_start or '' }}" required></label>
+    <label>Діє до <input type="date" name="date_end" value="{{ values.date_end or '' }}" required></label>
+    <label>Використань усього (0 — без меж) <input name="uses_total" value="{{ values.uses_total or '0' }}" inputmode="numeric"></label>
+    <label>Одним покупцем <input name="uses_customer" value="{{ values.uses_customer or '0' }}" inputmode="numeric"></label>
+  </div>
+  <fieldset>
+    <label><input type="checkbox" name="logged" value="1"{% if values.logged %} checked{% endif %}> Лише для зареєстрованих</label>
+    <label><input type="checkbox" name="shipping" value="1"{% if values.shipping %} checked{% endif %}> Безкоштовна доставка</label>
+    <label><input type="checkbox" name="active" value="1"{% if values.active %} checked{% endif %}> Увімкнений</label>
+  </fieldset>
+  <div class="grid">
+    <label>Діє лише на товари (номери через кому; порожньо — на весь кошик)
+      <input name="product_ids" value="{{ values.product_ids or '' }}" placeholder="101, 102"></label>
+    <label>Ніколи не діє на товари
+      <input name="excluded_product_ids" value="{{ values.excluded_product_ids or '' }}" placeholder="105"></label>
+  </div>
+  {% if card and (card.products or card.excluded_products) %}
+  <p><small>{% for p in card.products %}{{ p.id }} — {{ p.name or "?" }}; {% endfor %}
+    {% for p in card.excluded_products %}без {{ p.id }} — {{ p.name or "?" }}; {% endfor %}</small></p>
+  {% endif %}
+  <table>
+    <thead><tr><th>Категорія</th><th>Діє лише на неї</th><th>Ніколи не діє</th></tr></thead>
+    <tbody>
+    {% for category in categories %}
+      <tr>
+        <td>{{ category.name }}</td>
+        <td><input type="checkbox" name="category_id" value="{{ category.id }}"{% if category.id|string in (values.category_ids or []) %} checked{% endif %} aria-label="Діє на {{ category.name }}"></td>
+        <td><input type="checkbox" name="excluded_category_id" value="{{ category.id }}"{% if category.id|string in (values.excluded_category_ids or []) %} checked{% endif %} aria-label="Не діє на {{ category.name }}"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Зберегти</button>
+</form>
+{% if card %}
+<article>
+  <header>Використання</header>
+  <table>
+    <tbody>
+    {% for row in card.history %}
+      <tr><td>{{ row.date_added|when }}</td><td><a href="/app/orders/{{ row.order_id }}">№{{ row.order_id }}</a></td><td class="num">{{ row.amount|money }}</td></tr>
+    {% else %}
+      <tr><td>Купоном ще не користувались.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</article>
+{% endif %}
+{% endblock %}
