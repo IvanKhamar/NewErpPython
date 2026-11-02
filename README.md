@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 348 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 351 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
 Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 
@@ -110,6 +110,8 @@ uv run ruff check . ; uv run ruff format --check .         # lint and format che
 uv run lint-imports                                        # layer check
 uv run celery -A newerp.worker worker --beat --pool=solo   # worker with the scheduler (--pool=solo: Windows has no fork)
 uv run python -m newerp.consumer                           # print order events (NEWERP_KAFKA__BOOTSTRAP_SERVERS set)
+uv run python tools/check_live.py schema                   # real database vs db/reconstructed.sql (read-only)
+uv run python tools/check_live.py integrations             # one read-only call to each service with a key
 ```
 
 ## Learning roadmap
