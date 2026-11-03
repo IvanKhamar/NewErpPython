@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Вміст вітрини{% endblock %}
+{% block content %}
+<h1>Вміст вітрини</h1>
+<nav>
+  <ul>
+  {% for key, title in tabs %}
+    <li><a href="/app/catalog/content?tab={{ key }}"{% if key == tab %} aria-current="page"{% endif %}>{{ title }}</a></li>
+  {% endfor %}
+  </ul>
+</nav>
+<div id="content-tab">{% include "content/_tab.html" %}</div>
+{% endblock %}

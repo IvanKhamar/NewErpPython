@@ -15,6 +15,24 @@ from newerp.application.catalog.dictionaries import (
     LabelDto,
     SearchPresetDto,
 )
+from newerp.application.catalog.feedback import (
+    FeedbackService,
+    FeedbackState,
+    QuestionDto,
+    ReviewDto,
+    UpdateQuestionRequest,
+    UpdateReviewRequest,
+)
+from newerp.application.catalog.pages import (
+    AboutBlockDto,
+    BlogCategoryDto,
+    BlogPostDto,
+    FaqDto,
+    InformationDto,
+    NftBlockDto,
+    PageKind,
+    PageService,
+)
 from newerp.application.catalog.prices import (
     MAX_IMPORT_BYTES,
     ImportPreview,
@@ -68,6 +86,8 @@ from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
 from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
+from newerp.infrastructure.catalog.feedback import SqlFeedbackStore
+from newerp.infrastructure.catalog.pages import SqlPageStore
 from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
@@ -503,3 +523,148 @@ async def update_download(download_id: int, request: DownloadDto, service: Refer
 @dictionaries_router.delete("/downloads/{download_id}", status_code=204, summary="Видалити завантаження без товарів")
 async def delete_download(download_id: int, principal: CurrentPrincipal, service: References) -> None:
     await service.delete_download(download_id, principal.user_id)
+
+
+# ═══ Storefront content and feedback (Python first) ═══
+
+
+def get_page_service(session: Session, clock: ClockDep) -> PageService:
+    return PageService(SqlPageStore(session, get_settings().language_id), clock)
+
+
+def get_feedback_service(session: Session, clock: ClockDep) -> FeedbackService:
+    return FeedbackService(SqlFeedbackStore(session, get_settings().language_id), clock)
+
+
+Pages = Annotated[PageService, Depends(get_page_service)]
+Feedback = Annotated[FeedbackService, Depends(get_feedback_service)]
+
+
+@dictionaries_router.get("/information", summary="Інформаційні сторінки вітрини")
+async def list_information(pages: Pages) -> list[InformationDto]:
+    return await pages.information()
+
+
+@dictionaries_router.post("/information", status_code=201, summary="Нова сторінка; HTML очищується")
+async def create_information(request: InformationDto, pages: Pages) -> InformationDto:
+    return await pages.save_information(None, request)
+
+
+@dictionaries_router.put("/information/{page_id}", summary="Змінити сторінку")
+async def update_information(page_id: int, request: InformationDto, pages: Pages) -> InformationDto:
+    return await pages.save_information(page_id, request)
+
+
+@dictionaries_router.get("/faq", summary="Питання й відповіді (FAQ)")
+async def list_faq(pages: Pages) -> list[FaqDto]:
+    return await pages.faqs()
+
+
+@dictionaries_router.post("/faq", status_code=201, summary="Нове питання FAQ")
+async def create_faq(request: FaqDto, pages: Pages) -> FaqDto:
+    return await pages.save_faq(None, request)
+
+
+@dictionaries_router.put("/faq/{faq_id}", summary="Змінити питання FAQ")
+async def update_faq(faq_id: int, request: FaqDto, pages: Pages) -> FaqDto:
+    return await pages.save_faq(faq_id, request)
+
+
+@dictionaries_router.get("/blog/categories", summary="Рубрики блогу")
+async def list_blog_categories(pages: Pages) -> list[BlogCategoryDto]:
+    return await pages.blog_categories()
+
+
+@dictionaries_router.post("/blog/categories", status_code=201, summary="Нова рубрика блогу")
+async def create_blog_category(request: BlogCategoryDto, pages: Pages) -> BlogCategoryDto:
+    return await pages.save_blog_category(None, request)
+
+
+@dictionaries_router.put("/blog/categories/{category_id}", summary="Змінити рубрику блогу")
+async def update_blog_category(category_id: int, request: BlogCategoryDto, pages: Pages) -> BlogCategoryDto:
+    return await pages.save_blog_category(category_id, request)
+
+
+@dictionaries_router.get("/blog/posts", summary="Дописи блогу")
+async def list_blog_posts(pages: Pages) -> list[BlogPostDto]:
+    return await pages.blog_posts()
+
+
+@dictionaries_router.post("/blog/posts", status_code=201, summary="Новий допис; HTML очищується")
+async def create_blog_post(request: BlogPostDto, pages: Pages) -> BlogPostDto:
+    return await pages.save_blog_post(None, request)
+
+
+@dictionaries_router.put("/blog/posts/{post_id}", summary="Змінити допис")
+async def update_blog_post(post_id: int, request: BlogPostDto, pages: Pages) -> BlogPostDto:
+    return await pages.save_blog_post(post_id, request)
+
+
+@dictionaries_router.delete("/content/{kind}/{item_id}", status_code=204,
+                            summary="Видалити сторінку, питання FAQ, рубрику чи допис блогу")  # fmt: skip
+async def delete_content(kind: PageKind, item_id: int, principal: CurrentPrincipal, pages: Pages) -> None:
+    await pages.delete(kind, item_id, principal.user_id)
+
+
+@dictionaries_router.get("/blocks/about", summary="Блок «Про нас» головної сторінки")
+async def get_about(pages: Pages) -> AboutBlockDto:
+    return await pages.about()
+
+
+@dictionaries_router.put("/blocks/about", summary="Змінити блок «Про нас»")
+async def save_about(request: AboutBlockDto, pages: Pages) -> AboutBlockDto:
+    return await pages.save_about(request)
+
+
+@dictionaries_router.get("/blocks/nft", summary="Блок NFT головної сторінки")
+async def get_nft(pages: Pages) -> NftBlockDto:
+    return await pages.nft()
+
+
+@dictionaries_router.put("/blocks/nft", summary="Змінити блок NFT (посилання — лише магазину чи https)")
+async def save_nft(request: NftBlockDto, pages: Pages) -> NftBlockDto:
+    return await pages.save_nft(request)
+
+
+@dictionaries_router.get("/reviews", summary="Відгуки: all, pending (на модерації) або published")
+async def list_reviews(
+    feedback: Feedback,
+    state: FeedbackState = "all",
+    page: int = 1,
+    page_size: Annotated[int, Query(alias="pageSize")] = 20,
+) -> PagedResult[ReviewDto]:
+    return await feedback.reviews(state, page, page_size)
+
+
+@dictionaries_router.put("/reviews/{review_id}", status_code=204, summary="Виправити й опублікувати чи сховати відгук")
+async def update_review(
+    review_id: int, request: UpdateReviewRequest, principal: CurrentPrincipal, feedback: Feedback
+) -> None:
+    await feedback.update_review(review_id, request, principal.user_id)
+
+
+@dictionaries_router.delete("/reviews/{review_id}", status_code=204, summary="Видалити відгук")
+async def delete_review(review_id: int, principal: CurrentPrincipal, feedback: Feedback) -> None:
+    await feedback.delete_review(review_id, principal.user_id)
+
+
+@dictionaries_router.get("/questions", summary="Питання покупців: all, pending або published")
+async def list_questions(
+    feedback: Feedback,
+    state: FeedbackState = "all",
+    page: int = 1,
+    page_size: Annotated[int, Query(alias="pageSize")] = 20,
+) -> PagedResult[QuestionDto]:
+    return await feedback.questions(state, page, page_size)
+
+
+@dictionaries_router.put("/questions/{question_id}", status_code=204, summary="Відповісти й опублікувати питання")
+async def update_question(
+    question_id: int, request: UpdateQuestionRequest, principal: CurrentPrincipal, feedback: Feedback
+) -> None:
+    await feedback.update_question(question_id, request, principal.user_id)
+
+
+@dictionaries_router.delete("/questions/{question_id}", status_code=204, summary="Видалити питання")
+async def delete_question(question_id: int, principal: CurrentPrincipal, feedback: Feedback) -> None:
+    await feedback.delete_question(question_id, principal.user_id)

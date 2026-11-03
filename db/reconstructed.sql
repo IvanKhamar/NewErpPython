@@ -874,3 +874,116 @@ CREATE TABLE `dd_product_to_download` (
   PRIMARY KEY (`product_id`,`download_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+
+-- ═══ Вміст вітрини: інформаційні сторінки, FAQ, блог, питання покупців, відгуки ═══
+-- Стандартні таблиці OpenCart 3 (install/opencart.sql).
+CREATE TABLE `dd_information` (
+  `information_id` int(11) NOT NULL AUTO_INCREMENT,
+  `bottom` int(1) NOT NULL DEFAULT '0',
+  `sort_order` int(3) NOT NULL DEFAULT '0',
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`information_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_information_description` (
+  `information_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `title` varchar(64) NOT NULL,
+  `description` mediumtext NOT NULL,
+  `meta_title` varchar(255) NOT NULL,
+  `meta_description` varchar(255) NOT NULL,
+  `meta_keyword` varchar(255) NOT NULL,
+  PRIMARY KEY (`information_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_information_to_store` (
+  `information_id` int(11) NOT NULL,
+  `store_id` int(11) NOT NULL,
+  PRIMARY KEY (`information_id`,`store_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_review` (
+  `review_id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `author` varchar(64) NOT NULL,
+  `text` text NOT NULL,
+  `rating` int(1) NOT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0',
+  `date_added` datetime NOT NULL,
+  `date_modified` datetime NOT NULL,
+  PRIMARY KEY (`review_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Власні таблиці старого сайту: FAQ і блог (admin/model/catalog/faq.php, admin/model/blog/*.php).
+-- Колонки взято із запитів моделей; типи вгадані, звірити.
+CREATE TABLE `dd_faq` (
+  `faq_id` int(11) NOT NULL AUTO_INCREMENT,
+  `author` varchar(64) NOT NULL DEFAULT '',
+  `email` varchar(96) NOT NULL DEFAULT '',
+  `comment` text NULL,
+  `sort_order` int(11) NOT NULL DEFAULT '0',
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`faq_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_faq_description` (
+  `faq_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  PRIMARY KEY (`faq_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_post` (
+  `post_id` int(11) NOT NULL AUTO_INCREMENT,
+  `image` varchar(255) NOT NULL DEFAULT '',
+  `big_image` varchar(255) NOT NULL DEFAULT '',
+  `is_top` tinyint(1) NOT NULL DEFAULT '0',
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  `date_available` datetime NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`post_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_post_description` (
+  `post_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` mediumtext NOT NULL,
+  `meta_title` varchar(255) NOT NULL DEFAULT '',
+  `meta_description` varchar(255) NOT NULL DEFAULT '',
+  `image_alt` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`post_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_post_category` (
+  `post_category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`post_category_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_post_category_description` (
+  `post_category_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`post_category_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_post_to_category` (
+  `post_id` int(11) NOT NULL,
+  `post_category_id` int(11) NOT NULL,
+  PRIMARY KEY (`post_id`,`post_category_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Питання покупців у старій адмінці мають ще місто, відповідь (comment), статус, дату й картинку
+-- (admin/model/catalog/question.php). Типи вгадані, звірити.
+ALTER TABLE `dd_question`
+  ADD COLUMN `city` varchar(128) NOT NULL DEFAULT '',
+  ADD COLUMN `comment` text NULL,
+  ADD COLUMN `status` tinyint(1) NOT NULL DEFAULT '0',
+  ADD COLUMN `date_question` date NULL,
+  ADD COLUMN `image` varchar(255) NULL;

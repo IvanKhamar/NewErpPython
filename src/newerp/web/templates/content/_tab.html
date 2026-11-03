@@ -1,0 +1,133 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+{% macro field_input(item, name, label, kind) -%}
+  {% set value = item[name] %}
+  {% if kind == "html" %}
+  <label>{{ label }} <textarea name="{{ name }}" rows="5">{{ value or "" }}</textarea></label>
+  {% elif kind == "bool" %}
+  <label><input type="checkbox" name="{{ name }}" value="1"{% if value %} checked{% endif %}> {{ label }}</label>
+  {% elif kind == "int" %}
+  <label>{{ label }} <input name="{{ name }}" value="{{ value or 0 }}" inputmode="numeric"></label>
+  {% elif kind == "datetime" %}
+  <label>{{ label }} <input type="datetime-local" name="{{ name }}" value="{{ value.strftime('%Y-%m-%dT%H:%M') if value else '' }}"></label>
+  {% elif kind == "links" %}
+  <fieldset><legend>{{ label }}</legend>
+    {% for rubric in rubrics %}
+    <label><input type="checkbox" name="{{ name }}" value="{{ rubric.id }}"{% if rubric.id in value %} checked{% endif %}> {{ rubric.name }}</label>
+    {% endfor %}
+  </fieldset>
+  {% else %}
+  <label>{{ label }} <input name="{{ name }}" value="{{ value or '' }}" maxlength="255"></label>
+  {% endif %}
+{%- endmacro %}
+
+{% if items is defined %}
+{# The simple lists: each item opens into its form; the last one adds a new item. #}
+{% for item in items + [None] %}{% set current = item or blank %}{% set id = item.id if item else 0 %}
+<details{% if not item and not items %} open{% endif %}>
+  <summary>{% if item %}{{ current[title_field] or ("№" ~ id) }}{% if current.enabled is defined and not current.enabled %} <span class="chip none">вимкнено</span>{% endif %}{% else %}+ Додати{% endif %}</summary>
+  <form hx-post="/app/catalog/content/{{ tab }}/{{ id }}/save" hx-target="#content-tab">
+    {% for name, label, kind in fields %}{{ field_input(current, name, label, kind) }}{% endfor %}
+    <div role="group">
+      <button type="submit">{{ "Зберегти" if item else "Додати" }}</button>
+      {% if item %}<button type="button" class="secondary outline" hx-post="/app/catalog/content/{{ tab }}/{{ id }}/delete"
+        hx-target="#content-tab" hx-confirm="Видалити?">Видалити</button>{% endif %}
+    </div>
+  </form>
+</details>
+{% endfor %}
+
+{% elif tab == "about" or tab == "nft" %}
+<form hx-post="/app/catalog/content/blocks/{{ tab }}" hx-target="#content-tab">
+  <label><input type="checkbox" role="switch" name="enabled" value="1"{% if block.enabled %} checked{% endif %}> Показувати на головній</label>
+  <label>Заголовок <input name="heading_title" value="{{ block.heading_title }}" maxlength="255"></label>
+  <label>Підзаголовок <input name="subtitle" value="{{ block.subtitle }}" maxlength="255"></label>
+  <label>Текст (HTML) <textarea name="description" rows="5">{{ block.description }}</textarea></label>
+  {% if tab == "about" %}
+  <table>
+    <thead><tr><th>Картинка зліва</th><th>Справа</th><th>Мобільна</th><th>Порядок</th></tr></thead>
+    <tbody>
+    {% for item in block['items'] + [None, None] %}
+      <tr>
+        <td><input name="item_image_left" value="{{ item.image_left if item else '' }}" aria-label="Зліва"></td>
+        <td><input name="item_image_right" value="{{ item.image_right if item else '' }}" aria-label="Справа"></td>
+        <td><input name="item_image_mobile" value="{{ item.image_mobile if item else '' }}" aria-label="Мобільна"></td>
+        <td><input name="item_sort_order" value="{{ item.sort_order if item else '' }}" size="3" aria-label="Порядок"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="grid">
+    <label>Заголовок форми <input name="heading_form" value="{{ block.heading_form }}" maxlength="255"></label>
+    <label>Підзаголовок форми <input name="subtitle_form" value="{{ block.subtitle_form }}" maxlength="255"></label>
+  </div>
+  <div class="grid">
+    <label>Посилання (/шлях або https://) <input name="link" value="{{ block.link }}" maxlength="255"></label>
+    <label>Текст посилання <input name="text_link" value="{{ block.text_link }}" maxlength="255"></label>
+    <label>Картинка <input name="image" value="{{ block.image }}" maxlength="255"></label>
+  </div>
+  <table>
+    <thead><tr><th>Картинка галереї</th><th>Посилання</th><th>Порядок</th></tr></thead>
+    <tbody>
+    {% for image in block.images + [None, None] %}
+      <tr>
+        <td><input name="image_image" value="{{ image.image if image else '' }}" aria-label="Картинка"></td>
+        <td><input name="image_link" value="{{ image.link if image else '' }}" aria-label="Посилання"></td>
+        <td><input name="image_sort_order" value="{{ image.sort_order if image else '' }}" size="3" aria-label="Порядок"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Крок: заголовок</th><th>Підзаголовок</th><th>Текст (HTML)</th><th>Порядок</th></tr></thead>
+    <tbody>
+    {% for item in block['items'] + [None, None] %}
+      <tr>
+        <td><input name="item_title" value="{{ item.title if item else '' }}" aria-label="Заголовок"></td>
+        <td><input name="item_subtitle" value="{{ item.subtitle if item else '' }}" aria-label="Підзаголовок"></td>
+        <td><textarea name="item_description" rows="2" aria-label="Текст">{{ item.description if item else '' }}</textarea></td>
+        <td><input name="item_sort_order" value="{{ item.sort_order if item else '' }}" size="3" aria-label="Порядок"></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <button type="submit">Зберегти</button>
+</form>
+
+{% else %}
+{# Reviews and questions: moderation rows. #}
+<p>
+  {% for key, title in (("pending", "На модерації"), ("published", "Опубліковані"), ("all", "Усі")) %}
+  <a href="/app/catalog/content?tab={{ tab }}&state={{ key }}"{% if key == state %} aria-current="page"{% endif %}>{{ title }}</a>{% if not loop.last %} · {% endif %}
+  {% endfor %}
+</p>
+{% for row in result['items'] %}
+<article>
+  <header><a href="/app/catalog/products/{{ row.product_id }}">{{ row.product_name or ("товар №" ~ row.product_id) }}</a>
+    · {{ row.author if tab == "reviews" else row.name ~ " " ~ row.telephone }}</header>
+  <form hx-post="/app/catalog/content/{{ tab }}/{{ row.id }}/moderate/save" hx-target="#content-tab">
+    <input type="hidden" name="state" value="{{ state }}">
+    {% if tab == "reviews" %}
+    <div class="grid">
+      <label>Автор <input name="author" value="{{ row.author }}" maxlength="64"></label>
+      <label>Оцінка <input name="rating" value="{{ row.rating }}" inputmode="numeric" size="2"></label>
+    </div>
+    <label>Текст <textarea name="text" rows="3">{{ row.text }}</textarea></label>
+    {% else %}
+    <label>Питання <textarea name="question" rows="2">{{ row.question }}</textarea></label>
+    <label>Відповідь <textarea name="answer" rows="2">{{ row.answer }}</textarea></label>
+    {% endif %}
+    <label><input type="checkbox" name="published" value="1"{% if row.published %} checked{% endif %}> Опублікувати</label>
+    <div role="group">
+      <button type="submit">Зберегти</button>
+      <button type="button" class="secondary outline" hx-post="/app/catalog/content/{{ tab }}/{{ row.id }}/moderate/delete"
+        hx-include="closest form" hx-target="#content-tab" hx-confirm="Видалити?">Видалити</button>
+    </div>
+  </form>
+</article>
+{% else %}
+<p>Нічого немає.</p>
+{% endfor %}
+{% endif %}
