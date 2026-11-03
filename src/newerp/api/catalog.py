@@ -23,6 +23,7 @@ from newerp.application.catalog.feedback import (
     UpdateQuestionRequest,
     UpdateReviewRequest,
 )
+from newerp.application.catalog.maintenance import CatalogMaintenanceService, SizeFilterResult
 from newerp.application.catalog.pages import (
     AboutBlockDto,
     BlogCategoryDto,
@@ -87,6 +88,7 @@ from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
 from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
 from newerp.infrastructure.catalog.feedback import SqlFeedbackStore
+from newerp.infrastructure.catalog.maintenance import SqlMaintenanceStore
 from newerp.infrastructure.catalog.pages import SqlPageStore
 from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
@@ -668,3 +670,18 @@ async def update_question(
 @dictionaries_router.delete("/questions/{question_id}", status_code=204, summary="Видалити питання")
 async def delete_question(question_id: int, principal: CurrentPrincipal, feedback: Feedback) -> None:
     await feedback.delete_question(question_id, principal.user_id)
+
+
+# ═══ Maintenance (Python first) ═══
+
+
+def get_maintenance_service(session: Session) -> CatalogMaintenanceService:
+    return CatalogMaintenanceService(SqlMaintenanceStore(session, get_settings().language_id))
+
+
+Maintenance = Annotated[CatalogMaintenanceService, Depends(get_maintenance_service)]
+
+
+@prices_router.post("/size-filters", summary="Фільтри розмірів за розмірами товарів (додати бракуючі, зняти зайві)")
+async def rebuild_size_filters(principal: CurrentPrincipal, maintenance: Maintenance) -> SizeFilterResult:
+    return await maintenance.rebuild_size_filters(principal.user_id)

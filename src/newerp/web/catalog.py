@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from starlette.datastructures import FormData
 from starlette.datastructures import UploadFile as StarletteUpload
 
-from newerp.api.catalog import Editor, Imports, Prices, Products, Sorting
+from newerp.api.catalog import Editor, Imports, Maintenance, Prices, Products, Sorting
 from newerp.api.deps import Session
 from newerp.api.pre_orders import Service as PreOrders
 from newerp.api.security import Policies
@@ -504,3 +504,13 @@ async def import_products(
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     return render(request, "catalog/_import_preview.html", preview=preview)
+
+
+@router.post("/catalog/size-filters", dependencies=bulk)
+async def rebuild_size_filters(request: Request, user: WebUser, maintenance: Maintenance) -> HTMLResponse:
+    result = await maintenance.rebuild_size_filters(user.user_id)
+    note = (
+        f"Фільтри розмірів оновлено: нових значень {result.created_values}, "
+        f"додано {result.linked}, знято {result.unlinked}."
+    )
+    return render(request, "_note.html", text=note)

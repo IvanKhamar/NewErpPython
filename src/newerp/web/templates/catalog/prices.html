@@ -46,6 +46,12 @@
   <div id="price-result"></div>
 </article>
 <article>
+  <header>Обслуговування</header>
+  <p><small>Фільтри розмірів вітрини за розмірами товарів: бракуючі додаються, зайві знімаються.</small></p>
+  <button type="button" class="secondary" hx-post="/app/catalog/size-filters" hx-target="#maintenance-result">Оновити фільтри розмірів</button>
+  <div id="maintenance-result"></div>
+</article>
+<article>
   <header>Імпорт товарів з CSV <small>(лише оновлює наявні товари)</small></header>
   <p><small>UTF-8, роздільник «;» або «,», перший рядок — назви колонок: <code>model</code> або <code>product_id</code>
     і будь-які з <code>price, sku, name, status, sort_order, weight, length, width, height</code>. Порожня клітинка
