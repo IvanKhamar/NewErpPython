@@ -44,6 +44,7 @@ from newerp.application.marketing.vouchers import (
     VoucherOptions,
     VoucherService,
 )
+from newerp.application.module_settings import REMARKETING, ModuleSettingsService, SettingGroupDto
 from newerp.config import get_settings
 from newerp.domain.marketing import BirthdayPeriod, ContactField, ContactSource
 from newerp.infrastructure.mail import mail_sender
@@ -58,6 +59,7 @@ from newerp.infrastructure.marketing.integrations import (
 )
 from newerp.infrastructure.marketing.tracking import SqlTrackingStore, SqlVoucherThemeStore
 from newerp.infrastructure.marketing.vouchers import SqlVoucherStore
+from newerp.infrastructure.module_settings import SqlModuleSettingsStore
 from newerp.infrastructure.sms import SqlSmsLog
 
 orders_access = [Depends(require_roles(*Policies.ORDERS))]
@@ -397,3 +399,27 @@ async def tiktok_feed(
     if given is None or not hmac.compare_digest(given.strip().encode(), expected.encode()):
         return Response(status_code=401)
     return Response(await service.csv(), media_type="text/csv; charset=utf-8")
+
+
+# ═══ Remarketing module settings (Python first) ═══
+
+
+def get_remarketing_settings(session: Session) -> ModuleSettingsService:
+    return ModuleSettingsService(SqlModuleSettingsStore(session), REMARKETING)
+
+
+RemarketingSettings = Annotated[ModuleSettingsService, Depends(get_remarketing_settings)]
+
+
+@router.get("/remarketing/settings", dependencies=integrations,
+            summary="Налаштування модуля ремаркетингу за групами; секрети — лише «задано/не задано»")  # fmt: skip
+async def remarketing_settings(service: RemarketingSettings) -> list[SettingGroupDto]:
+    return await service.groups()
+
+
+@router.put("/remarketing/settings", dependencies=integrations,
+            summary="Змінити звичайні налаштування; секрети, скрипти й списки — лише в OpenCart")  # fmt: skip
+async def save_remarketing_settings(
+    changes: dict[str, str], principal: CurrentPrincipal, service: RemarketingSettings
+) -> list[SettingGroupDto]:
+    return await service.save(changes, principal.user_id)

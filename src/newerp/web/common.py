@@ -78,6 +78,7 @@ MENU = (
     MenuLink("Коди відстеження", "/app/marketing/tracking", Policies.ORDERS),
     MenuLink("Теми сертифікатів", "/app/marketing/vouchers/themes", Policies.ORDERS),
     MenuLink("Інтеграції", "/app/marketing/integrations", Policies.INTEGRATIONS),
+    MenuLink("Ремаркетинг", "/app/marketing/remarketing", Policies.INTEGRATIONS),
     MenuLink("Партнери", "/app/partners", Policies.ORDERS),
     MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
     MenuLink("Звіти", "/app/reports", Policies.ORDERS),

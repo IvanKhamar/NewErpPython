@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from starlette.datastructures import FormData
 
 from newerp.api.deps import Session
-from newerp.api.marketing import Instagram, Klaviyo, Tracking, VoucherAdmin
+from newerp.api.marketing import Instagram, Klaviyo, RemarketingSettings, Tracking, VoucherAdmin
 from newerp.api.security import Policies
 from newerp.application.marketing.integrations import KlaviyoSettingsDto
 from newerp.application.marketing.tracking import TrackingCodeDto
@@ -154,3 +154,31 @@ async def update_instagram(request: Request, instagram: Instagram, session: Sess
     return render(
         request, "_note.html", text=f"Нових дописів: {result.added}, картинок збережено: {result.pictures_saved}."
     )
+
+
+# ── Remarketing module settings (the admin only) ──
+
+
+async def _remarketing(request: Request, service: RemarketingSettings, **messages: Any) -> HTMLResponse:
+    template = "marketing/_remarketing.html" if is_fragment(request) else "marketing/remarketing.html"
+    return render(request, template, groups=await service.groups(), **messages)
+
+
+@router.get("/remarketing", dependencies=integrations)
+async def remarketing_page(request: Request, service: RemarketingSettings) -> HTMLResponse:
+    return await _remarketing(request, service)
+
+
+@router.post("/remarketing", dependencies=integrations)
+async def save_remarketing(
+    request: Request, user: WebUser, service: RemarketingSettings, session: Session
+) -> HTMLResponse:
+    """Only the text settings are in the form; a changed value is saved, the others stay."""
+    form = await request.form()
+    changes = {key: value for key, value in form.multi_items() if isinstance(value, str)}
+    current = {s.key: s.value for g in await service.groups() for s in g.settings if s.kind == "text"}
+    try:
+        await service.save({k: v for k, v in changes.items() if k in current and v.strip() != current[k]}, user.user_id)
+    except BUSINESS_ERRORS as error:
+        return await _remarketing(request, service, error=await undo(session, error))
+    return await _remarketing(request, service, saved="Збережено.")

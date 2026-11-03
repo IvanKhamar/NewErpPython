@@ -1,0 +1,30 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<form hx-post="/app/marketing/remarketing" hx-target="#remarketing">
+{% for group in groups %}
+<details{% if loop.first %} open{% endif %}>
+  <summary>{{ group.name }} <small>({{ group.settings|length }})</small></summary>
+  <table>
+    <tbody>
+    {% for setting in group.settings %}
+      <tr>
+        <td><code>{{ setting.key }}</code></td>
+        <td>
+          {% if setting.kind == "text" %}
+          <input name="{{ setting.key }}" value="{{ setting.value }}" maxlength="1000" aria-label="{{ setting.key }}">
+          {% elif setting.kind == "secret" %}
+          <span class="chip {{ 'received' if setting.is_set else 'none' }}">{{ "задано" if setting.is_set else "не задано" }}</span>
+          {% else %}
+          <small>{{ setting.value|truncate(80) }}</small> <span class="chip none">лише в OpenCart</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% else %}
+<p>Налаштувань модуля ремаркетингу в базі немає.</p>
+{% endfor %}
+{% if groups %}<button type="submit">Зберегти</button>{% endif %}
+</form>
