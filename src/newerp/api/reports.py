@@ -17,9 +17,11 @@ from newerp.application.reports import (
     SalesReportDto,
     StatusReportDto,
 )
+from newerp.application.standard_reports import Grouping, ReportDto, ReportKind, StandardReportService
 from newerp.config import RevenueFeedSettings, get_settings
 from newerp.domain.reports import ReportGrouping
 from newerp.infrastructure.reports import SqlReportStore
+from newerp.infrastructure.standard_reports import SqlStandardReportStore
 
 router = APIRouter(prefix="/reports", tags=["Звіти"], dependencies=[Depends(require_roles(*Policies.ORDERS))])
 # An outside dashboard downloads the feed, so it needs no login, only the token.
@@ -104,3 +106,24 @@ async def revenue_feed(
 def _matches(given: str | None, expected: str) -> bool:
     """Compares in constant time, so the response time does not tell which part of the token is right."""
     return given is not None and hmac.compare_digest(given.strip().encode(), expected.strip().encode())
+
+
+# ═══ OpenCart's standard reports (Python first, item 71) ═══
+
+
+def get_standard_reports(session: Session, clock: ClockDep) -> StandardReportService:
+    return StandardReportService(SqlStandardReportStore(session), clock)
+
+
+@router.get(
+    "/standard/{kind}",
+    summary="Стандартні звіти OpenCart за період (from–to, типово 30 днів; group: day, week, month)",
+)
+async def standard_report(
+    kind: ReportKind,
+    service: Annotated[StandardReportService, Depends(get_standard_reports)],
+    from_: Annotated[date | None, Query(alias="from")] = None,
+    to: date | None = None,
+    group: Grouping = "day",
+) -> ReportDto:
+    return await service.report(kind, from_, to, group)

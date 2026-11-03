@@ -1,0 +1,22 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<table>
+  <thead><tr><th>№</th><th>Назва</th>{% if kind == "order-statuses" %}<th>Колір</th>{% endif %}<th class="num">Використано</th><th></th></tr></thead>
+  <tbody>
+  {% for item in items + [None] %}{% set id = item.id if item else 0 %}
+    <tr>
+      <td>{{ item.id if item else "" }}</td>
+      <td><input form="s-{{ id }}" name="name" value="{{ item.name if item else '' }}" maxlength="32" aria-label="Назва" placeholder="Новий запис"></td>
+      {% if kind == "order-statuses" %}<td><input form="s-{{ id }}" name="color" value="{{ item.color if item else '' }}" maxlength="7" size="7" aria-label="Колір" placeholder="#rrggbb"></td>{% endif %}
+      <td class="num">{{ item.used if item else "" }}</td>
+      <td>
+        <form id="s-{{ id }}" hx-post="/app/admin/statuses/{{ kind }}/{{ id }}/save" hx-target="#statuses" role="group">
+          <button type="submit">{{ "Зберегти" if item else "Додати" }}</button>
+          {% if item and not item.used %}<button type="button" class="secondary outline" hx-post="/app/admin/statuses/{{ kind }}/{{ id }}/delete"
+            hx-target="#statuses" hx-confirm="Видалити?">Видалити</button>{% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

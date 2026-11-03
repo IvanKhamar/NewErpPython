@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, Response, UploadFile
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.application.banners import BannerDto, BannerService, SeoUrlDto, SeoUrlService
 from newerp.application.catalog.dictionaries import (
     CatalogDictionaryService,
     CategoryEditDto,
@@ -86,6 +87,7 @@ from newerp.application.catalog.sort import (
 from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
+from newerp.infrastructure.banners import SqlBannerStore, SqlSeoUrlStore
 from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
 from newerp.infrastructure.catalog.feedback import SqlFeedbackStore
 from newerp.infrastructure.catalog.maintenance import SqlMaintenanceStore
@@ -685,3 +687,64 @@ Maintenance = Annotated[CatalogMaintenanceService, Depends(get_maintenance_servi
 @prices_router.post("/size-filters", summary="Фільтри розмірів за розмірами товарів (додати бракуючі, зняти зайві)")
 async def rebuild_size_filters(principal: CurrentPrincipal, maintenance: Maintenance) -> SizeFilterResult:
     return await maintenance.rebuild_size_filters(principal.user_id)
+
+
+# ═══ Banners and SEO addresses (item 70) ═══
+
+
+def get_banners(session: Session) -> BannerService:
+    return BannerService(SqlBannerStore(session, get_settings().language_id))
+
+
+def get_seo_urls(session: Session) -> SeoUrlService:
+    return SeoUrlService(SqlSeoUrlStore(session, get_settings().language_id))
+
+
+Banners = Annotated[BannerService, Depends(get_banners)]
+SeoUrls = Annotated[SeoUrlService, Depends(get_seo_urls)]
+
+
+@dictionaries_router.get("/banners", summary="Банери з картинками й посиланнями")
+async def list_banners(service: Banners) -> list[BannerDto]:
+    return await service.banners()
+
+
+@dictionaries_router.post("/banners", status_code=201, summary="Новий банер (посилання — магазину чи https)")
+async def create_banner(request: BannerDto, principal: CurrentPrincipal, service: Banners) -> BannerDto:
+    return await service.save(None, request, principal.user_id)
+
+
+@dictionaries_router.put("/banners/{banner_id}", summary="Змінити банер")
+async def update_banner(banner_id: int, request: BannerDto, principal: CurrentPrincipal, service: Banners) -> BannerDto:
+    return await service.save(banner_id, request, principal.user_id)
+
+
+@dictionaries_router.delete(
+    "/banners/{banner_id}", status_code=204, summary="Видалити банер, якого не показують категорії"
+)
+async def delete_banner(banner_id: int, principal: CurrentPrincipal, service: Banners) -> None:
+    await service.delete(banner_id, principal.user_id)
+
+
+@dictionaries_router.get("/seo-urls", summary="SEO-адреси вітрини з пошуком, посторінково")
+async def list_seo_urls(
+    service: SeoUrls, search: str | None = None, page: int = 1, page_size: Annotated[int, Query(alias="pageSize")] = 50
+) -> PagedResult[SeoUrlDto]:
+    return await service.page(search, page, page_size)
+
+
+@dictionaries_router.post("/seo-urls", status_code=201, summary="Нова SEO-адреса (сторінка product_id=N тощо)")
+async def create_seo_url(request: SeoUrlDto, principal: CurrentPrincipal, service: SeoUrls) -> SeoUrlDto:
+    return await service.save(None, request, principal.user_id)
+
+
+@dictionaries_router.put("/seo-urls/{seo_url_id}", summary="Змінити SEO-адресу")
+async def update_seo_url(
+    seo_url_id: int, request: SeoUrlDto, principal: CurrentPrincipal, service: SeoUrls
+) -> SeoUrlDto:
+    return await service.save(seo_url_id, request, principal.user_id)
+
+
+@dictionaries_router.delete("/seo-urls/{seo_url_id}", status_code=204, summary="Видалити SEO-адресу")
+async def delete_seo_url(seo_url_id: int, principal: CurrentPrincipal, service: SeoUrls) -> None:
+    await service.delete(seo_url_id, principal.user_id)

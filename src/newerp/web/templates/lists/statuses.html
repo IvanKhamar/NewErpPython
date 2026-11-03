@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Довідники статусів{% endblock %}
+{% block content %}
+<h1>Довідники статусів</h1>
+<nav><ul>{% for key, title in kinds %}<li><a href="/app/admin/statuses?kind={{ key }}"{% if key == kind %} aria-current="page"{% endif %}>{{ title }}</a></li>{% endfor %}</ul></nav>
+<div id="statuses">{% include "lists/_statuses.html" %}</div>
+{% endblock %}

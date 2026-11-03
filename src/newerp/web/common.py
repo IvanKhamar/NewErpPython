@@ -68,6 +68,7 @@ MENU = (
     MenuLink("Категорії", "/app/catalog/categories", Policies.ORDERS),
     MenuLink("Мітки й пресети пошуку", "/app/catalog/labels", Policies.ORDERS),
     MenuLink("Фільтри, атрибути, опції", "/app/catalog/references", Policies.ORDERS),
+    MenuLink("Банери й SEO-адреси", "/app/catalog/banners", Policies.ORDERS),
     MenuLink("Вміст вітрини й відгуки", "/app/catalog/content", Policies.ORDERS),
     MenuLink("Масові ціни й імпорт", "/app/catalog/prices", Policies.CATALOG_BULK),
     MenuLink("Передзамовлення", "/app/preorders", Policies.ORDERS),
@@ -82,6 +83,7 @@ MENU = (
     MenuLink("Партнери", "/app/partners", Policies.ORDERS),
     MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
     MenuLink("Звіти", "/app/reports", Policies.ORDERS),
+    MenuLink("Стандартні звіти", "/app/reports/standard", Policies.ORDERS),
     MenuLink("Каса", "/app/cashbox", Policies.FINANCE),
     MenuLink("Надходження на рахунок", "/app/payments", Policies.FINANCE),
     MenuLink("Розхідники", "/app/stock", Policies.STOCK),
@@ -97,6 +99,7 @@ MENU = (
     MenuLink("Бонуси", "/app/bonuses", Policies.BONUSES),
     MenuLink("Користувачі", "/app/users", Policies.USERS),
     MenuLink("Адміністрування", "/app/admin", Policies.ADMIN_TOOLS),
+    MenuLink("Довідники статусів", "/app/admin/statuses", Policies.ADMIN_TOOLS),
 )
 
 

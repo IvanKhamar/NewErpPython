@@ -1149,3 +1149,62 @@ CREATE TABLE `dd_upload` (
   PRIMARY KEY (`upload_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+
+-- ═══ Довідники статусів, банери, звіти (стандартні таблиці OpenCart 3, install/opencart.sql) ═══
+CREATE TABLE `dd_stock_status` (
+  `stock_status_id` int(11) NOT NULL AUTO_INCREMENT,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(32) NOT NULL,
+  PRIMARY KEY (`stock_status_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_banner` (
+  `banner_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  `status` tinyint(1) NOT NULL,
+  PRIMARY KEY (`banner_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_banner_image` (
+  `banner_image_id` int(11) NOT NULL AUTO_INCREMENT,
+  `banner_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `title` varchar(64) NOT NULL,
+  `link` varchar(255) NOT NULL,
+  `image` varchar(255) NOT NULL,
+  `sort_order` int(3) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`banner_image_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_activity` (
+  `customer_activity_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) NOT NULL,
+  `key` varchar(64) NOT NULL,
+  `data` text NOT NULL,
+  `ip` varchar(40) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`customer_activity_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_search` (
+  `customer_search_id` int(11) NOT NULL AUTO_INCREMENT,
+  `store_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `keyword` varchar(255) NOT NULL,
+  `category_id` int(11),
+  `sub_category` tinyint(1) NOT NULL,
+  `description` tinyint(1) NOT NULL,
+  `products` int(11) NOT NULL,
+  `ip` varchar(40) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`customer_search_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_statistics` (
+  `statistics_id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(64) NOT NULL,
+  `value` decimal(15,4) NOT NULL,
+  PRIMARY KEY (`statistics_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+

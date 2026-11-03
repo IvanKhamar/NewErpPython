@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Стандартні звіти{% endblock %}
+{% block content %}
+<h1>Стандартні звіти</h1>
+<form class="filters" hx-get="/app/reports/standard" hx-target="#report" hx-trigger="change, submit" role="group">
+  <select name="kind" aria-label="Звіт">{% for key, value in kinds.items() %}<option value="{{ key }}"{% if key == kind %} selected{% endif %}>{{ value[0] }}</option>{% endfor %}</select>
+  <input type="date" name="date_from" value="{{ date_from }}" aria-label="Від">
+  <input type="date" name="date_to" value="{{ date_to }}" aria-label="До">
+  <select name="group" aria-label="Групувати">{% for key, title in (("day", "по днях"), ("week", "по тижнях"), ("month", "по місяцях")) %}<option value="{{ key }}"{% if key == group %} selected{% endif %}>{{ title }}</option>{% endfor %}</select>
+</form>
+<div id="report">{% include "lists/_report.html" %}</div>
+{% endblock %}

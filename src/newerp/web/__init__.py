@@ -21,6 +21,7 @@ from newerp.web import (
     customers,
     delivery,
     home,
+    lists,
     marketing,
     marketing_tools,
     orders,
@@ -40,9 +41,9 @@ def add_web(app: FastAPI) -> None:
     app.mount("/app/static", StaticFiles(directory=HERE / "static"), name="web-static")
     # customer_admin before customers and marketing_tools before marketing: their fixed paths
     # (/app/customers/settings, /app/marketing/vouchers/themes) must not be read as record numbers.
-    modules = (auth, home, administration, orders, returns, customer_admin, customers, delivery, cashbox, payments,
-               catalog, catalog_dictionaries, content, marketing_tools, marketing, partners, competitors, reports,
-               stock, production, production_specs, users)  # fmt: skip
+    modules = (auth, home, lists, administration, orders, returns, customer_admin, customers, delivery, cashbox,
+               payments, catalog, catalog_dictionaries, content, marketing_tools, marketing, partners, competitors,
+               reports, stock, production, production_specs, users)  # fmt: skip
     for module in modules:
         app.include_router(module.router)
 

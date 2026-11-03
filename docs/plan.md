@@ -107,9 +107,9 @@ missing in all three new versions, so every item is Python first):
 | 66 | Error log viewer: view, download, clear | `tool/log` | done (`/admin/error-log` with secrets masked, when `NEWERP_ADMIN_TOOLS__ERROR_LOG` is set) |
 | 67 | Database backup download | `tool/backup` | done (`/admin/backup.sql.gz`: dd_ and erp_ tables as SQL in gzip, logged; restore from the command line) |
 | 68 | Uploaded files: list, download, delete | `tool/upload` | done (`/admin/uploads` when `NEWERP_ADMIN_TOOLS__UPLOAD_DIR` is set; a path outside the folder is refused) |
-| 69 | Dictionaries: order statuses, return statuses, reasons and actions, stock statuses | `localisation/*` | |
-| 70 | Banners and SEO URLs | `design/banner`, `design/seo_url` | |
-| 71 | Standard reports: customer activity, searches, orders and transactions; products purchased; sales by order, coupon, return and shipping; marketing; statistics | `extension/report/*`, `report/statistics` | |
+| 69 | Dictionaries: order statuses, return statuses, reasons and actions, stock statuses | `localisation/*` | done (`/admin/status-lists/{order-statuses|return-statuses|return-reasons|return-actions|stock-statuses}`, admin only; colours only #rrggbb; a used status cannot be deleted; page `/app/admin/statuses`) |
+| 70 | Banners and SEO URLs | `design/banner`, `design/seo_url` | done (`/catalog/banners` with links only to the shop or https and pictures below catalog/, `/catalog/seo-urls` unique and only for known page kinds; page `/app/catalog/banners`) |
+| 71 | Standard reports: customer activity, searches, orders and transactions; products purchased; sales by order, coupon, return and shipping; marketing; statistics | `extension/report/*`, `report/statistics` | done (`/reports/standard/{kind}`: sales by period, returns, shipping, coupons, products purchased, customer orders and balance, customer activity and searches, OpenCart counters; the marketing report is item 57, online, views, rewards and taxes came with item 31; page `/app/reports/standard`) |
 
 Security rules for items 35–71 (the old admin had none of them; each item is done only with its rules and tests):
 

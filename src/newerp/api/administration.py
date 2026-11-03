@@ -21,10 +21,12 @@ from newerp.application.admin_files import (
 )
 from newerp.application.module_settings import STORE_CONFIG, ModuleSettingsService, SettingGroupDto
 from newerp.application.opencart_access import ApiKeyDto, ApiUserDto, ApiUserService, UserGroupDto, UserGroupService
+from newerp.application.status_lists import StatusItemDto, StatusList, StatusListService
 from newerp.config import get_settings
 from newerp.infrastructure.admin_files import LocalLogFile, LocalUploadFolder, SqlBackupStore, SqlUploadStore
 from newerp.infrastructure.module_settings import SqlModuleSettingsStore
 from newerp.infrastructure.opencart_access import SqlApiUserStore, SqlUserGroupStore
+from newerp.infrastructure.status_lists import SqlStatusListStore
 
 router = APIRouter(
     prefix="/admin", tags=["Адміністрування"], dependencies=[Depends(require_roles(*Policies.ADMIN_TOOLS))]
@@ -202,3 +204,37 @@ async def download_upload(upload_id: int, principal: CurrentPrincipal, service: 
 @router.delete("/uploads/{upload_id}", status_code=204, summary="Видалити файл і його запис")
 async def delete_upload(upload_id: int, principal: CurrentPrincipal, service: Uploads) -> None:
     await service.delete(upload_id, principal.user_id)
+
+
+# ═══ Status lists (item 69) ═══
+
+
+def get_status_lists(session: Session) -> StatusListService:
+    return StatusListService(SqlStatusListStore(session, get_settings().language_id))
+
+
+StatusLists = Annotated[StatusListService, Depends(get_status_lists)]
+
+
+@router.get("/status-lists/{kind}", summary="Статуси замовлень (з кольором), повернень, причини, дії, наявності")
+async def list_statuses(kind: StatusList, service: StatusLists) -> list[StatusItemDto]:
+    return await service.items(kind)
+
+
+@router.post("/status-lists/{kind}", status_code=201, summary="Новий запис довідника")
+async def create_status(
+    kind: StatusList, request: StatusItemDto, principal: CurrentPrincipal, service: StatusLists
+) -> StatusItemDto:
+    return await service.save(kind, None, request, principal.user_id)
+
+
+@router.put("/status-lists/{kind}/{item_id}", summary="Перейменувати (замовлення й повернення бачать нову назву)")
+async def update_status(
+    kind: StatusList, item_id: int, request: StatusItemDto, principal: CurrentPrincipal, service: StatusLists
+) -> StatusItemDto:
+    return await service.save(kind, item_id, request, principal.user_id)
+
+
+@router.delete("/status-lists/{kind}/{item_id}", status_code=204, summary="Видалити запис, якого ніщо не має")
+async def delete_status(kind: StatusList, item_id: int, principal: CurrentPrincipal, service: StatusLists) -> None:
+    await service.delete(kind, item_id, principal.user_id)

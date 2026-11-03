@@ -1,0 +1,54 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<h2>Банери</h2>
+{% for banner in banners + [None] %}{% set id = banner.id if banner else 0 %}
+<details{% if not banner and not banners %} open{% endif %}>
+  <summary>{{ banner.name if banner else "+ Новий банер" }}{% if banner and not banner.enabled %} <span class="chip none">вимкнений</span>{% endif %}</summary>
+  <form hx-post="/app/catalog/banners/{{ id }}/save" hx-target="#banners">
+    <label>Назва <input name="name" value="{{ banner.name if banner else '' }}" maxlength="64"></label>
+    <label><input type="checkbox" name="enabled" value="1"{% if not banner or banner.enabled %} checked{% endif %}> Увімкнений</label>
+    <table>
+      <thead><tr><th>Підпис</th><th>Посилання (/шлях або https://)</th><th>Картинка (catalog/…)</th><th>Порядок</th></tr></thead>
+      <tbody>
+      {% for image in (banner.images if banner else []) + [None, None] %}
+        <tr>
+          <td><input name="image_title" value="{{ image.title if image else '' }}" maxlength="64" aria-label="Підпис"></td>
+          <td><input name="image_link" value="{{ image.link if image else '' }}" maxlength="255" aria-label="Посилання"></td>
+          <td><input name="image_image" value="{{ image.image if image else '' }}" maxlength="255" aria-label="Картинка"></td>
+          <td><input name="image_sort_order" value="{{ image.sort_order if image else '' }}" size="3" aria-label="Порядок"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div role="group">
+      <button type="submit">{{ "Зберегти" if banner else "Додати" }}</button>
+      {% if banner %}<button type="button" class="secondary outline" hx-post="/app/catalog/banners/{{ id }}/delete" hx-target="#banners"
+        hx-confirm="Видалити банер?">Видалити</button>{% endif %}
+    </div>
+  </form>
+</details>
+{% endfor %}
+
+<h2>SEO-адреси</h2>
+<form hx-get="/app/catalog/banners" hx-target="#banners" role="search">
+  <input type="search" name="search" value="{{ search }}" placeholder="Адреса або сторінка" aria-label="Пошук">
+</form>
+<table>
+  <thead><tr><th>Сторінка</th><th>Адреса</th><th></th></tr></thead>
+  <tbody>
+  {% for item in seo['items'] + [None] %}{% set id = item.id if item else 0 %}
+    <tr>
+      <td><input form="seo-{{ id }}" name="query" value="{{ item.query if item else '' }}" placeholder="product_id=42" aria-label="Сторінка"></td>
+      <td><input form="seo-{{ id }}" name="keyword" value="{{ item.keyword if item else '' }}" placeholder="sukniia-lev" aria-label="Адреса"></td>
+      <td>
+        <form id="seo-{{ id }}" hx-post="/app/catalog/seo-urls/{{ id }}/save" hx-target="#banners" role="group">
+          <button type="submit">{{ "Зберегти" if item else "Додати" }}</button>
+          {% if item %}<button type="button" class="secondary outline" hx-post="/app/catalog/seo-urls/{{ id }}/delete" hx-target="#banners"
+            hx-confirm="Видалити адресу?">Видалити</button>{% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if seo.total_count > seo['items']|length %}<p><small>Показано {{ seo['items']|length }} з {{ seo.total_count }}: уточніть пошук.</small></p>{% endif %}

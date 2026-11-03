@@ -1,0 +1,18 @@
+{% from "_macros.html" import messages %}
+{{ messages(error) }}
+{% if report %}
+<h3>{{ report.title }} <small>{{ report.date_from }} — {{ report.date_to }}</small></h3>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr>{% for column in report.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in report.rows %}
+    <tr>{% for cell in row %}<td{% if cell is number %} class="num"{% endif %}>{{ cell|qty if cell is number else cell }}</td>{% endfor %}</tr>
+  {% else %}
+    <tr><td colspan="{{ report.columns|length }}">За цей період даних немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if report.cut %}<p><small>Показано перші {{ report.rows|length }} рядків: звузьте період.</small></p>{% endif %}
+{% endif %}
