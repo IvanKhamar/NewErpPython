@@ -683,3 +683,51 @@ CREATE TABLE `dd_customer_transaction` (
 -- Тип узято з DATE(...) у запиті; старий сайт міг мати '0000-00-00' замість NULL, NewErp читає такі як порожні.
 ALTER TABLE `dd_order`
   ADD COLUMN `date_shipping` date NULL;
+
+-- ═══ Каталог: форма товару старої адмінки (admin/model/catalog/product.php) ═══
+-- Власні колонки опису товару; у справжній базі вони, ймовірно, NOT NULL без типового значення — звірити.
+ALTER TABLE `dd_product_description`
+  ADD COLUMN `table_size` text NULL,
+  ADD COLUMN `variant` text NULL,
+  ADD COLUMN `notice` text NULL,
+  ADD COLUMN `model_info` text NULL,
+  ADD COLUMN `characteristics` text NULL;
+
+-- Стандартні таблиці OpenCart 3 (install/opencart.sql).
+CREATE TABLE `dd_seo_url` (
+  `seo_url_id` int(11) NOT NULL AUTO_INCREMENT,
+  `store_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `query` varchar(255) NOT NULL,
+  `keyword` varchar(255) NOT NULL,
+  PRIMARY KEY (`seo_url_id`),
+  KEY `query` (`query`),
+  KEY `keyword` (`keyword`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_product_related` (
+  `product_id` int(11) NOT NULL,
+  `related_id` int(11) NOT NULL,
+  PRIMARY KEY (`product_id`,`related_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Власні таблиці старого сайту: кольори й варіанти одного виробу (зв'язок в обидва боки) і назва кольору.
+-- Колонки взято із запитів editProduct; типи вгадані, звірити.
+CREATE TABLE `dd_product_related_color` (
+  `product_id` int(11) NOT NULL,
+  `related_id` int(11) NOT NULL,
+  PRIMARY KEY (`product_id`,`related_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_product_related_variant` (
+  `product_id` int(11) NOT NULL,
+  `related_id` int(11) NOT NULL,
+  PRIMARY KEY (`product_id`,`related_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_product_color` (
+  `product_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`product_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

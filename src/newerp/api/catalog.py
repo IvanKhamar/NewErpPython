@@ -3,10 +3,19 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
-from newerp.api.security import Policies, require_roles
+from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.application.catalog.product_edit import (
+    CreatedProductDto,
+    ProductEditDto,
+    ProductEditService,
+    ProductFormLookups,
+    RemoveNewRequest,
+    RemoveNewResult,
+    SaveProductRequest,
+)
 from newerp.application.catalog.products import (
     ProductCardDto,
     ProductFilter,
@@ -32,6 +41,7 @@ from newerp.application.catalog.sort import (
 from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
+from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
 from newerp.infrastructure.catalog.sort import SqlProductSortStore
 
@@ -50,7 +60,12 @@ def get_sort_service(session: Session, clock: ClockDep) -> ProductSortService:
     return ProductSortService(SqlProductSortStore(session, settings.language_id, options, clock.now), options, clock)
 
 
+def get_product_edit_service(session: Session, clock: ClockDep) -> ProductEditService:
+    return ProductEditService(SqlProductEditStore(session, get_settings().language_id), clock)
+
+
 Products = Annotated[ProductService, Depends(get_product_service)]
+Editor = Annotated[ProductEditService, Depends(get_product_edit_service)]
 Sorting = Annotated[ProductSortService, Depends(get_sort_service)]
 
 
@@ -81,6 +96,45 @@ async def labels(service: Products) -> list[LookupItem]:
 @products_router.get("/categories", summary="Увімкнені категорії")
 async def categories(service: Products) -> list[LookupItem]:
     return await service.categories()
+
+
+@products_router.get("/form-lookups", summary="Довідники форми товару: категорії, мітки, фільтри, розміри")
+async def form_lookups(editor: Editor) -> ProductFormLookups:
+    return await editor.lookups()
+
+
+@products_router.post("", status_code=201, summary="Новий товар (Python first): вимкнений, доки його не ввімкнуть")
+async def create_product(
+    request: SaveProductRequest, principal: CurrentPrincipal, editor: Editor, response: Response
+) -> CreatedProductDto:
+    created = await editor.create(request, principal.user_id)
+    response.headers["Location"] = f"/catalog/products/{created.product_id}"
+    return created
+
+
+@products_router.post("/remove-new", summary="Зняти NEW (мітку, фільтр «За темою» і тег) з усіх товарів принта за SKU")
+async def remove_new(request: RemoveNewRequest, editor: Editor) -> RemoveNewResult:
+    return await editor.remove_new(request)
+
+
+@products_router.get("/{product_id}/edit", summary="Увесь товар для форми редагування (Python first)")
+async def get_product_form(product_id: int, editor: Editor) -> ProductEditDto:
+    return await editor.get(product_id)
+
+
+@products_router.put(
+    "/{product_id}",
+    summary="Зберегти всю форму товару; HTML очищується; dateModified обов'язковий, змінений товар — 409",
+)
+async def save_product(
+    product_id: int, request: SaveProductRequest, principal: CurrentPrincipal, editor: Editor
+) -> ProductEditDto:
+    return await editor.save(product_id, request, principal.user_id)
+
+
+@products_router.post("/{product_id}/copy", status_code=201, summary="Копія товару: вимкнена, без залишку й SEO-адреси")
+async def copy_product(product_id: int, principal: CurrentPrincipal, editor: Editor) -> CreatedProductDto:
+    return await editor.copy(product_id, principal.user_id)
 
 
 @products_router.get(

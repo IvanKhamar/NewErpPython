@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name or "Новий товар" }}{% endblock %}
+{% block content %}
+<p><a href="/app/catalog/products">← Товари</a>{% if product_id %} · <a href="/app/catalog/products/{{ product_id }}">Картка товару</a>{% endif %}</p>
+<h1>{% if product_id %}{{ product.name }} <small>№{{ product_id }}</small>{% else %}Новий товар{% endif %}</h1>
+{% if product_id %}
+<button type="button" class="secondary outline" hx-post="/app/catalog/products/{{ product_id }}/copy" hx-target="#copy-result"
+        hx-confirm="Створити вимкнену копію товару?">Копіювати товар</button>
+<div id="copy-result"></div>
+{% endif %}
+<div id="product-form">{% include "catalog/_product_form.html" %}</div>
+{% endblock %}

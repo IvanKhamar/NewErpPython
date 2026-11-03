@@ -3,5 +3,6 @@
 {% block content %}
 <p><a href="/app/catalog/products">← Товари</a></p>
 <h1>{{ product.name }} <small>{{ product.model }}</small></h1>
+<p><a href="/app/catalog/products/{{ product.id }}/edit" role="button" class="secondary">Редагувати все</a></p>
 <div id="product">{% include "catalog/_product.html" %}</div>
 {% endblock %}

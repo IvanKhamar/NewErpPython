@@ -2,6 +2,15 @@
 {% block title %}Товари{% endblock %}
 {% block content %}
 <h1>Товари</h1>
+<p><a href="/app/catalog/products/new" role="button">Новий товар</a></p>
+<details>
+  <summary>Зняти NEW з принта</summary>
+  <form hx-post="/app/catalog/products/remove-new" hx-target="#remove-new-result" role="group">
+    <input name="sku" placeholder="Код принта (SKU)" maxlength="64" aria-label="SKU" required>
+    <button type="submit">Зняти NEW</button>
+  </form>
+  <div id="remove-new-result"></div>
+</details>
 <form class="filters" action="/app/catalog/products" method="get"
       hx-get="/app/catalog/products" hx-target="#products" hx-push-url="true" hx-trigger="change, submit">
   <input type="search" name="search" value="{{ values.search }}" placeholder="Назва чи модель" aria-label="Пошук">

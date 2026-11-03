@@ -81,9 +81,9 @@ missing in all three new versions, so every item is Python first):
 | 40 | Reward points and partner commission of an order: add and take back | `sale/order` addReward, addCommission | done (`/orders/{id}/credits`, `reward`, `commission`; `dd_customer_transaction` reconstructed) |
 | 41 | Shipping cost from Nova Poshta in a new order | `sale/quick_order` getShippingCost | done (`POST /orders/new/shipping-cost`; weight times quantity, the old site counted each product once) |
 | 42 | Order delete: admin only, the status handlers give the stock back first, logged | `sale/order` delete | done (`DELETE /orders/{id}`; refused with a waybill, cheque, bank payment, return or gift voucher) |
-| 43 | Product editing: create, edit (name, description, price, model, SKU, status, images, options and sizes, attributes, SEO), copy, enable and disable | `catalog/product` | |
+| 43 | Product editing: create, edit (name, description, price, model, SKU, status, images, options and sizes, attributes, SEO), copy, enable and disable | `catalog/product` | done (`POST /catalog/products`, `GET /{id}/edit`, `PUT /{id}`, `POST /{id}/copy`; pages `/app/catalog/products/new` and `/{id}/edit`. Attributes, options other than sizes and downloads come with 49; picture upload is paths only for now) |
 | 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | |
-| 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | |
+| 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | done (`POST /catalog/products/remove-new`) |
 | 46 | Mass price control (by category, manufacturer, percent or sum), with a preview before saving | `extension/module/price_control` | |
 | 47 | Label dictionary and search presets | `catalog/label`, `catalog/search_preset` | |
 | 48 | Categories: create, edit, delete, rebuild the paths | `catalog/category` | |

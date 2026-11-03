@@ -1,0 +1,125 @@
+{% from "_macros.html" import messages %}
+{% set size_prices = {} %}{% for size in product.sizes %}{% set _ = size_prices.update({size.option_value_id: size}) %}{% endfor %}
+{# date_modified goes back with the form: if someone changed the product meanwhile, the save is refused (409). #}
+<form hx-post="/app/catalog/products/{{ product_id or 'new' }}{% if product_id %}/edit{% endif %}" hx-target="#form-result">
+  {% if product.date_modified %}<input type="hidden" name="date_modified" value="{{ product.date_modified.isoformat() }}">{% endif %}
+  {{ messages(error, (), saved) }}
+  <article>
+    <header>Основне</header>
+    <label>Назва <input name="name" value="{{ product.name }}" maxlength="255" required></label>
+    <div class="grid">
+      <label>Модель <input name="model" value="{{ product.model }}" maxlength="64" required></label>
+      <label>Код принта (SKU) <input name="sku" value="{{ product.sku }}" maxlength="64"></label>
+      <label>Ціна, грн <input name="price" value="{{ product.price|qty }}" inputmode="decimal"></label>
+    </div>
+    <div class="grid">
+      <label>Мінімум у замовленні <input name="minimum" value="{{ product.minimum }}" inputmode="numeric"></label>
+      <label>Порядок <input name="sort_order" value="{{ product.sort_order }}" inputmode="numeric"></label>
+      <label>Виробник (№) <input name="manufacturer_id" value="{{ product.manufacturer_id }}" inputmode="numeric"></label>
+      <label>Статус наявності (№) <input name="stock_status_id" value="{{ product.stock_status_id }}" inputmode="numeric"></label>
+    </div>
+    <div class="grid">
+      <label>Вага, г <input name="weight" value="{{ product.weight|qty }}" inputmode="decimal"></label>
+      <label>Довжина, см <input name="length" value="{{ product.length|qty }}" inputmode="decimal"></label>
+      <label>Ширина, см <input name="width" value="{{ product.width|qty }}" inputmode="decimal"></label>
+      <label>Висота, см <input name="height" value="{{ product.height|qty }}" inputmode="decimal"></label>
+    </div>
+    <label><input type="checkbox" role="switch" name="enabled" value="1"{% if product.enabled %} checked{% endif %}> Увімкнений на вітрині</label>
+    <label><input type="checkbox" name="subtract" value="1"{% if product.subtract %} checked{% endif %}> Віднімати зі складу</label>
+    <label>Колір <input name="color" value="{{ product.color }}" maxlength="255"></label>
+  </article>
+  <article>
+    <header>Опис <small>(HTML; скрипти й небезпечні атрибути прибираються під час збереження)</small></header>
+    <label>Опис <textarea name="description" rows="6">{{ product.description }}</textarea></label>
+    <label>Таблиця розмірів <textarea name="table_size" rows="3">{{ product.table_size }}</textarea></label>
+    <label>Модель (блок) <textarea name="model_info" rows="3">{{ product.model_info }}</textarea></label>
+    <label>Характеристики <textarea name="characteristics" rows="3">{{ product.characteristics }}</textarea></label>
+    <label>Примітка <textarea name="notice" rows="2">{{ product.notice }}</textarea></label>
+    <label>Варіант <input name="variant" value="{{ product.variant }}"></label>
+    <label>Теги (через кому) <input name="tag" value="{{ product.tag }}"></label>
+  </article>
+  <article>
+    <header>SEO</header>
+    <label>Адреса на вітрині <input name="seo_keyword" value="{{ product.seo_keyword }}" maxlength="255" placeholder="suknia-lev-chorna"></label>
+    <label>Meta title <input name="meta_title" value="{{ product.meta_title }}" maxlength="255"></label>
+    <label>Meta description <input name="meta_description" value="{{ product.meta_description }}" maxlength="255"></label>
+    <label>Meta keywords <input name="meta_keyword" value="{{ product.meta_keyword }}" maxlength="255"></label>
+  </article>
+  <article>
+    <header>Картинки</header>
+    <label>Головна <input name="image" value="{{ product.image }}" placeholder="catalog/dresses/photo.jpg" maxlength="255"></label>
+    <label>Додаткові, по одній у рядку
+      <textarea name="images" rows="3">{% for image in product.images %}{{ image.image }}
+{% endfor %}</textarea></label>
+  </article>
+  <div class="grid">
+    <article>
+      <header>Категорії</header>
+      {% for category in lookups.categories %}
+      <label><input type="checkbox" name="category_ids" value="{{ category.id }}"{% if category.id in product.category_ids %} checked{% endif %}> {{ category.name }}</label>
+      {% endfor %}
+    </article>
+    <article>
+      <header>Мітки</header>
+      {% for label in lookups.labels %}
+      <label><input type="checkbox" name="label_ids" value="{{ label.id }}"{% if label.id in product.label_ids %} checked{% endif %}> {{ label.name }}</label>
+      {% endfor %}
+      <header>Фільтри <small>(група: значення)</small></header>
+      {% for item in lookups.filters %}
+      <label><input type="checkbox" name="filter_ids" value="{{ item.id }}"{% if item.id in product.filter_ids %} checked{% endif %}> {{ item.name }}</label>
+      {% endfor %}
+    </article>
+  </div>
+  <article>
+    <header>Розміри <small>(залишки веде виробництво; розмір із залишком не прибрати)</small></header>
+    <table>
+      <thead><tr><th>Розмір</th><th>Ціна, грн (0 — як у товару)</th><th class="num">Залишок</th></tr></thead>
+      <tbody>
+      {% for size in lookups.sizes %}{% set current = size_prices.get(size.id) %}
+        <tr>
+          <td><label><input type="checkbox" name="size" value="{{ size.id }}"{% if current %} checked{% endif %}> {{ size.name }}</label></td>
+          <td><input name="size_price_{{ size.id }}" value="{{ current.price|qty if current else 0 }}" inputmode="decimal" aria-label="Ціна {{ size.name }}"></td>
+          <td class="num">{{ current.quantity if current else "—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  <article>
+    <header>Акційні ціни <small>(ціна або відсоток знижки; порожні дати — без обмеження)</small></header>
+    <table>
+      <thead><tr><th>Група</th><th>Пріоритет</th><th>Ціна</th><th>Знижка, %</th><th>Від</th><th>До</th></tr></thead>
+      <tbody>
+      {% for special in product.specials %}
+        <tr>
+          <td><input name="special_group" value="{{ special.customer_group_id }}" inputmode="numeric" aria-label="Група"></td>
+          <td><input name="special_priority" value="{{ special.priority }}" inputmode="numeric" aria-label="Пріоритет"></td>
+          <td><input name="special_price" value="{{ special.price|qty }}" inputmode="decimal" aria-label="Ціна"></td>
+          <td><input name="special_percent" value="{{ special.percent|qty }}" inputmode="decimal" aria-label="Знижка"></td>
+          <td><input type="date" name="special_start" value="{{ special.date_start or '' }}" aria-label="Від"></td>
+          <td><input type="date" name="special_end" value="{{ special.date_end or '' }}" aria-label="До"></td>
+        </tr>
+      {% endfor %}
+      {% for _ in range(empty_specials) %}
+        <tr>
+          <td><input name="special_group" value="1" inputmode="numeric" aria-label="Група"></td>
+          <td><input name="special_priority" value="1" inputmode="numeric" aria-label="Пріоритет"></td>
+          <td><input name="special_price" value="" inputmode="decimal" aria-label="Ціна"></td>
+          <td><input name="special_percent" value="" inputmode="decimal" aria-label="Знижка"></td>
+          <td><input type="date" name="special_start" aria-label="Від"></td>
+          <td><input type="date" name="special_end" aria-label="До"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p><small>Щоб прибрати акцію, очистьте її ціну й відсоток.</small></p>
+  </article>
+  <article>
+    <header>Пов'язані товари <small>(номери через кому)</small></header>
+    <label>Супутні <input name="related_ids" value="{{ product.related_ids|join(', ') }}"></label>
+    <label>Інші кольори <input name="related_color_ids" value="{{ product.related_color_ids|join(', ') }}"></label>
+    <label>Інші варіанти <input name="related_variant_ids" value="{{ product.related_variant_ids|join(', ') }}"></label>
+  </article>
+  <div id="form-result"></div>
+  <button type="submit">{% if product_id %}Зберегти{% else %}Створити товар{% endif %}</button>
+</form>

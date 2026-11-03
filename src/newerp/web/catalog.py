@@ -7,13 +7,23 @@ from typing import Annotated, Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
+from pydantic import ValidationError
+from starlette.datastructures import FormData
 
-from newerp.api.catalog import Products, Sorting
+from newerp.api.catalog import Editor, Products, Sorting
 from newerp.api.deps import Session
 from newerp.api.pre_orders import Service as PreOrders
 from newerp.api.security import Policies
 from newerp.application.catalog.pre_orders import PreOrderFilter, UpdatePreOrderRequest
+from newerp.application.catalog.product_edit import (
+    ProductFormDto,
+    ProductImageDto,
+    ProductSizeEditDto,
+    ProductSpecialDto,
+    RemoveNewRequest,
+    SaveProductRequest,
+)
 from newerp.application.catalog.products import ProductFilter, UpdateProductRequest
 from newerp.application.catalog.sort import (
     CrossSellMetricDto,
@@ -24,7 +34,17 @@ from newerp.application.catalog.sort import (
 )
 from newerp.domain.catalog import SizeAvailability, SortGroupType
 from newerp.domain.common import DomainError
-from newerp.web.common import BUSINESS_ERRORS, decimal_field, is_fragment, number, page_roles, qty, render, undo
+from newerp.web.common import (
+    BUSINESS_ERRORS,
+    WebUser,
+    decimal_field,
+    is_fragment,
+    number,
+    page_roles,
+    qty,
+    render,
+    undo,
+)
 
 router = APIRouter(prefix="/app", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.ORDERS))])
 Field = Annotated[str, Form()]
@@ -86,6 +106,161 @@ async def _product(request: Request, product_id: int, products: Products, templa
         return render(request, "not_found.html", status_code=404)
     return render(request, template, product=product, labels=await products.labels(),
                   categories=await products.categories(), **messages)  # fmt: skip
+
+
+# ── The whole product form (Python first; before /{product_id}, or "new" would be read as a number) ──
+
+TEXT_FIELDS = (
+    "model sku name description tag meta_title meta_description meta_keyword table_size variant notice model_info "
+    "characteristics color seo_keyword image"
+).split()
+NUMBER_FIELDS = ("price", "weight", "length", "width", "height")
+INT_FIELDS = ("minimum", "stock_status_id", "manufacturer_id", "sort_order")
+LINK_FIELDS = ("related_ids", "related_color_ids", "related_variant_ids")
+SPECIAL_ROWS_EMPTY = 2  # empty rows for new sale prices under the saved ones
+SPECIAL_COLUMNS = ("group", "priority", "price", "percent", "start", "end")
+
+
+def _ids(text: str) -> list[int]:
+    """ "12, 15 40" → [12, 15, 40]; anything else is refused, not skipped."""
+    parts = [p for p in text.replace(",", " ").split() if p]
+    if any(not (p.isascii() and p.isdigit()) for p in parts):
+        raise DomainError(f"Номери товарів через кому, наприклад 12, 15: «{text}».")
+    return [int(p) for p in parts]
+
+
+def _day(text: str) -> date | None:
+    try:
+        return date.fromisoformat(text) if text else None
+    except ValueError as error:
+        raise DomainError(f"Дата має бути у форматі РРРР-ММ-ДД: «{text}».") from error
+
+
+def _product_request(form: FormData) -> SaveProductRequest:
+    """The form fields as the request the API takes as JSON; repeated fields are lists and table rows."""
+
+    def text(name: str) -> str:
+        value = form.get(name, "")
+        return value if isinstance(value, str) else ""
+
+    specials = [
+        ProductSpecialDto(
+            customer_group_id=number(group) or 1,
+            priority=number(priority) or 1,
+            price=decimal_field(price, "Акційна ціна"),
+            percent=decimal_field(percent, "Знижка, %"),
+            date_start=_day(start),
+            date_end=_day(end),
+        )
+        for group, priority, price, percent, start, end in zip(
+            *(map(str, form.getlist(f"special_{n}")) for n in SPECIAL_COLUMNS), strict=True
+        )
+        if price.strip() or percent.strip()
+    ]
+    sizes = [
+        ProductSizeEditDto(option_value_id=int(v), price=decimal_field(text(f"size_price_{v}"), "Ціна розміру"))
+        for v in map(str, form.getlist("size"))
+        if v.isdigit()
+    ]
+    images = [ProductImageDto(image=line.strip(), sort_order=n) for n, line in enumerate(text("images").splitlines())]
+    modified = text("date_modified")
+    return SaveProductRequest(
+        **{name: text(name) for name in TEXT_FIELDS},
+        **{name: decimal_field(text(name), name) for name in NUMBER_FIELDS},
+        **{name: number(text(name).strip()) or 0 for name in INT_FIELDS},
+        **{name: _ids(text(name)) for name in LINK_FIELDS},
+        subtract=text("subtract") == "1",
+        enabled=text("enabled") == "1",
+        category_ids=[number(str(v)) or 0 for v in form.getlist("category_ids")],
+        label_ids=[number(str(v)) or 0 for v in form.getlist("label_ids")],
+        filter_ids=[number(str(v)) or 0 for v in form.getlist("filter_ids")],
+        images=[i for i in images if i.image],
+        specials=specials,
+        sizes=sizes,
+        date_modified=datetime.fromisoformat(modified) if modified else None,
+    )
+
+
+def _invalid(error: ValidationError) -> str:
+    names = ", ".join(str(item["loc"][0]) for item in error.errors())
+    return f"Перевірте поля: {names}."
+
+
+async def _form_page(
+    request: Request, editor: Editor, product: ProductFormDto, product_id: int | None, **messages: Any
+) -> HTMLResponse:
+    template = "catalog/_product_form.html" if is_fragment(request) else "catalog/product_form.html"
+    return render(request, template, product=product, product_id=product_id, lookups=await editor.lookups(),
+                  empty_specials=SPECIAL_ROWS_EMPTY, **messages)  # fmt: skip
+
+
+@router.get("/catalog/products/new")
+async def new_product_page(request: Request, editor: Editor) -> HTMLResponse:
+    return await _form_page(request, editor, ProductFormDto(), None)
+
+
+@router.post("/catalog/products/new")
+async def create_product(request: Request, user: WebUser, editor: Editor, session: Session) -> Response:
+    form = await request.form()
+    try:
+        created = await editor.create(_product_request(form), user.user_id)
+    except ValidationError as error:
+        return render(request, "_error.html", error=_invalid(error))
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    return Response(status_code=204, headers={"HX-Redirect": f"/app/catalog/products/{created.product_id}/edit"})
+
+
+@router.post("/catalog/products/remove-new")
+async def remove_new(request: Request, editor: Editor, session: Session, sku: Field = "") -> HTMLResponse:
+    try:
+        result = await editor.remove_new(RemoveNewRequest(sku=sku[:64]))
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    return render(request, "_note.html", text=f"NEW знято з товарів: {', '.join(map(str, result.product_ids))}.")
+
+
+@router.get("/catalog/products/{product_id}/edit")
+async def edit_product_page(request: Request, product_id: int, editor: Editor) -> HTMLResponse:
+    try:
+        product = await editor.get(product_id)
+    except BUSINESS_ERRORS:
+        return render(request, "not_found.html", status_code=404)
+    return await _form_page(request, editor, product, product_id)
+
+
+@router.post("/catalog/products/{product_id}/edit")
+async def save_product(
+    request: Request, product_id: int, user: WebUser, editor: Editor, session: Session
+) -> HTMLResponse:
+    """The form is shown again: saved with its new version, or with the error and what was typed."""
+    form = await request.form()
+    typed: ProductFormDto | None = None
+    try:
+        save = _product_request(form)
+        typed = save
+        saved = await editor.save(product_id, save, user.user_id)
+    except ValidationError as error:
+        return render(request, "_error.html", error=_invalid(error))
+    except BUSINESS_ERRORS as error:
+        message = await undo(session, error)
+        if typed is None:
+            return render(request, "_error.html", error=message)
+        response = await _form_page(request, editor, typed, product_id, error=message)
+        response.headers["HX-Retarget"] = "#product-form"
+        return response
+    response = await _form_page(request, editor, saved, product_id, saved="Товар збережено.")
+    response.headers["HX-Retarget"] = "#product-form"
+    return response
+
+
+@router.post("/catalog/products/{product_id}/copy")
+async def copy_product(request: Request, product_id: int, user: WebUser, editor: Editor, session: Session) -> Response:
+    try:
+        created = await editor.copy(product_id, user.user_id)
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    return Response(status_code=204, headers={"HX-Redirect": f"/app/catalog/products/{created.product_id}/edit"})
 
 
 @router.get("/catalog/products/{product_id}")

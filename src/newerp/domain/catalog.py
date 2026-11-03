@@ -1,6 +1,7 @@
 """Shop catalog rules: the product order by sales (the old site's "Порядок товарів") and what the ERP may change in a
 product."""
 
+import re
 from collections.abc import Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
@@ -189,3 +190,35 @@ class SpecialPrice:
             tens = (regular * (100 - self.percent) / 100 / 10).quantize(Decimal(1), rounding=ROUND_HALF_UP)
             return max(tens * 10, Decimal(0))
         return self.price
+
+
+# ── Editing products (the old admin's product form, Python first) ──
+
+# A picture of the storefront: a path under image/catalog/ of the OpenCart site, letters, digits and - _ . / only,
+# so it can never point outside that folder or carry markup.
+_IMAGE_PATH = re.compile(r"catalog/[\w\-./ ]+\.(?:jpe?g|png|webp|gif)", re.IGNORECASE)
+_SEO_KEYWORD = re.compile(r"[a-z0-9]+(?:[-_][a-z0-9]+)*")
+NEW_LABEL = "NEW"  # the label, the "За темою" filter value and the "тема:NEW" tag of a new print
+NEW_TAG = "тема:NEW"
+
+
+def image_path(value: str) -> str:
+    """ "" for no picture; otherwise a checked path below catalog/."""
+    path = value.strip()
+    if path and (not _IMAGE_PATH.fullmatch(path) or ".." in path or "//" in path):
+        raise DomainError(f"Шлях до картинки «{path}» має бути на кшталт catalog/folder/photo.jpg.")
+    return path
+
+
+def seo_keyword(value: str) -> str:
+    """The product's address on the storefront: latin letters, digits, - and _ ("" for none)."""
+    keyword = value.strip().lower()
+    if keyword and (len(keyword) > 255 or not _SEO_KEYWORD.fullmatch(keyword)):
+        raise DomainError("SEO-адреса: лише латинські літери, цифри, - та _, наприклад sukniia-lion-chorna.")
+    return keyword
+
+
+def without_new_tag(tags: str) -> str:
+    """The product's tags without "тема:NEW" (any case), the rest kept in their order."""
+    kept = [t.strip() for t in tags.split(",") if t.strip() and t.strip().casefold() != NEW_TAG.casefold()]
+    return ",".join(kept)

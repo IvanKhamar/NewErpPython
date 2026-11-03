@@ -57,6 +57,13 @@ class DdProductDescription(Base):
     meta_title: Mapped[str] = mapped_column(String(255), default="")
     meta_description: Mapped[str] = mapped_column(String(255), default="")
     meta_keyword: Mapped[str] = mapped_column(String(255), default="")
+    # Own columns of the old site (db/reconstructed.sql): the size table, the variant and notice texts, the model
+    # and characteristics blocks of the product page.
+    table_size: Mapped[str | None] = mapped_column(Text, default="")
+    variant: Mapped[str | None] = mapped_column(Text, default="")
+    notice: Mapped[str | None] = mapped_column(Text, default="")
+    model_info: Mapped[str | None] = mapped_column(Text, default="")
+    characteristics: Mapped[str | None] = mapped_column(Text, default="")
 
 
 class DdProductOptionValue(Base):
