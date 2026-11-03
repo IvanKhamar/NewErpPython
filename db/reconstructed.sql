@@ -1080,3 +1080,14 @@ CREATE TABLE `dd_mono_orders` (
   `modifiedDate` datetime NULL,
   PRIMARY KEY (`Id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Маркетинг: коди відстеження кампаній (стандартна таблиця OpenCart 3) ═══
+CREATE TABLE `dd_marketing` (
+  `marketing_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(32) NOT NULL,
+  `description` text NOT NULL,
+  `code` varchar(64) NOT NULL,
+  `clicks` int(5) NOT NULL DEFAULT '0',
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`marketing_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

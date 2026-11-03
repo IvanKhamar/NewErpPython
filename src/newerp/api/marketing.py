@@ -1,12 +1,13 @@
 """Marketing: birthdays, bulk SMS, the contacts export, gift vouchers and paying an order with a voucher."""
 
 from datetime import date
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
-from newerp.api.security import Policies, require_roles
+from newerp.api.security import CurrentPrincipal, Policies, require_roles
 from newerp.api.sms import get_sender
 from newerp.application.common import LookupItem, SystemClock
 from newerp.application.marketing.campaigns import (
@@ -22,6 +23,8 @@ from newerp.application.marketing.campaigns import (
     MarketingService,
 )
 from newerp.application.marketing.coupons import CouponCardDto, CouponListItem, CouponService, SaveCouponRequest
+from newerp.application.marketing.tracking import TrackingCodeDto, TrackingService
+from newerp.application.marketing.voucher_admin import VoucherAdminService, VoucherMailResult, VoucherThemeDto
 from newerp.application.marketing.vouchers import (
     OrderVoucherDto,
     RedeemVoucherRequest,
@@ -34,8 +37,10 @@ from newerp.application.marketing.vouchers import (
 )
 from newerp.config import get_settings
 from newerp.domain.marketing import BirthdayPeriod, ContactField, ContactSource
+from newerp.infrastructure.mail import mail_sender
 from newerp.infrastructure.marketing.campaigns import SqlMarketingStore
 from newerp.infrastructure.marketing.coupons import SqlCouponStore
+from newerp.infrastructure.marketing.tracking import SqlTrackingStore, SqlVoucherThemeStore
 from newerp.infrastructure.marketing.vouchers import SqlVoucherStore
 from newerp.infrastructure.sms import SqlSmsLog
 
@@ -234,3 +239,70 @@ async def update_coupon(coupon_id: int, request: SaveCouponRequest, service: Cou
 )
 async def delete_coupon(coupon_id: int, service: Coupons) -> None:
     await service.delete(coupon_id)
+
+
+# ═══ Tracking codes, voucher e-mail and themes (Python first) ═══
+
+
+@lru_cache
+def get_mail():
+    return mail_sender(get_settings().mail)
+
+
+def get_tracking(session: Session, clock: ClockDep) -> TrackingService:
+    return TrackingService(SqlTrackingStore(session), clock, get_settings().customers.store_url)
+
+
+def get_voucher_admin(session: Session, vouchers: Vouchers) -> VoucherAdminService:
+    return VoucherAdminService(vouchers, SqlVoucherThemeStore(session, get_settings().language_id), get_mail())
+
+
+Tracking = Annotated[TrackingService, Depends(get_tracking)]
+VoucherAdmin = Annotated[VoucherAdminService, Depends(get_voucher_admin)]
+
+
+@router.get("/tracking", summary="Коди відстеження кампаній: кліки, замовлення, сума")
+async def list_tracking(service: Tracking) -> list[TrackingCodeDto]:
+    return await service.codes()
+
+
+@router.post("/tracking", status_code=201, summary="Новий код (латиниця, цифри, - _), унікальний")
+async def create_tracking(request: TrackingCodeDto, service: Tracking) -> TrackingCodeDto:
+    return await service.save(None, request)
+
+
+@router.put("/tracking/{marketing_id}", summary="Змінити код відстеження")
+async def update_tracking(marketing_id: int, request: TrackingCodeDto, service: Tracking) -> TrackingCodeDto:
+    return await service.save(marketing_id, request)
+
+
+@router.delete("/tracking/{marketing_id}", status_code=204, summary="Видалити код (замовлення його зберігають)")
+async def delete_tracking(marketing_id: int, principal: CurrentPrincipal, service: Tracking) -> None:
+    await service.delete(marketing_id, principal.user_id)
+
+
+@router.post("/vouchers/{voucher_id}/email", summary="Надіслати сертифікат листом (на to_email або вказану адресу)")
+async def email_voucher(
+    voucher_id: int, principal: CurrentPrincipal, service: VoucherAdmin, to: str | None = None
+) -> VoucherMailResult:
+    return await service.send_email(voucher_id, to, principal.user_id)
+
+
+@router.get("/vouchers/themes/details", summary="Теми сертифікатів з картинками й кількістю сертифікатів")
+async def list_voucher_themes(service: VoucherAdmin) -> list[VoucherThemeDto]:
+    return await service.themes()
+
+
+@router.post("/vouchers/themes", status_code=201, summary="Нова тема сертифіката")
+async def create_voucher_theme(request: VoucherThemeDto, service: VoucherAdmin) -> VoucherThemeDto:
+    return await service.save_theme(None, request)
+
+
+@router.put("/vouchers/themes/{theme_id}", summary="Змінити тему сертифіката")
+async def update_voucher_theme(theme_id: int, request: VoucherThemeDto, service: VoucherAdmin) -> VoucherThemeDto:
+    return await service.save_theme(theme_id, request)
+
+
+@router.delete("/vouchers/themes/{theme_id}", status_code=204, summary="Видалити тему, якої не мають сертифікати")
+async def delete_voucher_theme(theme_id: int, principal: CurrentPrincipal, service: VoucherAdmin) -> None:
+    await service.delete_theme(theme_id, principal.user_id)

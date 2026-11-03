@@ -219,6 +219,21 @@ class MarketingSettings(BaseModel):
     bulk_sms_delay_milliseconds: int = 300
 
 
+class MailSettings(BaseModel):
+    """SMTP for e-mails (gift vouchers). The password only in .env; without a host e-mails are not sent."""
+
+    host: str = ""
+    port: int = 587
+    username: str = ""
+    password: SecretStr = SecretStr("")
+    from_address: str = ""
+    starttls: bool = True
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.host.strip() and self.from_address.strip())
+
+
 class VoucherSettings(BaseModel):
     # A voucher bought in an order is usable once the order is in one of these statuses.
     paid_status_ids: list[int] = [22, 20]
@@ -292,6 +307,7 @@ class Settings(BaseSettings):
     customers: CustomerSettings = CustomerSettings()
     marketing: MarketingSettings = MarketingSettings()
     vouchers: VoucherSettings = VoucherSettings()
+    mail: MailSettings = MailSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
     competitors: CompetitorSettings = CompetitorSettings()
     kafka: KafkaSettings = KafkaSettings()

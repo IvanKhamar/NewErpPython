@@ -1,0 +1,27 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<div class="overflow-auto">
+<table>
+  <thead><tr><th>Назва</th><th>Код</th><th>Опис</th><th class="num">Кліків</th><th class="num">Замовлень</th><th class="num">Сума</th><th></th></tr></thead>
+  <tbody>
+  {% for item in codes + [None] %}{% set id = item.id if item else 0 %}
+    <tr>
+      <td><input form="t-{{ id }}" name="name" value="{{ item.name if item else '' }}" maxlength="32" aria-label="Назва" placeholder="Нова кампанія"></td>
+      <td><input form="t-{{ id }}" name="code" value="{{ item.code if item else '' }}" maxlength="64" aria-label="Код">
+        {% if item and item.link %}<br><small><input readonly value="{{ item.link }}" aria-label="Посилання"></small>{% endif %}</td>
+      <td><input form="t-{{ id }}" name="description" value="{{ item.description if item else '' }}" aria-label="Опис"></td>
+      <td class="num">{{ item.clicks if item else "" }}</td>
+      <td class="num">{{ item.orders if item else "" }}</td>
+      <td class="num">{{ item.revenue|money if item else "" }}</td>
+      <td>
+        <form id="t-{{ id }}" hx-post="/app/marketing/tracking/{{ id }}/save" hx-target="#tracking" role="group">
+          <button type="submit">{{ "Зберегти" if item else "Додати" }}</button>
+          {% if item %}<button type="button" class="secondary outline" hx-post="/app/marketing/tracking/{{ id }}/delete"
+            hx-target="#tracking" hx-confirm="Видалити код? Замовлення його збережуть.">Видалити</button>{% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

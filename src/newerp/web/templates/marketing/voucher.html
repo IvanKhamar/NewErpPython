@@ -43,6 +43,14 @@
       <div id="sms-result"></div>
     </article>
     <article>
+      <header>Надіслати листом</header>
+      <form hx-post="/app/marketing/vouchers/{{ card.id }}/email" hx-target="#email-result" role="group">
+        <input name="to" type="email" placeholder="{{ card.to_email or 'E-mail отримувача' }}" aria-label="E-mail">
+        <button type="submit" class="outline">Надіслати лист</button>
+      </form>
+      <div id="email-result"></div>
+    </article>
+    <article>
       <header>Списання</header>
       <table>
         <tbody>

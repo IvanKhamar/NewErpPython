@@ -4,7 +4,7 @@ Python version of NewErp: an ERP for a sewing workshop and online clothing store
 database and the same HTTP API contract as the [.NET](https://github.com/IvanKhamar/NewErp) and Java versions:
 one system, three backends, one contract.
 
-**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 436 tests, CI with ruff,
+**Status:** the whole .NET API is ported (phases in [docs/plan.md](docs/plan.md)): 440 tests, CI with ruff,
 import-linter, pytest, a Docker image build and gitleaks. The web interface at `/app/` covers every module, like the
 Blazor app of the .NET version. What is still missing: the table at the end of the plan.
 

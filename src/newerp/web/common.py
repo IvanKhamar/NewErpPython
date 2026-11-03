@@ -75,6 +75,8 @@ MENU = (
     MenuLink("Вивантаження контактів", "/app/marketing/export", Policies.ORDERS),
     MenuLink("Подарункові сертифікати", "/app/marketing/vouchers", Policies.ORDERS),
     MenuLink("Купони", "/app/marketing/coupons", Policies.ORDERS),
+    MenuLink("Коди відстеження", "/app/marketing/tracking", Policies.ORDERS),
+    MenuLink("Теми сертифікатів", "/app/marketing/vouchers/themes", Policies.ORDERS),
     MenuLink("Партнери", "/app/partners", Policies.ORDERS),
     MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
     MenuLink("Звіти", "/app/reports", Policies.ORDERS),

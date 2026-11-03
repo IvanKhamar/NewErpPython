@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Коди відстеження{% endblock %}
+{% block content %}
+<h1>Коди відстеження кампаній</h1>
+<p><small>Посилання з <code>?tracking=КОД</code> позначає замовлення, які воно приводить.</small></p>
+<div id="tracking">{% include "marketing/_tracking.html" %}</div>
+{% endblock %}
