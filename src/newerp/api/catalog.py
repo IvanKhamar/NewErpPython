@@ -7,6 +7,14 @@ from fastapi import APIRouter, Depends, Query, Response, UploadFile
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.application.catalog.dictionaries import (
+    CatalogDictionaryService,
+    CategoryEditDto,
+    CategoryFormDto,
+    CategoryListItem,
+    LabelDto,
+    SearchPresetDto,
+)
 from newerp.application.catalog.prices import (
     MAX_IMPORT_BYTES,
     ImportPreview,
@@ -51,6 +59,7 @@ from newerp.application.catalog.sort import (
 from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
+from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
 from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
@@ -302,3 +311,91 @@ async def preview_import(file: UploadFile, imports: Imports) -> ImportPreview:
 )
 async def apply_import(file: UploadFile, principal: CurrentPrincipal, imports: Imports) -> ImportResult:
     return await imports.apply(await read_upload(file), principal.user_id)
+
+
+# ═══ Labels, search presets, categories (Python first) ═══
+
+dictionaries_router = APIRouter(prefix="/catalog", tags=["Довідники каталогу"], dependencies=orders_access)
+
+
+def get_dictionary_service(session: Session, clock: ClockDep) -> CatalogDictionaryService:
+    return CatalogDictionaryService(SqlDictionaryStore(session, get_settings().language_id), clock)
+
+
+Dictionaries = Annotated[CatalogDictionaryService, Depends(get_dictionary_service)]
+
+
+@dictionaries_router.get("/labels", summary="Мітки товарів з кількістю товарів")
+async def list_labels(service: Dictionaries) -> list[LabelDto]:
+    return await service.labels()
+
+
+@dictionaries_router.post("/labels", status_code=201, summary="Нова мітка (кольори — #rrggbb)")
+async def create_label(request: LabelDto, service: Dictionaries) -> LabelDto:
+    return await service.save_label(None, request)
+
+
+@dictionaries_router.put("/labels/{label_id}", summary="Змінити мітку")
+async def update_label(label_id: int, request: LabelDto, service: Dictionaries) -> LabelDto:
+    return await service.save_label(label_id, request)
+
+
+@dictionaries_router.delete("/labels/{label_id}", status_code=204, summary="Видалити мітку й зняти її з товарів")
+async def delete_label(label_id: int, principal: CurrentPrincipal, service: Dictionaries) -> None:
+    await service.delete_label(label_id, principal.user_id)
+
+
+@dictionaries_router.get("/search-presets", summary="Готові пошуки вітрини")
+async def list_presets(service: Dictionaries) -> list[SearchPresetDto]:
+    return await service.presets()
+
+
+@dictionaries_router.post("/search-presets", status_code=201, summary="Новий пресет (адреса відносна або https)")
+async def create_preset(request: SearchPresetDto, service: Dictionaries) -> SearchPresetDto:
+    return await service.save_preset(None, request)
+
+
+@dictionaries_router.put("/search-presets/{preset_id}", summary="Змінити пресет")
+async def update_preset(preset_id: int, request: SearchPresetDto, service: Dictionaries) -> SearchPresetDto:
+    return await service.save_preset(preset_id, request)
+
+
+@dictionaries_router.delete("/search-presets/{preset_id}", status_code=204, summary="Видалити пресет")
+async def delete_preset(preset_id: int, service: Dictionaries) -> None:
+    await service.delete_preset(preset_id)
+
+
+@dictionaries_router.get("/categories", summary="Усі категорії з батьками в назві й кількістю товарів")
+async def list_categories(service: Dictionaries) -> list[CategoryListItem]:
+    return await service.categories()
+
+
+@dictionaries_router.post("/categories/repair", summary="Перебудувати дерево категорій (dd_category_path)",
+                          dependencies=bulk_access)  # fmt: skip
+async def repair_categories(service: Dictionaries) -> dict[str, int]:
+    return {"categories": await service.repair_paths()}
+
+
+@dictionaries_router.get("/categories/{category_id}", summary="Категорія для редагування")
+async def get_category(category_id: int, service: Dictionaries) -> CategoryEditDto:
+    return await service.category(category_id)
+
+
+@dictionaries_router.post("/categories", status_code=201, summary="Нова категорія; HTML опису очищується")
+async def create_category(
+    request: CategoryFormDto, principal: CurrentPrincipal, service: Dictionaries
+) -> CategoryEditDto:
+    return await service.save_category(None, request, principal.user_id)
+
+
+@dictionaries_router.put("/categories/{category_id}", summary="Змінити категорію (і перебудувати дерево)")
+async def update_category(
+    category_id: int, request: CategoryFormDto, principal: CurrentPrincipal, service: Dictionaries
+) -> CategoryEditDto:
+    return await service.save_category(category_id, request, principal.user_id)
+
+
+@dictionaries_router.delete("/categories/{category_id}", status_code=204, dependencies=bulk_access,
+                            summary="Видалити категорію без підкатегорій (лише адміністратор)")  # fmt: skip
+async def delete_category(category_id: int, principal: CurrentPrincipal, service: Dictionaries) -> None:
+    await service.delete_category(category_id, principal.user_id)

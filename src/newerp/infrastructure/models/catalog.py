@@ -122,6 +122,14 @@ class DdCategory(Base):
     status: Mapped[bool]
     # How many days from the order date a product of this category must be ready (0: not set).
     production_period: Mapped[int] = mapped_column(default=0)
+    image: Mapped[str | None] = mapped_column(String(255), default=None)
+    top: Mapped[bool] = mapped_column(default=False)
+    column: Mapped[int] = mapped_column(default=1)
+    # Dates and the old site's own columns are read only when asked (the real database may hold zero dates).
+    date_added: Mapped[datetime] = mapped_column(deferred=True)
+    date_modified: Mapped[datetime] = mapped_column(deferred=True)
+    banner_id: Mapped[int] = mapped_column(default=0, deferred=True)
+    image_table_size: Mapped[str | None] = mapped_column(String(255), default=None, deferred=True)
 
 
 class DdCategoryDescription(Base):
@@ -134,6 +142,10 @@ class DdCategoryDescription(Base):
     meta_title: Mapped[str] = mapped_column(String(255), default="")
     meta_description: Mapped[str] = mapped_column(String(255), default="")
     meta_keyword: Mapped[str] = mapped_column(String(255), default="")
+    # Own columns of the old site: the product name pattern, the advertising name, the size-table text.
+    product_name: Mapped[str | None] = mapped_column(String(255), default="", deferred=True)
+    advertising_product_name: Mapped[str | None] = mapped_column(String(255), default="", deferred=True)
+    description_table_size: Mapped[str | None] = mapped_column(Text, default="", deferred=True)
 
 
 class DdProductImage(Base):

@@ -1,0 +1,50 @@
+{% from "_macros.html" import messages %}
+<form hx-post="/app/catalog/categories/{{ category_id or 0 }}" hx-target="#category-form">
+  {{ messages(error, (), saved_text) }}
+  <div class="grid">
+    <label>Назва <input name="name" value="{{ category.name }}" maxlength="255" required></label>
+    <label>Батьківська
+      <select name="parent_id">
+        <option value="0">— верхній рівень —</option>
+        {% for parent in parents %}
+        <option value="{{ parent.id }}"{% if parent.id == category.parent_id %} selected{% endif %}>{{ parent.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="grid">
+    <label>Назва товару в категорії <input name="product_name" value="{{ category.product_name }}" maxlength="255"></label>
+    <label>Рекламна назва <input name="advertising_product_name" value="{{ category.advertising_product_name }}" maxlength="255"></label>
+  </div>
+  <label>Опис <small>(HTML; скрипти прибираються)</small> <textarea name="description" rows="5">{{ category.description }}</textarea></label>
+  <label>Таблиця розмірів <textarea name="description_table_size" rows="3">{{ category.description_table_size }}</textarea></label>
+  <div class="grid">
+    <label>Картинка <input name="image" value="{{ category.image }}" placeholder="catalog/categories/dresses.jpg" maxlength="255"></label>
+    <label>Картинка таблиці розмірів <input name="image_table_size" value="{{ category.image_table_size }}" maxlength="255"></label>
+  </div>
+  <div class="grid">
+    <label>SEO-адреса <input name="seo_keyword" value="{{ category.seo_keyword }}" maxlength="255"></label>
+    <label>Meta title <input name="meta_title" value="{{ category.meta_title }}" maxlength="255"></label>
+  </div>
+  <div class="grid">
+    <label>Meta description <input name="meta_description" value="{{ category.meta_description }}" maxlength="255"></label>
+    <label>Meta keywords <input name="meta_keyword" value="{{ category.meta_keyword }}" maxlength="255"></label>
+  </div>
+  <div class="grid">
+    <label>Порядок <input name="sort_order" value="{{ category.sort_order }}" inputmode="numeric"></label>
+    <label>Колонок у меню <input name="column" value="{{ category.column }}" inputmode="numeric"></label>
+    <label>Днів на виготовлення <input name="production_period" value="{{ category.production_period }}" inputmode="numeric"></label>
+    <label>Банер (№) <input name="banner_id" value="{{ category.banner_id }}" inputmode="numeric"></label>
+  </div>
+  <label><input type="checkbox" name="top" value="1"{% if category.top %} checked{% endif %}> У верхньому меню</label>
+  <label><input type="checkbox" role="switch" name="enabled" value="1"{% if category.enabled %} checked{% endif %}> Увімкнена</label>
+  {% if filters %}
+  <fieldset>
+    <legend>Фільтри категорії</legend>
+    {% for item in filters %}
+    <label><input type="checkbox" name="filter_ids" value="{{ item.id }}"{% if item.id in category.filter_ids %} checked{% endif %}> {{ item.name }}</label>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+  <button type="submit">{% if category_id %}Зберегти{% else %}Створити категорію{% endif %}</button>
+</form>

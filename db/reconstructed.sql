@@ -731,3 +731,45 @@ CREATE TABLE `dd_product_color` (
   `name` varchar(255) NOT NULL,
   PRIMARY KEY (`product_id`,`language_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Каталог: довідники старої адмінки (admin/model/catalog/category.php, search_preset.php) ═══
+-- Власні колонки категорії: банер, картинка таблиці розмірів; в описі — шаблон назви товару, рекламна назва,
+-- текст таблиці розмірів. Типи вгадані, звірити.
+ALTER TABLE `dd_category`
+  ADD COLUMN `banner_id` int(11) NOT NULL DEFAULT '0',
+  ADD COLUMN `image_table_size` varchar(255) NULL;
+
+ALTER TABLE `dd_category_description`
+  ADD COLUMN `product_name` varchar(255) NULL,
+  ADD COLUMN `advertising_product_name` varchar(255) NULL,
+  ADD COLUMN `description_table_size` text NULL;
+
+-- Стандартні таблиці OpenCart 3 (install/opencart.sql): дерево категорій (closure table), магазин, фільтри.
+CREATE TABLE `dd_category_path` (
+  `category_id` int(11) NOT NULL,
+  `path_id` int(11) NOT NULL,
+  `level` int(11) NOT NULL,
+  PRIMARY KEY (`category_id`,`path_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_category_to_store` (
+  `category_id` int(11) NOT NULL,
+  `store_id` int(11) NOT NULL,
+  PRIMARY KEY (`category_id`,`store_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_category_filter` (
+  `category_id` int(11) NOT NULL,
+  `filter_id` int(11) NOT NULL,
+  PRIMARY KEY (`category_id`,`filter_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Власна таблиця: готові пошуки вітрини (назва й адреса). Колонки із запитів моделі, типи вгадані.
+CREATE TABLE `dd_search_preset` (
+  `preset_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT '0',
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`preset_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

@@ -1,0 +1,55 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+{# One form per row; a row with number 0 adds a new one. #}
+<article>
+  <header>Мітки товарів <small>(кольори — #rrggbb)</small></header>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Назва</th><th>Фон</th><th>Текст</th><th>Порядок</th><th>Увімк.</th><th class="num">Товарів</th><th></th></tr></thead>
+    <tbody>
+    {% for label in labels + [None] %}{% set id = label.id if label else 0 %}
+      <tr>
+        <td><input form="label-{{ id }}" name="name" value="{{ label.name if label else '' }}" maxlength="64" aria-label="Назва" placeholder="Нова мітка"></td>
+        <td><input form="label-{{ id }}" name="background_color" value="{{ label.background_color if label else '' }}" maxlength="7" size="7" aria-label="Фон"></td>
+        <td><input form="label-{{ id }}" name="text_color" value="{{ label.text_color if label else '' }}" maxlength="7" size="7" aria-label="Текст"></td>
+        <td><input form="label-{{ id }}" name="sort_order" value="{{ label.sort_order if label else 0 }}" inputmode="numeric" size="3" aria-label="Порядок"></td>
+        <td><input form="label-{{ id }}" type="checkbox" name="enabled" value="1"{% if not label or label.enabled %} checked{% endif %} aria-label="Увімкнена"></td>
+        <td class="num">{{ label.products if label else "" }}</td>
+        <td>
+          <form id="label-{{ id }}" hx-post="/app/catalog/labels/label/{{ id }}/save" hx-target="#dictionaries" role="group">
+            <button type="submit">{{ "Зберегти" if label else "Додати" }}</button>
+            {% if label %}<button type="button" class="secondary outline" hx-post="/app/catalog/labels/label/{{ id }}/delete"
+              hx-target="#dictionaries" hx-confirm="Видалити мітку «{{ label.name }}» і зняти її з {{ label.products }} товарів?">Видалити</button>{% endif %}
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>
+<article>
+  <header>Пресети пошуку вітрини <small>(адреса магазину, напр. /catalog?filter=new, або https://…)</small></header>
+  <div class="overflow-auto">
+  <table>
+    <thead><tr><th>Назва</th><th>Адреса</th><th>Порядок</th><th>Увімк.</th><th></th></tr></thead>
+    <tbody>
+    {% for preset in presets + [None] %}{% set id = preset.id if preset else 0 %}
+      <tr>
+        <td><input form="preset-{{ id }}" name="name" value="{{ preset.name if preset else '' }}" maxlength="255" aria-label="Назва" placeholder="Новий пресет"></td>
+        <td><input form="preset-{{ id }}" name="url" value="{{ preset.url if preset else '' }}" maxlength="255" aria-label="Адреса"></td>
+        <td><input form="preset-{{ id }}" name="sort_order" value="{{ preset.sort_order if preset else 0 }}" inputmode="numeric" size="3" aria-label="Порядок"></td>
+        <td><input form="preset-{{ id }}" type="checkbox" name="enabled" value="1"{% if not preset or preset.enabled %} checked{% endif %} aria-label="Увімкнений"></td>
+        <td>
+          <form id="preset-{{ id }}" hx-post="/app/catalog/labels/preset/{{ id }}/save" hx-target="#dictionaries" role="group">
+            <button type="submit">{{ "Зберегти" if preset else "Додати" }}</button>
+            {% if preset %}<button type="button" class="secondary outline" hx-post="/app/catalog/labels/preset/{{ id }}/delete"
+              hx-target="#dictionaries" hx-confirm="Видалити пресет «{{ preset.name }}»?">Видалити</button>{% endif %}
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</article>

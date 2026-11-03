@@ -85,8 +85,8 @@ missing in all three new versions, so every item is Python first):
 | 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | done (price edit in the list with the row's version; `POST /catalog/products/import/preview` and `/import`, admin only: UTF-8 CSV by model or product_id, updates only, no stock and no picture downloads, which the old importer fetched from any URL) |
 | 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | done (`POST /catalog/products/remove-new`) |
 | 46 | Mass price control (by category, manufacturer, percent or sum), with a preview before saving | `extension/module/price_control` | done (`POST /catalog/prices/preview` and `/apply`, admin only; price or sale percent by category, page `/app/catalog/prices`) |
-| 47 | Label dictionary and search presets | `catalog/label`, `catalog/search_preset` | |
-| 48 | Categories: create, edit, delete, rebuild the paths | `catalog/category` | |
+| 47 | Label dictionary and search presets | `catalog/label`, `catalog/search_preset` | done (`/catalog/labels`, `/catalog/search-presets`; colours only #rrggbb, preset addresses only the shop or https; page `/app/catalog/labels`) |
+| 48 | Categories: create, edit, delete, rebuild the paths | `catalog/category` | done (`/catalog/categories` with the tree path rebuilt on every save and `POST /catalog/categories/repair`; no loops; delete is admin only and refused with subcategories) |
 | 49 | Manufacturers, filters and filter groups, attributes and attribute groups, options, downloads | `catalog/manufacturer`, `filter`, `attribute`, `attribute_group`, `option`, `download` | |
 | 50 | Content: information pages, FAQ, blog (categories and posts), the "Про нас" and NFT blocks | `catalog/information`, `catalog/faq`, `blog/*`, `extension/module/about`, `nft` | |
 | 51 | Reviews and product questions: moderation and answers | `catalog/review`, `catalog/question` | |

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Категорії{% endblock %}
+{% block content %}
+<h1>Категорії</h1>
+<p>
+  <a href="/app/catalog/categories/new" role="button">Нова категорія</a>
+  {% if user and user.role in bulk_roles %}
+  <button type="button" class="secondary outline" hx-post="/app/catalog/categories/repair" hx-target="#repair-result">Перебудувати дерево</button>
+  {% endif %}
+</p>
+<div id="repair-result"></div>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>№</th><th>Категорія</th><th class="num">Порядок</th><th class="num">Товарів</th><th></th></tr></thead>
+  <tbody>
+  {% for category in categories %}
+    <tr>
+      <td>{{ category.id }}</td>
+      <td><a href="/app/catalog/categories/{{ category.id }}">{{ category.name }}</a></td>
+      <td class="num">{{ category.sort_order }}</td>
+      <td class="num">{{ category.products }}</td>
+      <td>{% if not category.enabled %}<span class="chip none">вимкнена</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Категорій ще немає</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

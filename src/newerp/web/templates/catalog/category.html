@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name or "Нова категорія" }}{% endblock %}
+{% block content %}
+<p><a href="/app/catalog/categories">← Категорії</a></p>
+<h1>{% if category_id %}{{ category.name }} <small>№{{ category_id }}</small>{% else %}Нова категорія{% endif %}</h1>
+<div id="category-form">{% include "catalog/_category_form.html" %}</div>
+{% if category_id and user and user.role in bulk_roles %}
+<button type="button" class="secondary outline" hx-post="/app/catalog/categories/{{ category_id }}/delete" hx-target="#delete-result"
+        hx-confirm="Видалити категорію «{{ category.name }}»? Товари залишаться, але без неї.">Видалити категорію</button>
+<div id="delete-result"></div>
+{% endif %}
+{% endblock %}
