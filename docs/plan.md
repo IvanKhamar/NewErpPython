@@ -127,6 +127,18 @@ Security rules for items 35–71 (the old admin had none of them; each item is d
 
 Each item (or a small group) starts with a plan the user approves, like the earlier phases.
 
+Still open after items 35–71 (found 2026-11-03):
+
+| # | Item | Status |
+|---|---|---|
+| 72 | Check the reconstructed tables and columns against the real database: run `tools/check_live.py schema` (read-only) and fix `db/reconstructed.sql` and the mappings where the guesses differ (types of the old site's own tables: blog, FAQ, colours, search presets, mono orders, Instagram, own description and category columns) | |
+| 73 | Production settings in `.env` for what stays off without them: storefront address (`NEWERP_CUSTOMERS__STORE_URL`), SMTP (`NEWERP_MAIL__*`), monobank token, TikTok feed token, OpenCart log and upload folders (`NEWERP_ADMIN_TOOLS__*`) on a shared volume, Instagram picture folder | |
+| 74 | Click through the pages of items 35–71 in a browser once (they are covered by web tests, but not looked at) | |
+| 75 | Picture upload for products, categories, banners and voucher themes (now paths only): to the storefront's image folder on a shared volume, type checked by content, size limit, names made by the server | |
+| 76 | Options other than sizes in the product form (colours, lengths…): add and remove a product's options and values, prices per value; stock stays with production | |
+| 77 | TikTok: the live catalog sync of the old module through TikTok's API (now a feed by URL); Klaviyo: event logs of the module | |
+| 78 | Port items 23–71 to the .NET and Java versions: `docs/from-python.md` in both repos lists them with contracts, security rules and tables | |
+
 Not planned on purpose (they stay in OpenCart or were replaced): Ukrposhta, WayForPay and Justin (closed in 2022),
 LiqPay e-mail invoices (replaced by the payment link), OpenCart engine settings (extensions, marketplace, themes,
 layouts, translations, countries, zones, taxes, currencies, units), subscriptions (`recurring`).
