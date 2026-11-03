@@ -114,6 +114,23 @@
     </table>
     <p><small>Щоб прибрати акцію, очистьте її ціну й відсоток.</small></p>
   </article>
+  {% if lookups.attributes %}
+  {% set attribute_text = {} %}{% for item in product.attributes %}{% set _ = attribute_text.update({item.attribute_id: item.text}) %}{% endfor %}
+  <article>
+    <header>Атрибути <small>(порожнє поле — без атрибута)</small></header>
+    {% for item in lookups.attributes %}
+    <label>{{ item.name }} <input name="attr_{{ item.id }}" value="{{ attribute_text.get(item.id, '') }}" maxlength="10000"></label>
+    {% endfor %}
+  </article>
+  {% endif %}
+  {% if lookups.downloads %}
+  <article>
+    <header>Завантаження для покупця</header>
+    {% for item in lookups.downloads %}
+    <label><input type="checkbox" name="download_ids" value="{{ item.id }}"{% if item.id in product.download_ids %} checked{% endif %}> {{ item.name }}</label>
+    {% endfor %}
+  </article>
+  {% endif %}
   <article>
     <header>Пов'язані товари <small>(номери через кому)</small></header>
     <label>Супутні <input name="related_ids" value="{{ product.related_ids|join(', ') }}"></label>

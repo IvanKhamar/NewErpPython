@@ -41,6 +41,14 @@ from newerp.application.catalog.products import (
     ProductService,
     UpdateProductRequest,
 )
+from newerp.application.catalog.references import (
+    CatalogReferenceService,
+    DownloadDto,
+    ManufacturerDto,
+    ReferenceGroupDto,
+    ReferenceItemDto,
+    ReferenceKind,
+)
 from newerp.application.catalog.sort import (
     ApplySortRequest,
     CrossSellMetricDto,
@@ -63,6 +71,7 @@ from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
 from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
+from newerp.infrastructure.catalog.references import SqlReferenceStore
 from newerp.infrastructure.catalog.sort import SqlProductSortStore
 
 orders_access = [Depends(require_roles(*Policies.ORDERS))]
@@ -399,3 +408,98 @@ async def update_category(
                             summary="Видалити категорію без підкатегорій (лише адміністратор)")  # fmt: skip
 async def delete_category(category_id: int, principal: CurrentPrincipal, service: Dictionaries) -> None:
     await service.delete_category(category_id, principal.user_id)
+
+
+# ═══ Filters, attributes, options, manufacturers, downloads (Python first) ═══
+
+
+def get_reference_service(session: Session) -> CatalogReferenceService:
+    return CatalogReferenceService(SqlReferenceStore(session, get_settings().language_id))
+
+
+References = Annotated[CatalogReferenceService, Depends(get_reference_service)]
+
+
+@dictionaries_router.get("/references/{kind}", summary="Групи фільтрів, атрибутів чи опцій зі значеннями")
+async def list_groups(kind: ReferenceKind, service: References) -> list[ReferenceGroupDto]:
+    return await service.groups(kind)
+
+
+@dictionaries_router.post("/references/{kind}", status_code=201, summary="Нова група (для опцій — і тип)")
+async def create_group(kind: ReferenceKind, request: ReferenceGroupDto, service: References) -> ReferenceGroupDto:
+    return await service.save_group(kind, None, request)
+
+
+@dictionaries_router.put("/references/{kind}/{group_id}", summary="Змінити групу")
+async def update_group(
+    kind: ReferenceKind, group_id: int, request: ReferenceGroupDto, service: References
+) -> ReferenceGroupDto:
+    return await service.save_group(kind, group_id, request)
+
+
+@dictionaries_router.delete("/references/{kind}/{group_id}", status_code=204,
+                            summary="Видалити групу зі значеннями, якщо жоден товар їх не має")  # fmt: skip
+async def delete_group(kind: ReferenceKind, group_id: int, principal: CurrentPrincipal, service: References) -> None:
+    await service.delete_group(kind, group_id, principal.user_id)
+
+
+@dictionaries_router.post("/references/{kind}/{group_id}/values", status_code=201, summary="Нове значення групи")
+async def create_value(
+    kind: ReferenceKind, group_id: int, request: ReferenceItemDto, service: References
+) -> ReferenceGroupDto:
+    return await service.save_item(kind, group_id, None, request)
+
+
+@dictionaries_router.put("/references/{kind}/{group_id}/values/{value_id}", summary="Змінити значення")
+async def update_value(
+    kind: ReferenceKind, group_id: int, value_id: int, request: ReferenceItemDto, service: References
+) -> ReferenceGroupDto:
+    return await service.save_item(kind, group_id, value_id, request)
+
+
+@dictionaries_router.delete("/references/{kind}/values/{value_id}", status_code=204,
+                            summary="Видалити значення, якщо жоден товар його не має")  # fmt: skip
+async def delete_value(kind: ReferenceKind, value_id: int, principal: CurrentPrincipal, service: References) -> None:
+    await service.delete_item(kind, value_id, principal.user_id)
+
+
+@dictionaries_router.get("/manufacturers", summary="Виробники з кількістю товарів")
+async def list_manufacturers(service: References) -> list[ManufacturerDto]:
+    return await service.manufacturers()
+
+
+@dictionaries_router.post("/manufacturers", status_code=201, summary="Новий виробник")
+async def create_manufacturer(request: ManufacturerDto, service: References) -> ManufacturerDto:
+    return await service.save_manufacturer(None, request)
+
+
+@dictionaries_router.put("/manufacturers/{manufacturer_id}", summary="Змінити виробника")
+async def update_manufacturer(manufacturer_id: int, request: ManufacturerDto, service: References) -> ManufacturerDto:
+    return await service.save_manufacturer(manufacturer_id, request)
+
+
+@dictionaries_router.delete(
+    "/manufacturers/{manufacturer_id}", status_code=204, summary="Видалити виробника без товарів"
+)
+async def delete_manufacturer(manufacturer_id: int, principal: CurrentPrincipal, service: References) -> None:
+    await service.delete_manufacturer(manufacturer_id, principal.user_id)
+
+
+@dictionaries_router.get("/downloads", summary="Файли для покупців (записи; самі файли — на вітрині)")
+async def list_downloads(service: References) -> list[DownloadDto]:
+    return await service.downloads()
+
+
+@dictionaries_router.post("/downloads", status_code=201, summary="Нове завантаження (ім'я файлу без папок)")
+async def create_download(request: DownloadDto, service: References) -> DownloadDto:
+    return await service.save_download(None, request)
+
+
+@dictionaries_router.put("/downloads/{download_id}", summary="Змінити завантаження")
+async def update_download(download_id: int, request: DownloadDto, service: References) -> DownloadDto:
+    return await service.save_download(download_id, request)
+
+
+@dictionaries_router.delete("/downloads/{download_id}", status_code=204, summary="Видалити завантаження без товарів")
+async def delete_download(download_id: int, principal: CurrentPrincipal, service: References) -> None:
+    await service.delete_download(download_id, principal.user_id)

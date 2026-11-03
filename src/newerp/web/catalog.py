@@ -19,6 +19,7 @@ from newerp.api.security import Policies
 from newerp.application.catalog.pre_orders import PreOrderFilter, UpdatePreOrderRequest
 from newerp.application.catalog.prices import MAX_IMPORT_BYTES, PriceChangeRequest
 from newerp.application.catalog.product_edit import (
+    ProductAttributeDto,
     ProductFormDto,
     ProductImageDto,
     ProductSizeEditDto,
@@ -117,7 +118,7 @@ TEXT_FIELDS = (
     "characteristics color seo_keyword image"
 ).split()
 NUMBER_FIELDS = ("price", "weight", "length", "width", "height")
-INT_FIELDS = ("minimum", "stock_status_id", "manufacturer_id", "sort_order")
+INT_FIELDS = ("stock_status_id", "manufacturer_id", "sort_order")
 LINK_FIELDS = ("related_ids", "related_color_ids", "related_variant_ids")
 SPECIAL_ROWS_EMPTY = 2  # empty rows for new sale prices under the saved ones
 SPECIAL_COLUMNS = ("group", "priority", "price", "percent", "start", "end")
@@ -171,11 +172,18 @@ def _product_request(form: FormData) -> SaveProductRequest:
         **{name: decimal_field(text(name), name) for name in NUMBER_FIELDS},
         **{name: number(text(name).strip()) or 0 for name in INT_FIELDS},
         **{name: _ids(text(name)) for name in LINK_FIELDS},
+        minimum=number(text("minimum").strip()) or 1,
         subtract=text("subtract") == "1",
         enabled=text("enabled") == "1",
         category_ids=[number(str(v)) or 0 for v in form.getlist("category_ids")],
         label_ids=[number(str(v)) or 0 for v in form.getlist("label_ids")],
         filter_ids=[number(str(v)) or 0 for v in form.getlist("filter_ids")],
+        attributes=[
+            ProductAttributeDto(attribute_id=int(key[5:]), text=value)
+            for key, value in form.multi_items()
+            if key.startswith("attr_") and key[5:].isdigit() and isinstance(value, str) and value.strip()
+        ],
+        download_ids=[number(str(v)) or 0 for v in form.getlist("download_ids")],
         images=[i for i in images if i.image],
         specials=specials,
         sizes=sizes,

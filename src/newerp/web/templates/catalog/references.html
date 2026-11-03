@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Фільтри, атрибути, опції{% endblock %}
+{% block content %}
+<h1>Фільтри, атрибути, опції</h1>
+<nav>
+  <ul>
+  {% for key, title in tabs %}
+    <li><a href="/app/catalog/references?tab={{ key }}"{% if key == tab %} aria-current="page"{% endif %}>{{ title }}</a></li>
+  {% endfor %}
+  </ul>
+</nav>
+<div id="references">{% include "catalog/_references.html" %}</div>
+{% endblock %}

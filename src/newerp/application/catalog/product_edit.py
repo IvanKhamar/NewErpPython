@@ -37,6 +37,13 @@ class ProductSpecialDto(Dto):
     date_end: date | None = None
 
 
+class ProductAttributeDto(Dto):
+    """A product's attribute value: "Склад" → "Льон 100%"."""
+
+    attribute_id: int
+    text: str = Field(default="", max_length=10_000)
+
+
 class ProductSizeEditDto(Dto):
     """option_value_id of the size option; quantity is shown only, production keeps it."""
 
@@ -85,6 +92,8 @@ class ProductFormDto(Dto):
     images: list[ProductImageDto] = Field(default_factory=list, max_length=50)
     specials: list[ProductSpecialDto] = Field(default_factory=list, max_length=50)
     sizes: list[ProductSizeEditDto] = Field(default_factory=list, max_length=100)
+    attributes: list[ProductAttributeDto] = Field(default_factory=list, max_length=100)
+    download_ids: Ids = Field(default_factory=list, max_length=MAX_LINKS)
 
 
 class ProductEditDto(ProductFormDto):
@@ -103,6 +112,8 @@ class ProductFormLookups(Dto):
     labels: list[LookupItem]
     filters: list[LookupItem]  # "Група: значення"
     sizes: list[LookupItem]  # values of the size option
+    attributes: list[LookupItem]  # "Група: атрибут"
+    downloads: list[LookupItem]
 
 
 class CreatedProductDto(Dto):
@@ -207,6 +218,8 @@ class ProductEditService:
         _known("фільтри", request.filter_ids, lookups.filters, current.filter_ids if current else [])
         size_ids = [size.option_value_id for size in request.sizes]
         _known("розміри", size_ids, lookups.sizes, [])
+        _known("атрибути", [a.attribute_id for a in request.attributes], lookups.attributes, [])
+        _known("завантаження", request.download_ids, lookups.downloads, current.download_ids if current else [])
         if len(set(size_ids)) != len(size_ids):
             raise DomainError("Розмір у списку двічі.")
         if current is not None:
@@ -240,6 +253,8 @@ class ProductEditService:
                 "related_ids": _unique(request.related_ids, product_id),
                 "related_color_ids": _unique(request.related_color_ids, product_id),
                 "related_variant_ids": _unique(request.related_variant_ids, product_id),
+                "attributes": list({a.attribute_id: a for a in request.attributes if a.text.strip()}.values()),
+                "download_ids": list(dict.fromkeys(request.download_ids)),
             }
         )
 

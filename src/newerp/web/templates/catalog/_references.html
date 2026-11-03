@@ -1,0 +1,78 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+{% macro row_buttons(form_id, url, exists, confirm) -%}
+<form id="{{ form_id }}" hx-post="{{ url }}/save" hx-target="#references" role="group">
+  <button type="submit">{{ "Зберегти" if exists else "Додати" }}</button>
+  {% if exists %}<button type="button" class="secondary outline" hx-post="{{ url }}/delete" hx-target="#references"
+    hx-confirm="{{ confirm }}">Видалити</button>{% endif %}
+</form>
+{%- endmacro %}
+{% set base = "/app/catalog/references/" ~ tab %}
+{% if tab == "manufacturers" %}
+<table>
+  <thead><tr><th>Назва</th><th>Картинка</th><th>Порядок</th><th class="num">Товарів</th><th></th></tr></thead>
+  <tbody>
+  {% for row in rows + [None] %}{% set id = row.id if row else 0 %}
+    <tr>
+      <td><input form="m-{{ id }}" name="name" value="{{ row.name if row else '' }}" maxlength="64" aria-label="Назва" placeholder="Новий виробник"></td>
+      <td><input form="m-{{ id }}" name="image" value="{{ row.image if row else '' }}" maxlength="255" aria-label="Картинка"></td>
+      <td><input form="m-{{ id }}" name="sort_order" value="{{ row.sort_order if row else 0 }}" size="3" aria-label="Порядок"></td>
+      <td class="num">{{ row.products if row else "" }}</td>
+      <td>{{ row_buttons("m-" ~ id, base ~ "/0/" ~ id, row, "Видалити виробника?") }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif tab == "downloads" %}
+<p><small>Файл кладуть у storage/download вітрини; тут лише запис: назва, ім'я файлу й ім'я для покупця.</small></p>
+<table>
+  <thead><tr><th>Назва</th><th>Файл</th><th>Ім'я для покупця</th><th class="num">Товарів</th><th></th></tr></thead>
+  <tbody>
+  {% for row in rows + [None] %}{% set id = row.id if row else 0 %}
+    <tr>
+      <td><input form="d-{{ id }}" name="name" value="{{ row.name if row else '' }}" maxlength="64" aria-label="Назва" placeholder="Нове завантаження"></td>
+      <td><input form="d-{{ id }}" name="filename" value="{{ row.filename if row else '' }}" maxlength="160" aria-label="Файл"></td>
+      <td><input form="d-{{ id }}" name="mask" value="{{ row.mask if row else '' }}" maxlength="128" aria-label="Ім'я для покупця"></td>
+      <td class="num">{{ row.products if row else "" }}</td>
+      <td>{{ row_buttons("d-" ~ id, base ~ "/0/" ~ id, row, "Видалити завантаження?") }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+{% for group in groups + [None] %}{% set gid = group.id if group else 0 %}
+<article>
+  <header>
+    <div class="grid">
+      <input form="g-{{ gid }}" name="name" value="{{ group.name if group else '' }}" maxlength="128" aria-label="Назва групи" placeholder="Нова група">
+      <input form="g-{{ gid }}" name="sort_order" value="{{ group.sort_order if group else 0 }}" aria-label="Порядок групи">
+      {% if tab == "options" %}
+      <select form="g-{{ gid }}" name="type" aria-label="Тип">
+        {% for kind in ("select", "radio", "checkbox", "text", "textarea", "date") %}
+        <option value="{{ kind }}"{% if group and group.type == kind %} selected{% endif %}>{{ kind }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      {{ row_buttons("g-" ~ gid, base ~ "/" ~ gid ~ "/0", group, "Видалити групу з усіма значеннями?") }}
+    </div>
+  </header>
+  {% if group %}
+  <table>
+    <thead><tr><th>Значення</th><th>Порядок</th>{% if tab == "options" %}<th>Картинка</th>{% endif %}<th class="num">Товарів</th><th></th></tr></thead>
+    <tbody>
+    {% for item in group['items'] + [None] %}{% set vid = item.id if item else 0 %}{% set fid = "v-" ~ gid ~ "-" ~ vid %}
+      <tr>
+        <td><input form="{{ fid }}" name="name" value="{{ item.name if item else '' }}" maxlength="128" aria-label="Значення" placeholder="Нове значення">
+            <input form="{{ fid }}" type="hidden" name="level" value="value"></td>
+        <td><input form="{{ fid }}" name="sort_order" value="{{ item.sort_order if item else 0 }}" size="3" aria-label="Порядок"></td>
+        {% if tab == "options" %}<td><input form="{{ fid }}" name="image" value="{{ item.image if item else '' }}" maxlength="255" aria-label="Картинка"></td>{% endif %}
+        <td class="num">{{ item.products if item else "" }}</td>
+        <td>{{ row_buttons(fid, base ~ "/" ~ gid ~ "/" ~ vid, item, "Видалити значення?") }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</article>
+{% endfor %}
+{% endif %}

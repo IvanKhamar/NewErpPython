@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table, Text, case, del
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.catalog.product_edit import (
+    ProductAttributeDto,
     ProductEditDto,
     ProductFormDto,
     ProductFormLookups,
@@ -20,6 +21,14 @@ from newerp.application.catalog.product_edit import (
 )
 from newerp.application.common import ConflictError, LookupItem, ukrainian_key
 from newerp.domain.catalog import NEW_LABEL, without_new_tag
+from newerp.infrastructure.catalog.tables import (
+    attribute,
+    attribute_description,
+    attribute_group_description,
+    download_description,
+    product_attribute,
+    product_to_download,
+)
 from newerp.infrastructure.models.catalog import (
     DdCategory,
     DdCategoryDescription,
@@ -166,8 +175,17 @@ class SqlProductEditStore:
                 ProductSizeEditDto(option_value_id=i, name=name or f"#{i}", price=price, quantity=quantity)
                 for i, name, price, quantity in sizes
             ],
+            attributes=[ProductAttributeDto(attribute_id=i, text=t) for i, t in await self._attributes(product_id)],
+            download_ids=await ids(product_to_download.c.download_id, product_to_download.c.product_id),
             **text,
         )  # fmt: skip
+
+    async def _attributes(self, product_id: int) -> list[tuple[int, str]]:
+        c = product_attribute.c
+        rows = await self._session.execute(
+            select(c.attribute_id, c.text).where(c.product_id == product_id, c.language_id == self._language_id)
+        )
+        return [(r[0], r[1] or "") for r in rows]
 
     async def lookups(self) -> ProductFormLookups:
         categories = await self._session.execute(
@@ -201,11 +219,27 @@ class SqlProductEditStore:
             )
             .order_by(DdOptionValueDescription.option_value_id)
         )
+        a, an, gn = attribute.c, attribute_description.c, attribute_group_description.c
+        attributes = await self._session.execute(
+            select(a.attribute_id, func.coalesce(an.name, ""), gn.name)
+            .outerjoin(
+                attribute_description, (an.attribute_id == a.attribute_id) & (an.language_id == self._language_id)
+            )
+            .outerjoin(attribute_group_description, (gn.attribute_group_id == a.attribute_group_id)
+                       & (gn.language_id == self._language_id))
+            .order_by(gn.name, a.sort_order)
+        )  # fmt: skip
+        dn = download_description.c
+        downloads = await self._session.execute(
+            select(dn.download_id, dn.name).where(dn.language_id == self._language_id).order_by(dn.name)
+        )
         return ProductFormLookups(
             categories=sorted((LookupItem(id=i, name=n) for i, n in categories), key=lambda c: ukrainian_key(c.name)),
             labels=[LookupItem(id=i, name=n) for i, n in labels],
             filters=[LookupItem(id=i, name=f"{g}: {n}") for i, n, g in filters],
             sizes=[LookupItem(id=i, name=n) for i, n in sizes],
+            attributes=[LookupItem(id=i, name=f"{g}: {n}" if g else n) for i, n, g in attributes],
+            downloads=[LookupItem(id=i, name=n) for i, n in downloads],
         )
 
     async def existing_products(self, product_ids: set[int]) -> set[int]:
@@ -368,6 +402,16 @@ class SqlProductEditStore:
                     store_id=STORE_ID, language_id=lang, query=f"product_id={product_id}", keyword=form.seo_keyword
                 )  # fmt: skip
             )
+        c = product_attribute.c
+        await s.execute(delete(product_attribute).where(c.product_id == product_id, c.language_id == lang))
+        if form.attributes:
+            rows = [{"product_id": product_id, "attribute_id": a.attribute_id, "language_id": lang, "text": a.text}
+                    for a in form.attributes]  # fmt: skip
+            await s.execute(insert(product_attribute), rows)
+        await s.execute(delete(product_to_download).where(product_to_download.c.product_id == product_id))
+        if form.download_ids:
+            links = [{"product_id": product_id, "download_id": i} for i in form.download_ids]
+            await s.execute(insert(product_to_download), links)
         await self._write_sizes(product_id, form.sizes, sizes_before)
         await s.commit()
 

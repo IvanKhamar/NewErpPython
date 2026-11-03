@@ -7,10 +7,17 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from starlette.datastructures import FormData
 
-from newerp.api.catalog import Dictionaries
+from newerp.api.catalog import Dictionaries, References
 from newerp.api.deps import Session
 from newerp.api.security import Policies
 from newerp.application.catalog.dictionaries import CategoryFormDto, LabelDto, SearchPresetDto
+from newerp.application.catalog.references import (
+    DownloadDto,
+    ManufacturerDto,
+    ReferenceGroupDto,
+    ReferenceItemDto,
+    ReferenceKind,
+)
 from newerp.web.common import BUSINESS_ERRORS, WebUser, is_fragment, number, page_roles, render, undo
 
 router = APIRouter(prefix="/app/catalog", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.ORDERS))])
@@ -161,3 +168,75 @@ async def delete_category(
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     return Response(status_code=204, headers={"HX-Redirect": "/app/catalog/categories"})
+
+
+# ── Filters, attributes, options, manufacturers, downloads ──
+
+REFERENCE_TABS = (("filters", "Фільтри"), ("attributes", "Атрибути"), ("options", "Опції"),
+                  ("manufacturers", "Виробники"), ("downloads", "Завантаження"))  # fmt: skip
+Tab = Literal["filters", "attributes", "options", "manufacturers", "downloads"]
+
+
+async def _references(request: Request, service: References, tab: str, **messages: Any) -> HTMLResponse:
+    context: dict[str, Any] = {"tab": tab, "tabs": REFERENCE_TABS, **messages}
+    if tab == "manufacturers":
+        context["rows"] = await service.manufacturers()
+    elif tab == "downloads":
+        context["rows"] = await service.downloads()
+    else:
+        context["groups"] = await service.groups(ReferenceKind(tab))
+    template = "catalog/_references.html" if is_fragment(request) else "catalog/references.html"
+    return render(request, template, **context)
+
+
+@router.get("/references")
+async def references_page(request: Request, service: References, tab: Tab = "filters") -> HTMLResponse:
+    return await _references(request, service, tab)
+
+
+@router.post("/references/{tab}/{group_id}/{item_id}/{action}")
+async def change_reference(
+    request: Request,
+    tab: Tab,
+    group_id: int,
+    item_id: int,
+    action: Literal["save", "delete"],
+    user: WebUser,
+    service: References,
+    session: Session,
+) -> HTMLResponse:
+    """Groups: item_id 0 is the group itself. Values: both ids. Flat lists: group_id 0. An id of 0 adds."""
+    form = await request.form()
+    name, sort_order = _text(form, "name"), number(_text(form, "sort_order")) or 0
+    try:
+        if tab == "manufacturers":
+            if action == "delete":
+                await service.delete_manufacturer(item_id, user.user_id)
+            else:
+                item = ManufacturerDto(name=name, image=_text(form, "image"), sort_order=sort_order)
+                await service.save_manufacturer(item_id or None, item)
+        elif tab == "downloads":
+            if action == "delete":
+                await service.delete_download(item_id, user.user_id)
+            else:
+                download = DownloadDto(name=name, filename=_text(form, "filename"), mask=_text(form, "mask"))
+                await service.save_download(item_id or None, download)
+        else:
+            kind = ReferenceKind(tab)
+            if action == "delete":
+                if item_id:
+                    await service.delete_item(kind, item_id, user.user_id)
+                else:
+                    await service.delete_group(kind, group_id, user.user_id)
+            elif group_id and _text(form, "level") == "value":
+                value = ReferenceItemDto(name=name, sort_order=sort_order, image=_text(form, "image"))
+                await service.save_item(kind, group_id, item_id or None, value)
+            else:
+                group_type = _text(form, "type") or "select"
+                group = ReferenceGroupDto(name=name, sort_order=sort_order, type=group_type)
+                await service.save_group(kind, group_id or None, group)
+    except ValidationError as error:
+        return await _references(request, service, tab, error=_invalid(error))
+    except BUSINESS_ERRORS as error:
+        return await _references(request, service, tab, error=await undo(session, error))
+    return await _references(request, service, tab, saved="Збережено.")
