@@ -3,19 +3,21 @@
 
 import math
 from datetime import date, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from starlette.datastructures import FormData
+from starlette.datastructures import UploadFile as StarletteUpload
 
-from newerp.api.catalog import Editor, Products, Sorting
+from newerp.api.catalog import Editor, Imports, Prices, Products, Sorting
 from newerp.api.deps import Session
 from newerp.api.pre_orders import Service as PreOrders
 from newerp.api.security import Policies
 from newerp.application.catalog.pre_orders import PreOrderFilter, UpdatePreOrderRequest
+from newerp.application.catalog.prices import MAX_IMPORT_BYTES, PriceChangeRequest
 from newerp.application.catalog.product_edit import (
     ProductFormDto,
     ProductImageDto,
@@ -405,3 +407,92 @@ async def update_pre_order(
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     return render(request, "_note.html", text=f"Збережено: ліміт {qty(limit)}.")
+
+
+# ── Quick price edit in the list, mass prices and the CSV import (Python first) ──
+
+
+@router.post("/catalog/products/{product_id}/price")
+async def quick_price(
+    request: Request,
+    product_id: int,
+    products: Products,
+    session: Session,
+    price: Field = "",
+    date_modified: Field = "",
+) -> HTMLResponse:
+    """The price cell of the list: saved with the row's date_modified, so a change made meanwhile is refused."""
+    error = None
+    try:
+        update = UpdateProductRequest(
+            price=decimal_field(price, "Ціна"), date_modified=datetime.fromisoformat(date_modified)
+        )
+        await products.update(product_id, update)
+    except ValueError:
+        error = "Оновіть сторінку."
+    except BUSINESS_ERRORS as exc:
+        error = await undo(session, exc)
+    card = await products.get(product_id)
+    return render(request, "catalog/_price_cell.html", product=card, error=error, saved=error is None)
+
+
+bulk = [Depends(page_roles(*Policies.CATALOG_BULK))]
+
+
+def _price_request(form: FormData) -> PriceChangeRequest:
+    def text(name: str) -> str:
+        value = form.get(name, "")
+        return value.strip() if isinstance(value, str) else ""
+
+    return PriceChangeRequest(
+        target="sale" if text("target") == "sale" else "price",
+        operation=text("operation") or "add",
+        amount=decimal_field(text("amount"), "Число"),
+        unit=text("unit") or "amount",
+        category_ids=[number(str(v)) or 0 for v in form.getlist("category_ids")],
+        all_products=text("all_products") == "1",
+    )
+
+
+@router.get("/catalog/prices", dependencies=bulk)
+async def prices_page(request: Request, editor: Editor) -> HTMLResponse:
+    return render(request, "catalog/prices.html", categories=(await editor.lookups()).categories)
+
+
+@router.post("/catalog/prices/{action}", dependencies=bulk)
+async def change_prices(
+    request: Request, action: Literal["preview", "apply"], user: WebUser, prices: Prices, session: Session
+) -> HTMLResponse:
+    form = await request.form()
+    try:
+        price_request = _price_request(form)
+        if action == "apply":
+            result = await prices.apply(price_request, user.user_id)
+            return render(request, "_note.html", text=f"Змінено товарів: {result.changed}.")
+        preview = await prices.preview(price_request)
+    except ValidationError as error:
+        return render(request, "_error.html", error=_invalid(error))
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    return render(request, "catalog/_price_preview.html", preview=preview, target=price_request.target)
+
+
+@router.post("/catalog/import/{action}", dependencies=bulk)
+async def import_products(
+    request: Request, action: Literal["preview", "apply"], user: WebUser, imports: Imports, session: Session
+) -> HTMLResponse:
+    form = await request.form()
+    file = form.get("file")
+    if not isinstance(file, StarletteUpload):
+        return render(request, "_error.html", error="Оберіть CSV-файл.")
+    content = await file.read(MAX_IMPORT_BYTES + 1)
+    try:
+        if action == "apply":
+            result = await imports.apply(content, user.user_id)
+            return render(
+                request, "_note.html", text=f"Оновлено товарів: {result.updated}, з помилками: {result.errors}."
+            )
+        preview = await imports.preview(content)
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    return render(request, "catalog/_import_preview.html", preview=preview)

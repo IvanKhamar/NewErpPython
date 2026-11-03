@@ -64,6 +64,7 @@ MENU = (
     MenuLink("Доставка", "/app/delivery", Policies.ORDERS),
     MenuLink("Товари", "/app/catalog/products", Policies.ORDERS),
     MenuLink("Порядок товарів", "/app/catalog/sort", Policies.ORDERS),
+    MenuLink("Масові ціни й імпорт", "/app/catalog/prices", Policies.CATALOG_BULK),
     MenuLink("Передзамовлення", "/app/preorders", Policies.ORDERS),
     MenuLink("Дні народження", "/app/marketing/birthdays", Policies.ORDERS),
     MenuLink("Вивантаження контактів", "/app/marketing/export", Policies.ORDERS),

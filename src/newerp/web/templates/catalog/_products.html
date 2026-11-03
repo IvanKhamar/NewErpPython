@@ -8,7 +8,7 @@
       <td>{{ product.id }}</td>
       <td><a href="/app/catalog/products/{{ product.id }}">{{ product.name }}</a></td>
       <td>{{ product.model }}</td>
-      <td class="num">{{ product.price|money }}</td>
+      {% include "catalog/_price_cell.html" %}
       <td class="num">{{ product.quantity }}</td>
       <td>{% if not product.enabled %}<span class="chip none">вимкнений</span>{% endif %}</td>
     </tr>

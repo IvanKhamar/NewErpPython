@@ -3,10 +3,20 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response, UploadFile
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
+from newerp.application.catalog.prices import (
+    MAX_IMPORT_BYTES,
+    ImportPreview,
+    ImportResult,
+    PriceChangePreview,
+    PriceChangeRequest,
+    PriceChangeResult,
+    PriceChangeService,
+    ProductImportService,
+)
 from newerp.application.catalog.product_edit import (
     CreatedProductDto,
     ProductEditDto,
@@ -41,6 +51,7 @@ from newerp.application.catalog.sort import (
 from newerp.application.common import LookupItem, PagedResult
 from newerp.config import get_settings
 from newerp.domain.catalog import SortGroupType
+from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
 from newerp.infrastructure.catalog.sort import SqlProductSortStore
@@ -244,3 +255,50 @@ async def set_cross_sell_metric(metric: CrossSellMetricDto, service: Sorting) ->
 @sort_router.get("/products", summary="Пошук увімкнених товарів за назвою (для закріплення)")
 async def search_products(service: Sorting, search: str | None = None) -> list[SortProductDto]:
     return await service.search_products(search)
+
+
+# ═══ Mass prices and the CSV import (Python first; the admin only) ═══
+
+bulk_access = [Depends(require_roles(*Policies.CATALOG_BULK))]
+prices_router = APIRouter(prefix="/catalog/prices", tags=["Масові ціни"], dependencies=bulk_access)
+
+
+def get_price_service(session: Session) -> PriceChangeService:
+    return PriceChangeService(SqlPriceStore(session, get_settings().language_id))
+
+
+def get_import_service(session: Session) -> ProductImportService:
+    return ProductImportService(SqlImportStore(session, get_settings().language_id))
+
+
+Prices = Annotated[PriceChangeService, Depends(get_price_service)]
+Imports = Annotated[ProductImportService, Depends(get_import_service)]
+
+
+async def read_upload(file: UploadFile) -> bytes:
+    """At most one byte over the limit is read, so a huge file is refused without filling the memory."""
+    return await file.read(MAX_IMPORT_BYTES + 1)
+
+
+@prices_router.post("/preview", summary="Що зміниться: ціни чи відсоток акції товарів обраних категорій і виробників")
+async def preview_prices(request: PriceChangeRequest, prices: Prices) -> PriceChangePreview:
+    return await prices.preview(request)
+
+
+@prices_router.post("/apply", summary="Змінити ціни чи акції (кожна зміна — в журнал аудиту)")
+async def apply_prices(request: PriceChangeRequest, principal: CurrentPrincipal, prices: Prices) -> PriceChangeResult:
+    return await prices.apply(request, principal.user_id)
+
+
+@products_router.post(
+    "/import/preview", summary="CSV (UTF-8; model або product_id + колонки): що зміниться", dependencies=bulk_access
+)
+async def preview_import(file: UploadFile, imports: Imports) -> ImportPreview:
+    return await imports.preview(await read_upload(file))
+
+
+@products_router.post(
+    "/import", summary="Оновити товари з CSV; рядки з помилками пропускаються", dependencies=bulk_access
+)
+async def apply_import(file: UploadFile, principal: CurrentPrincipal, imports: Imports) -> ImportResult:
+    return await imports.apply(await read_upload(file), principal.user_id)

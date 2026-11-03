@@ -1,0 +1,17 @@
+<p>Без змін: {{ preview.unchanged }}, з помилками: {{ preview.errors }}. Рядки з помилками під час імпорту пропускаються.</p>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Рядок</th><th>Товар</th><th>Зміни або помилка</th></tr></thead>
+  <tbody>
+  {% for row in preview.rows %}
+    <tr>
+      <td>{{ row.line }}</td>
+      <td>{% if row.product_id %}№{{ row.product_id }} {% endif %}{{ row.model }}</td>
+      <td>{% if row.error %}<span class="error">{{ row.error }}</span>{% else %}{% for column, change in row.changes.items() %}{{ column }}: {{ change }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">Файл нічого не змінить.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

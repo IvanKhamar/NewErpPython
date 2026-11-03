@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Масові ціни й імпорт{% endblock %}
+{% block content %}
+<h1>Масові ціни й імпорт</h1>
+<article>
+  <header>Змінити ціни чи акції <small>(спершу «Переглянути», потім «Застосувати»; кожна зміна — в журнал)</small></header>
+  <form hx-target="#price-result">
+    <div class="grid">
+      <label>Що змінити
+        <select name="target">
+          <option value="price">Ціну товару</option>
+          <option value="sale">Акцію (знижку, %)</option>
+        </select>
+      </label>
+      <label>Як
+        <select name="operation">
+          <option value="add">Додати</option>
+          <option value="subtract">Відняти</option>
+          <option value="multiply">Помножити на</option>
+          <option value="divide">Поділити на</option>
+          <option value="set_percent">Акція: встановити знижку</option>
+          <option value="remove">Акція: прибрати</option>
+        </select>
+      </label>
+      <label>Число <input name="amount" value="0" inputmode="decimal"></label>
+      <label>Одиниця
+        <select name="unit">
+          <option value="amount">грн</option>
+          <option value="percent">% від ціни</option>
+        </select>
+      </label>
+    </div>
+    <fieldset>
+      <legend>Категорії</legend>
+      {% for category in categories %}
+      <label><input type="checkbox" name="category_ids" value="{{ category.id }}"> {{ category.name }}</label>
+      {% endfor %}
+      <label><input type="checkbox" name="all_products" value="1"> Усі товари магазину</label>
+    </fieldset>
+    <div role="group">
+      <button type="button" class="secondary" hx-post="/app/catalog/prices/preview" hx-include="closest form">Переглянути</button>
+      <button type="button" hx-post="/app/catalog/prices/apply" hx-include="closest form"
+              hx-confirm="Застосувати зміну до всіх обраних товарів?">Застосувати</button>
+    </div>
+  </form>
+  <div id="price-result"></div>
+</article>
+<article>
+  <header>Імпорт товарів з CSV <small>(лише оновлює наявні товари)</small></header>
+  <p><small>UTF-8, роздільник «;» або «,», перший рядок — назви колонок: <code>model</code> або <code>product_id</code>
+    і будь-які з <code>price, sku, name, status, sort_order, weight, length, width, height</code>. Порожня клітинка
+    залишає значення. Залишки й картинки не імпортуються. До 1 МБ і 5000 рядків.</small></p>
+  <form hx-encoding="multipart/form-data" hx-target="#import-result">
+    <input type="file" name="file" accept=".csv,text/csv" aria-label="CSV-файл" required>
+    <div role="group">
+      <button type="button" class="secondary" hx-post="/app/catalog/import/preview" hx-include="closest form"
+              hx-encoding="multipart/form-data">Переглянути</button>
+      <button type="button" hx-post="/app/catalog/import/apply" hx-include="closest form" hx-encoding="multipart/form-data"
+              hx-confirm="Оновити товари з файлу?">Імпортувати</button>
+    </div>
+  </form>
+  <div id="import-result"></div>
+</article>
+{% endblock %}

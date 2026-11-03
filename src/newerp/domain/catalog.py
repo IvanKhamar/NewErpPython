@@ -5,7 +5,7 @@ import re
 from collections.abc import Iterable, Mapping, Sequence, Set
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 from newerp.domain.common import DomainError
 
@@ -222,3 +222,42 @@ def without_new_tag(tags: str) -> str:
     """The product's tags without "тема:NEW" (any case), the rest kept in their order."""
     kept = [t.strip() for t in tags.split(",") if t.strip() and t.strip().casefold() != NEW_TAG.casefold()]
     return ",".join(kept)
+
+
+# ── Mass price changes (the old admin's "Масове керування цінами") ──
+
+
+class PriceOperation(StrEnum):
+    ADD = "add"
+    SUBTRACT = "subtract"
+    MULTIPLY = "multiply"
+    DIVIDE = "divide"
+
+
+class PriceUnit(StrEnum):
+    AMOUNT = "amount"  # hryvnias
+    PERCENT = "percent"  # of the current price
+
+
+def changed_price(price: Decimal, operation: PriceOperation, amount: Decimal, unit: PriceUnit) -> Decimal:
+    """The new price, rounded to whole hryvnias as the shop's prices are, never below zero."""
+    if amount < 0:
+        raise DomainError("Число має бути додатним.")
+    step = price * amount / 100 if unit == PriceUnit.PERCENT else amount
+    if operation == PriceOperation.ADD:
+        result = price + step
+    elif operation == PriceOperation.SUBTRACT:
+        result = price - step
+    elif operation == PriceOperation.MULTIPLY:
+        result = price * amount
+    else:
+        if amount == 0:
+            raise DomainError("На нуль ділити не можна.")
+        result = price / amount
+    return max(result, Decimal(0)).quantize(Decimal(1), ROUND_HALF_UP)
+
+
+def sale_percent(percent: Decimal) -> Decimal:
+    if not Decimal(0) < percent < Decimal(100):
+        raise DomainError("Знижка має бути від 1 до 99 %.")
+    return percent

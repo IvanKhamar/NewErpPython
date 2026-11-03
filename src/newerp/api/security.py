@@ -132,6 +132,8 @@ class Policies:
     FINANCE_SETUP = (Roles.ADMIN,)
     # Deleting an order cannot be undone: the admin only, and only an order nothing else points to.
     ORDER_DELETE = (Roles.ADMIN,)
+    # Changing many products at once (mass prices, the CSV import): the admin only.
+    CATALOG_BULK = (Roles.ADMIN,)
 
 
 # Every response gets these headers (SecurityHeaders.cs).

@@ -67,13 +67,16 @@ class SqlProductStore:
                 DdProduct.status,
                 DdProduct.quantity,
                 DdProduct.image,
+                DdProduct.date_modified,
             )  # fmt: skip
             .order_by(name, DdProduct.product_id)
             .offset((f.page - 1) * f.page_size)
             .limit(f.page_size)
         )
         items = [
-            ProductListItem(id=r[0], name=r[1], model=r[2], price=r[3], enabled=r[4], quantity=r[5], image=r[6])
+            ProductListItem(
+                id=r[0], name=r[1], model=r[2], price=r[3], enabled=r[4], quantity=r[5], image=r[6], date_modified=r[7]
+            )
             for r in rows
         ]
         return PagedResult[ProductListItem](items=items, page=f.page, page_size=f.page_size, total_count=total or 0)

@@ -34,6 +34,7 @@ class ProductListItem(Dto):
     enabled: bool
     quantity: int
     image: str | None
+    date_modified: datetime | None = None  # for the quick price edit in the list, like the card's
 
 
 class ProductSize(Dto):

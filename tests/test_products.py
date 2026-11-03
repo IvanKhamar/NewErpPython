@@ -114,6 +114,7 @@ def test_list_filters_pages_card_and_lookups(api, catalog):
     assert [p["id"] for p in everything["items"]] == [71, CATEGORY_PRODUCT_ID, 70, 72]  # by name
     assert next(p for p in everything["items"] if p["id"] == 70) == {
         "id": 70, "name": "Сукня лляна", "model": "SL-01", "price": 1500, "enabled": True, "quantity": 6, "image": None,
+        "dateModified": "2026-10-01T10:00:00",  # Python first: the list's quick price edit sends it back
     }  # fmt: skip
     assert ids("?categoryId=30&enabled=true") == [70, 72]
     assert ids("?labelId=1") == [70]

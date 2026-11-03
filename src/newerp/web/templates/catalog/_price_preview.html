@@ -1,0 +1,17 @@
+<p>Товарів у виборі: {{ preview.total }}, зміниться: {{ preview.changed }}{% if preview.changed > preview.rows|length %} (показано перші {{ preview.rows|length }}){% endif %}.</p>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>№</th><th>Товар</th><th>Модель</th><th class="num">{{ "Знижка, % було" if target == "sale" else "Ціна була" }}</th><th class="num">Стане</th></tr></thead>
+  <tbody>
+  {% for row in preview.rows %}
+    <tr>
+      <td>{{ row.product_id }}</td><td>{{ row.name }}</td><td>{{ row.model }}</td>
+      <td class="num">{{ row.old|qty if row.old is not none else "—" }}</td>
+      <td class="num">{{ row.new|qty if row.new is not none else "—" }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Нічого не зміниться.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>

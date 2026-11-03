@@ -1,0 +1,10 @@
+{# The price of a list row, saved on change with the row's version (the old list's quick edit). #}
+<td class="num" id="price-{{ product.id }}">
+  {% if product.date_modified %}
+  <form hx-post="/app/catalog/products/{{ product.id }}/price" hx-trigger="change" hx-target="#price-{{ product.id }}" hx-swap="outerHTML">
+    <input type="hidden" name="date_modified" value="{{ product.date_modified.isoformat() }}">
+    <input name="price" value="{{ product.price|qty }}" inputmode="decimal" aria-label="Ціна {{ product.name }}" size="7">
+  </form>
+  {% else %}{{ product.price|money }}{% endif %}
+  {% if error %}<small class="error" role="alert">{{ error }}</small>{% elif saved %}<small class="ok">збережено</small>{% endif %}
+</td>

@@ -82,9 +82,9 @@ missing in all three new versions, so every item is Python first):
 | 41 | Shipping cost from Nova Poshta in a new order | `sale/quick_order` getShippingCost | done (`POST /orders/new/shipping-cost`; weight times quantity, the old site counted each product once) |
 | 42 | Order delete: admin only, the status handlers give the stock back first, logged | `sale/order` delete | done (`DELETE /orders/{id}`; refused with a waybill, cheque, bank payment, return or gift voucher) |
 | 43 | Product editing: create, edit (name, description, price, model, SKU, status, images, options and sizes, attributes, SEO), copy, enable and disable | `catalog/product` | done (`POST /catalog/products`, `GET /{id}/edit`, `PUT /{id}`, `POST /{id}/copy`; pages `/app/catalog/products/new` and `/{id}/edit`. Attributes, options other than sizes and downloads come with 49; picture upload is paths only for now) |
-| 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | |
+| 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | done (price edit in the list with the row's version; `POST /catalog/products/import/preview` and `/import`, admin only: UTF-8 CSV by model or product_id, updates only, no stock and no picture downloads, which the old importer fetched from any URL) |
 | 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | done (`POST /catalog/products/remove-new`) |
-| 46 | Mass price control (by category, manufacturer, percent or sum), with a preview before saving | `extension/module/price_control` | |
+| 46 | Mass price control (by category, manufacturer, percent or sum), with a preview before saving | `extension/module/price_control` | done (`POST /catalog/prices/preview` and `/apply`, admin only; price or sale percent by category, page `/app/catalog/prices`) |
 | 47 | Label dictionary and search presets | `catalog/label`, `catalog/search_preset` | |
 | 48 | Categories: create, edit, delete, rebuild the paths | `catalog/category` | |
 | 49 | Manufacturers, filters and filter groups, attributes and attribute groups, options, downloads | `catalog/manufacturer`, `filter`, `attribute`, `attribute_group`, `option`, `download` | |
