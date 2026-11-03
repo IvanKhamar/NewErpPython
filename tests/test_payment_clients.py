@@ -104,3 +104,25 @@ def test_without_keys_the_gateway_is_a_test_one_and_never_paid():
         "https://www.liqpay.ua/api/3/checkout?data="
     )
     assert asyncio.run(gateway.status("1")).error_code == "payment_not_found"
+
+
+def test_every_account_is_read_with_its_own_keys():
+    """The old admin's "business cards" were a second merchant read the same way, with keys written into the code;
+    here they are one more account in NEWERP_PRIVAT_BANK__ACCOUNTS, and an account without a token is skipped."""
+    seen: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.headers["id"], request.headers["token"]))
+        return httpx.Response(200, content=STATEMENT.encode("cp1251"))
+
+    accounts = [
+        PrivatBankAccount(id="main", token="secret-1"),
+        PrivatBankAccount(id="business-card", token="secret-2"),
+        PrivatBankAccount(id="not-ready", token=""),
+    ]
+    client = HttpPrivatBankClient(PrivatBankSettings(accounts=accounts), httpx.MockTransport(handler))
+
+    transactions = asyncio.run(client.fetch(date(2026, 10, 15), date(2026, 10, 16)))
+
+    assert seen == [("main", "secret-1"), ("business-card", "secret-2")]
+    assert len(transactions) == 4

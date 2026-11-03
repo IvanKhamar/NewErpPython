@@ -10,11 +10,11 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 
 from newerp.api.deps import Session
-from newerp.api.payments import Bank, LiqPay
+from newerp.api.payments import Bank, LiqPay, Monobank
 from newerp.api.security import Policies
 from newerp.application.payments import BankPaymentFilter, CreatePaymentLinkRequest, LinkPaymentRequest
 from newerp.domain.payments import MatchReason
-from newerp.web.common import BUSINESS_ERRORS, decimal_field, is_fragment, number, page_roles, render, undo
+from newerp.web.common import BUSINESS_ERRORS, WebUser, decimal_field, is_fragment, number, page_roles, render, undo
 
 router = APIRouter(
     prefix="/app/payments", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.FINANCE))]
@@ -139,34 +139,60 @@ async def set_visible(
 # ── The payments of an order (a section of the order card) ──
 
 
-async def _order_payments(request: Request, order_id: int, bank: Bank, liqpay: LiqPay, **context: Any):
+async def _order_payments(
+    request: Request, order_id: int, bank: Bank, liqpay: LiqPay, monobank: Monobank, **context: Any
+):
     return render(
         request,
         "payments/_order.html",
         order_id=order_id,
         payments=await bank.for_order(order_id),
         status=await liqpay.status(order_id),
+        mono_invoices=await monobank.for_order(order_id),
         **context,
     )
 
 
 @router.get("/orders/{order_id}")
-async def order_payments(request: Request, order_id: int, bank: Bank, liqpay: LiqPay) -> HTMLResponse:
+async def order_payments(
+    request: Request, order_id: int, bank: Bank, liqpay: LiqPay, monobank: Monobank
+) -> HTMLResponse:
     try:
-        return await _order_payments(request, order_id, bank, liqpay)
+        return await _order_payments(request, order_id, bank, liqpay, monobank)
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=str(error))
 
 
 @router.post("/orders/{order_id}/liqpay-link")
-async def liqpay_link(request: Request, order_id: int, bank: Bank, liqpay: LiqPay, amount: Field = "") -> HTMLResponse:
+async def liqpay_link(
+    request: Request, order_id: int, bank: Bank, liqpay: LiqPay, monobank: Monobank, amount: Field = ""
+) -> HTMLResponse:
     """A LiqPay payment link to send to the customer; an empty amount is what is left to pay."""
     try:
         sum_ = decimal_field(amount, "Сума") if amount.strip() else None
         link = await liqpay.create_link(order_id, CreatePaymentLinkRequest(amount=sum_))
     except BUSINESS_ERRORS as error:
-        return await _order_payments(request, order_id, bank, liqpay, error=str(error))
-    return await _order_payments(request, order_id, bank, liqpay, link=link)
+        return await _order_payments(request, order_id, bank, liqpay, monobank, error=str(error))
+    return await _order_payments(request, order_id, bank, liqpay, monobank, link=link)
+
+
+@router.post("/orders/{order_id}/mono-link")
+async def mono_link(
+    request: Request,
+    order_id: int,
+    user: WebUser,
+    bank: Bank,
+    liqpay: LiqPay,
+    monobank: Monobank,
+    amount: Field = "",
+) -> HTMLResponse:
+    """A monobank invoice for the order; an empty amount is the whole order."""
+    try:
+        sum_ = decimal_field(amount, "Сума") if amount.strip() else None
+        link = await monobank.create_link(order_id, CreatePaymentLinkRequest(amount=sum_), user.user_id)
+    except BUSINESS_ERRORS as error:
+        return await _order_payments(request, order_id, bank, liqpay, monobank, error=str(error))
+    return await _order_payments(request, order_id, bank, liqpay, monobank, mono_link=link)
 
 
 @router.post("/auto-match")

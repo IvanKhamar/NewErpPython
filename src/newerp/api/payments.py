@@ -7,8 +7,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 
 from newerp.api.deps import ClockDep, Session, get_order_queries
-from newerp.api.security import Policies, require_roles
+from newerp.api.security import CurrentPrincipal, Policies, require_roles
 from newerp.application.common import PagedResult
+from newerp.application.monobank import MonobankService, MonoCheckResult, MonoInvoiceDto, MonoLinkDto
 from newerp.application.payments import (
     AutoMatchResult,
     BankImportResult,
@@ -23,6 +24,7 @@ from newerp.application.payments import (
     PaymentSuggestionDto,
 )
 from newerp.config import get_settings
+from newerp.infrastructure.monobank import SqlMonoInvoiceStore, monobank_gateway
 from newerp.infrastructure.orders.queries import SqlOrderQueries
 from newerp.infrastructure.payments import SqlBankPaymentRepository, bank_statement_client, liqpay_gateway
 
@@ -113,3 +115,41 @@ async def liqpay_link(order_id: int, request: CreatePaymentLinkRequest, service:
 @order_router.get("/liqpay-status", summary="Чи оплачено замовлення через LiqPay")
 async def liqpay_status(order_id: int, service: LiqPay) -> LiqPayStatusDto:
     return await service.status(order_id)
+
+
+# ═══ monobank (Python first) ═══
+
+
+@lru_cache
+def get_monobank():
+    return monobank_gateway(get_settings().monobank)
+
+
+def get_monobank_service(
+    session: Session, clock: ClockDep, orders: Annotated[SqlOrderQueries, Depends(get_order_queries)]
+) -> MonobankService:
+    settings = get_settings().monobank
+    return MonobankService(
+        orders, SqlMonoInvoiceStore(session), get_monobank(), clock, settings.redirect_url, settings.check_days
+    )
+
+
+Monobank = Annotated[MonobankService, Depends(get_monobank_service)]
+mono_router = APIRouter(prefix="/payments/monobank", tags=["Оплати"], dependencies=finance)
+
+
+@order_router.post("/mono-link", summary="Рахунок monobank на оплату замовлення; без токена — тестовий (isTest)")
+async def mono_link(
+    order_id: int, request: CreatePaymentLinkRequest, principal: CurrentPrincipal, service: Monobank
+) -> MonoLinkDto:
+    return await service.create_link(order_id, request, principal.user_id)
+
+
+@order_router.get("/mono-invoices", summary="Рахунки monobank замовлення зі статусами")
+async def mono_invoices(order_id: int, service: Monobank) -> list[MonoInvoiceDto]:
+    return await service.for_order(order_id)
+
+
+@mono_router.post("/check", summary="Оновити статуси незавершених рахунків monobank за останні дні")
+async def mono_check(service: Monobank) -> MonoCheckResult:
+    return await service.check()

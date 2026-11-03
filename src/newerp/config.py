@@ -145,6 +145,22 @@ class PrivatBankSettings(BaseModel):
         return any(a.id and a.token.get_secret_value() for a in self.accounts)
 
 
+class MonobankSettings(BaseModel):
+    """monobank acquiring (plata by mono): the merchant token only in .env (NEWERP_MONOBANK__TOKEN). Without it a stub
+    makes test invoices that nobody can pay."""
+
+    token: SecretStr | None = None
+    base_url: str = "https://api.monobank.ua"
+    redirect_url: str = ""  # where the customer returns after paying (the storefront)
+    # How often unfinished invoices of the last check_days are asked about; 0: only by hand.
+    check_interval_minutes: int = 30
+    check_days: int = 3
+
+    @property
+    def is_configured(self) -> bool:
+        return self.token is not None and bool(self.token.get_secret_value().strip())
+
+
 class LiqPaySettings(BaseModel):
     base_url: str = "https://www.liqpay.ua"
     public_key: str = ""
@@ -268,6 +284,7 @@ class Settings(BaseSettings):
     checkbox: CheckboxSettings = CheckboxSettings()
     privat_bank: PrivatBankSettings = PrivatBankSettings()
     liq_pay: LiqPaySettings = LiqPaySettings()
+    monobank: MonobankSettings = MonobankSettings()
     sms_club: SmsClubSettings = SmsClubSettings()
     partner_feed: PartnerFeedSettings = PartnerFeedSettings()
     product_sort: ProductSortSettings = ProductSortSettings()

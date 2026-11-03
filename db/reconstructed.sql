@@ -1065,3 +1065,18 @@ CREATE TABLE `dd_custom_field_customer_group` (
   PRIMARY KEY (`custom_field_id`,`customer_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+
+-- ═══ Оплата monobank (модуль plata by mono старого сайту) ═══
+-- install() створює Id, InvoiceId, OrderId, SecretKey; status, amount, createdDate, modifiedDate модуль дописав пізніше
+-- (admin/model/extension/payment/mono.php updatePayment). Типи останніх вгадані: amount тут у гривнях, звірити.
+CREATE TABLE `dd_mono_orders` (
+  `Id` int NOT NULL AUTO_INCREMENT,
+  `InvoiceId` varchar(50) DEFAULT NULL,
+  `OrderId` int(10) DEFAULT NULL,
+  `SecretKey` varchar(51) DEFAULT NULL,
+  `status` varchar(32) DEFAULT NULL,
+  `amount` decimal(15,4) NOT NULL DEFAULT '0.0000',
+  `createdDate` datetime NULL,
+  `modifiedDate` datetime NULL,
+  PRIMARY KEY (`Id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

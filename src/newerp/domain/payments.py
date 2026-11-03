@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
-from enum import IntEnum, IntFlag
+from enum import IntEnum, IntFlag, StrEnum
 
 from newerp.domain.common import DomainError
 
@@ -203,3 +203,43 @@ def interpret_liqpay(status: str | None, error_code: str | None) -> LiqPayState:
     if not status and error_code is not None:
         raise DomainError(f"LiqPay відповів помилкою: {error_code}.")
     return LiqPayState.WAITING
+
+
+# ── monobank acquiring (plata by mono) ──
+
+
+class MonoState(StrEnum):
+    """The invoice statuses of the monobank API."""
+
+    CREATED = "created"
+    PROCESSING = "processing"
+    HOLD = "hold"
+    SUCCESS = "success"
+    FAILURE = "failure"
+    REVERSED = "reversed"
+    EXPIRED = "expired"
+
+
+MONO_FINAL = (MonoState.SUCCESS, MonoState.FAILURE, MonoState.REVERSED, MonoState.EXPIRED)
+MONO_LABELS = {
+    MonoState.CREATED: "Очікується оплата",
+    MonoState.PROCESSING: "Платіж обробляється",
+    MonoState.HOLD: "Кошти заблоковано",
+    MonoState.SUCCESS: "Успішна оплата",
+    MonoState.FAILURE: "Невдала оплата",
+    MonoState.REVERSED: "Оплата повернена",
+    MonoState.EXPIRED: "Рахунок прострочено",
+}
+
+
+def mono_state(status: str | None) -> MonoState | None:
+    """None for a status the ERP does not know yet (shown as "waits for an update", as on the old site)."""
+    try:
+        return MonoState(status or "")
+    except ValueError:
+        return None
+
+
+def to_kopecks(amount: Decimal) -> int:
+    """monobank counts in kopecks: 300.50 UAH → 30050."""
+    return int((amount * 100).quantize(Decimal(1), ROUND_HALF_EVEN))

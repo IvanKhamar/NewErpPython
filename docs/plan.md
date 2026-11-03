@@ -93,8 +93,8 @@ missing in all three new versions, so every item is Python first):
 | 52 | Maintenance: rebuild the filters and size filters, recount pre-order quantities | `tool/console` | done (`POST /catalog/prices/size-filters`, admin only: every product gets exactly the size filters of its sizes; the pre-order recount was already `POST /preorders/settle` and its Celery task) |
 | 53 | Customer card: edit, unlock, log in as the customer, balance transactions, reward points, IP list, history | `customer/customer` | done (`GET /customers/{id}/edit`, `PUT /customers/{id}` with addresses (no password), `/account`, `/transactions`, `/rewards`, `/unlock`; `POST /customers/{id}/login-link`, admin only: a one-time storefront link that a Celery task expires after `NEWERP_CUSTOMERS__LOGIN_LINK_MINUTES`) |
 | 54 | Customer groups, customer approval, custom fields | `customer/customer_group`, `customer_approval`, `custom_field` | done (`/customers/groups`, `/customers/approvals`, `/customers/custom-fields`; groups and fields admin only; page `/app/customers/settings`) |
-| 55 | monobank: payment check, payment list, matching with orders | `extension/payment/mono` | |
-| 56 | PrivatBank business cards: their payments next to the statement | `sale/privatbank` checkBusinessCards | |
+| 55 | monobank: payment check, payment list, matching with orders | `extension/payment/mono` | done (`POST /orders/{id}/mono-link`, `GET /orders/{id}/mono-invoices`, `POST /payments/monobank/check` and its Celery task; token in `NEWERP_MONOBANK__TOKEN`, test invoices without it; TLS checks and a timeout, which the old module turned off) |
+| 56 | PrivatBank business cards: their payments next to the statement | `sale/privatbank` checkBusinessCards | done (already in phase 9: the business cards are more accounts in `NEWERP_PRIVAT_BANK__ACCOUNTS`, read with the same statement API; the old code had their tokens written into it) |
 | 57 | Marketing tracking codes | `marketing/marketing` | |
 | 58 | Gift vouchers: sending by e-mail, editing the voucher themes | `sale/voucher` send, `sale/voucher_theme` | |
 | 59 | Klaviyo: customer and subscriber exports, events | `extension/module/klaviyo` | |

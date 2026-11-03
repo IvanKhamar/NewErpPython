@@ -20,6 +20,7 @@ from newerp.application.common import SystemClock
 from newerp.application.competitors import CompetitorService
 from newerp.application.customer_admin import CustomerAdminService
 from newerp.application.delivery.services import DeliveryService
+from newerp.application.monobank import MonobankService
 from newerp.application.stock.alerts import LowStockAlertOptions, LowStockAlertService
 from newerp.config import Settings, get_settings
 from newerp.infrastructure.cashbox.checkbox import checkbox_client
@@ -29,6 +30,8 @@ from newerp.infrastructure.competitors import HttpPageFetcher, SqlCompetitorStor
 from newerp.infrastructure.customer_admin import SqlCustomerAdminStore
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
 from newerp.infrastructure.delivery.repositories import SqlShipmentRepository
+from newerp.infrastructure.monobank import SqlMonoInvoiceStore, monobank_gateway
+from newerp.infrastructure.orders.queries import SqlOrderQueries
 from newerp.infrastructure.sms import sms_sender
 from newerp.infrastructure.stock.repositories import SqlStockRepository
 
@@ -151,6 +154,12 @@ def beat_schedule_for(config: Settings) -> dict[str, dict]:
     # Without phones there is no one to tell.
     if config.stock.alert_phones and (alert_at := daily_at(config.stock.alert_time, "stock.alert_time")) is not None:
         schedule["stock-low-stock-alert"] = {"task": "stock.low_stock_alert", "schedule": alert_at}
+    # Without a token the stub has no invoices to ask about.
+    if config.monobank.is_configured and config.monobank.check_interval_minutes > 0:
+        schedule["payments-mono-check"] = {
+            "task": "payments.mono_check",
+            "schedule": config.monobank.check_interval_minutes * 60,
+        }
     if config.customers.login_link_minutes > 0:
         schedule["customers-expire-login-links"] = {"task": "customers.expire_login_links", "schedule": 60}
     # Without a key the stub has no waybills to track.
@@ -177,5 +186,24 @@ def customers_expire_login_links() -> int:
             settings.customers.login_link_minutes,
         )
         return await service.expire_login_links()
+
+    return asyncio.run(with_session(work))
+
+
+@app.task(name="payments.mono_check")
+def payments_mono_check() -> dict:
+    """Asks monobank about the unfinished invoices of the last days (the old admin's "check payments")."""
+
+    async def work(session: AsyncSession) -> dict:
+        mono = settings.monobank
+        service = MonobankService(
+            SqlOrderQueries(session, settings.language_id),
+            SqlMonoInvoiceStore(session),
+            monobank_gateway(mono),
+            SystemClock(),
+            mono.redirect_url,
+            mono.check_days,
+        )
+        return (await service.check()).model_dump(by_alias=True)
 
     return asyncio.run(with_session(work))

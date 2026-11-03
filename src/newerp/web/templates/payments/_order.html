@@ -22,3 +22,25 @@
   <input name="amount" inputmode="decimal" placeholder="Сума (порожньо — залишок до оплати)" aria-label="Сума">
   <button type="submit" class="outline">Посилання LiqPay</button>
 </form>
+<p>monobank:</p>
+{% if mono_invoices %}
+<table>
+  <tbody>
+  {% for invoice in mono_invoices %}
+    <tr>
+      <td>{{ invoice.created|when if invoice.created else "" }}</td>
+      <td>{% if invoice.paid %}<strong>{{ invoice.label }}</strong>{% else %}{{ invoice.label }}{% endif %}</td>
+      <td class="num">{{ invoice.amount|money }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% if mono_link %}
+<p class="ok">Рахунок monobank на {{ mono_link.amount|money }} грн{% if mono_link.is_test %} (тестовий, не оплачується){% endif %}:</p>
+<input readonly value="{{ mono_link.url }}" aria-label="Посилання на оплату monobank">
+{% endif %}
+<form hx-post="/app/payments/orders/{{ order_id }}/mono-link" hx-target="#order-payments" role="group">
+  <input name="amount" inputmode="decimal" placeholder="Сума (порожньо — усе замовлення)" aria-label="Сума monobank">
+  <button type="submit" class="outline">Рахунок monobank</button>
+</form>
