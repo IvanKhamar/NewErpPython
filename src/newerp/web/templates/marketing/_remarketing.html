@@ -1,6 +1,6 @@
 {% from "_macros.html" import messages %}
 {{ messages(error, (), saved) }}
-<form hx-post="/app/marketing/remarketing" hx-target="#remarketing">
+<form hx-post="{{ action|default('/app/marketing/remarketing') }}" hx-target="#{{ target|default('remarketing') }}">
 {% for group in groups %}
 <details{% if loop.first %} open{% endif %}>
   <summary>{{ group.name }} <small>({{ group.settings|length }})</small></summary>

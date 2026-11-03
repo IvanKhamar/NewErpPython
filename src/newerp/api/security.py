@@ -132,6 +132,8 @@ class Policies:
     FINANCE_SETUP = (Roles.ADMIN,)
     # Deleting an order cannot be undone: the admin only, and only an order nothing else points to.
     ORDER_DELETE = (Roles.ADMIN,)
+    # The old admin's users, groups, API keys, settings, logs, backups and uploads: the admin only.
+    ADMIN_TOOLS = (Roles.ADMIN,)
     # Integrations with outside services (Klaviyo switches and exports, Instagram update): the admin only.
     INTEGRATIONS = (Roles.ADMIN,)
     # Changing many products at once (mass prices, the CSV import): the admin only.

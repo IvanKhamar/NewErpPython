@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from newerp.api import (
+    administration,
     auth,
     cashbox,
     catalog,
@@ -81,6 +82,7 @@ app.include_router(marketing.router)
 app.include_router(marketing.feeds_router)
 app.include_router(marketing.order_router)
 app.include_router(returns.router)
+app.include_router(administration.router)
 app.include_router(customer_admin.router)  # before customers: its fixed paths win over /customers/{id}
 app.include_router(customers.router)
 app.include_router(reports.router)

@@ -254,6 +254,14 @@ class TikTokFeedSettings(BaseModel):
         return bool(self.token.get_secret_value().strip())
 
 
+class AdminToolsSettings(BaseModel):
+    """Files of the storefront the admin tools read, when the ERP runs where it can reach them (a shared volume):
+    OpenCart's error log and its folder of files customers uploaded. Empty: that tool is off."""
+
+    error_log: str = ""  # /var/www/storage/logs/error.log
+    upload_dir: str = ""  # /var/www/storage/upload
+
+
 class InstagramSettings(BaseModel):
     """The storefront's Instagram block. The access token stays where the old module keeps it (dd_setting), because
     it has to be refreshed and saved every month. image_dir: the storefront's image folder, when the ERP can write
@@ -332,6 +340,7 @@ class Settings(BaseSettings):
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
     tiktok_feed: TikTokFeedSettings = TikTokFeedSettings()
     instagram: InstagramSettings = InstagramSettings()
+    admin_tools: AdminToolsSettings = AdminToolsSettings()
     competitors: CompetitorSettings = CompetitorSettings()
     kafka: KafkaSettings = KafkaSettings()
 

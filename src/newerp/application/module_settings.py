@@ -113,3 +113,16 @@ REMARKETING = SettingRules(
     # Counters are raw JavaScript put on every page; custom SQL runs on the storefront's database.
     locked=re.compile(r"(counter|custom_sql|_route$)"),
 )
+
+
+STORE_CONFIG = SettingRules(
+    code="config",
+    prefix="config_",
+    # Mail and SMTP passwords, API keys, the encryption key, captcha secrets.
+    secret=re.compile(r"(password|_key$|key_|token|secret|encryption|captcha)"),
+    # Analytics and other code pasted into every page, the upload allowlists, security switches: OpenCart only.
+    locked=re.compile(
+        r"(analytics|_code$|robots|file_ext_allowed|file_mime_allowed|file_max_size|^config_secure$|"
+        r"^config_shared$|compression|error_|^config_api_id$)"
+    ),  # fmt: skip
+)

@@ -1,0 +1,113 @@
+{% from "_macros.html" import messages %}
+{% if tab == "settings" %}
+<p><small>Паролі й ключі тут лише «задано / не задано»; коди аналітики й дозволи файлів змінюються тільки в OpenCart.</small></p>
+{% include "marketing/_remarketing.html" %}
+
+{% else %}
+{{ messages(error, (), saved) }}
+{% if tab == "groups" %}
+<p><small>Групи старої адмінки OpenCart: які сторінки група відкриває (перегляд) і змінює. Своя група завжди зберігає «user/user_permission».</small></p>
+{% for group in user_groups + [None] %}{% set id = group.id if group else 0 %}
+<details{% if not group and not user_groups %} open{% endif %}>
+  <summary>{{ group.name if group else "+ Нова група" }}{% if group %} <small>(користувачів: {{ group.users }})</small>{% endif %}</summary>
+  <form hx-post="/app/admin/groups/{{ id }}/save" hx-target="#admin-tab">
+    <label>Назва <input name="name" value="{{ group.name if group else '' }}" maxlength="64"></label>
+    <table>
+      <thead><tr><th>Сторінка</th><th>Перегляд</th><th>Зміна</th></tr></thead>
+      <tbody>
+      {% for route in routes %}
+        <tr>
+          <td><code>{{ route }}</code></td>
+          <td><input type="checkbox" name="access" value="{{ route }}"{% if group and route in group.access %} checked{% endif %} aria-label="Перегляд {{ route }}"></td>
+          <td><input type="checkbox" name="modify" value="{{ route }}"{% if group and route in group.modify %} checked{% endif %} aria-label="Зміна {{ route }}"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="grid">
+      <label>Ще сторінки для перегляду (через пробіл) <input name="access_more" placeholder="catalog/product"></label>
+      <label>Ще сторінки для зміни <input name="modify_more"></label>
+    </div>
+    <div role="group">
+      <button type="submit">{{ "Зберегти" if group else "Додати" }}</button>
+      {% if group %}<button type="button" class="secondary outline" hx-post="/app/admin/groups/{{ id }}/delete"
+        hx-target="#admin-tab" hx-confirm="Видалити групу?">Видалити</button>{% endif %}
+    </div>
+  </form>
+</details>
+{% endfor %}
+
+{% elif tab == "api" %}
+{% if new_key %}
+<article class="warning" role="alert">
+  <p><strong>Новий ключ API №{{ new_key.api_id }} — скопіюйте його зараз, більше його не буде показано:</strong></p>
+  <input readonly value="{{ new_key.key }}" aria-label="Новий ключ API">
+</article>
+{% endif %}
+<table>
+  <thead><tr><th>Користувач</th><th>Дозволені IP</th><th>Увімк.</th><th>Ключ</th><th class="num">Сесій</th><th></th></tr></thead>
+  <tbody>
+  {% for item in api_users + [None] %}{% set id = item.id if item else 0 %}
+    <tr>
+      <td><input form="api-{{ id }}" name="username" value="{{ item.username if item else '' }}" maxlength="64" aria-label="Користувач" placeholder="Новий користувач"></td>
+      <td><input form="api-{{ id }}" name="ips" value="{{ item.ips|join(' ') if item else '' }}" aria-label="IP"></td>
+      <td><input form="api-{{ id }}" type="checkbox" name="enabled" value="1"{% if not item or item.enabled %} checked{% endif %} aria-label="Увімкнений"></td>
+      <td>{% if item %}<span class="chip {{ 'received' if item.has_key else 'none' }}">{{ "задано" if item.has_key else "немає" }}</span>{% endif %}</td>
+      <td class="num">{{ item.sessions if item else "" }}</td>
+      <td>
+        <form id="api-{{ id }}" hx-post="/app/admin/api/{{ id }}/save" hx-target="#admin-tab" role="group">
+          <button type="submit">{{ "Зберегти" if item else "Додати" }}</button>
+          {% if item %}
+          <button type="button" class="secondary" hx-post="/app/admin/api/{{ id }}/key" hx-target="#admin-tab"
+            hx-confirm="Створити новий ключ? Старий одразу перестане працювати.">Новий ключ</button>
+          <button type="button" class="secondary outline" hx-post="/app/admin/api/{{ id }}/delete" hx-target="#admin-tab"
+            hx-confirm="Видалити користувача API?">Видалити</button>
+          {% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% elif tab == "log" %}
+{% if not log.enabled %}
+<p>Журнал не підключено: вкажіть файл у NEWERP_ADMIN_TOOLS__ERROR_LOG.</p>
+{% else %}
+<p>Розмір: {{ log.size }} байт{% if log.cut %}, показано кінець{% endif %}. Паролі й токени приховано.
+  <a href="/admin/error-log/download">Завантажити</a></p>
+<pre style="max-height: 30rem; overflow: auto">{{ log.text }}</pre>
+<button type="button" class="secondary outline" hx-post="/app/admin/log/0/clear" hx-target="#admin-tab"
+        hx-confirm="Очистити журнал помилок?">Очистити</button>
+{% endif %}
+
+{% elif tab == "backup" %}
+<p>Копія таблиць магазину як SQL у gzip. Відновлення — лише з командного рядка: помилку там уже не скасувати.</p>
+<form action="/admin/backup.sql.gz" method="get">
+  <details>
+    <summary>Лише деякі таблиці (інакше — усі {{ tables|length }})</summary>
+    {% for table in tables %}<label><input type="checkbox" name="tables" value="{{ table }}"> {{ table }}</label>{% endfor %}
+  </details>
+  <button type="submit">Завантажити копію</button>
+</form>
+
+{% else %}
+<table>
+  <thead><tr><th>Файл</th><th>Код</th><th>Коли</th><th class="num">Розмір</th><th></th></tr></thead>
+  <tbody>
+  {% for item in uploads %}
+    <tr>
+      <td>{% if item.size is not none %}<a href="/admin/uploads/{{ item.id }}/file">{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</td>
+      <td><code>{{ item.code }}</code></td>
+      <td>{{ item.date_added|when if item.date_added else "" }}</td>
+      <td class="num">{{ item.size if item.size is not none else "—" }}</td>
+      <td><button type="button" class="secondary outline" hx-post="/app/admin/uploads/{{ item.id }}/delete" hx-target="#admin-tab"
+          hx-confirm="Видалити файл?">Видалити</button></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Файлів немає.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}

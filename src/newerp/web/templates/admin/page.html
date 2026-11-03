@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Адміністрування{% endblock %}
+{% block content %}
+<h1>Адміністрування</h1>
+<nav>
+  <ul>
+  {% for key, title in tabs %}
+    <li><a href="/app/admin?tab={{ key }}"{% if key == tab %} aria-current="page"{% endif %}>{{ title }}</a></li>
+  {% endfor %}
+  </ul>
+</nav>
+<div id="admin-tab">{% include "admin/_tab.html" %}</div>
+{% endblock %}

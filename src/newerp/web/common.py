@@ -96,6 +96,7 @@ MENU = (
     MenuLink("Журнал крою й пошиву", "/app/production/log", Policies.STOCK),
     MenuLink("Бонуси", "/app/bonuses", Policies.BONUSES),
     MenuLink("Користувачі", "/app/users", Policies.USERS),
+    MenuLink("Адміністрування", "/app/admin", Policies.ADMIN_TOOLS),
 )
 
 

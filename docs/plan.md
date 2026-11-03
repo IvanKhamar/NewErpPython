@@ -101,12 +101,12 @@ missing in all three new versions, so every item is Python first):
 | 60 | TikTok Business: catalog sync | `extension/module/tiktok_business` | done as a catalog feed: `GET /feeds/tiktok.csv` with `NEWERP_TIKTOK_FEED__TOKEN` (TikTok reads a catalog by URL; the storefront pixel stays in the module) |
 | 61 | Instagram: image update | `extension/module/instagram` | done (`POST /marketing/instagram/update` and a Celery task: the token refreshed after 30 days, new posts into dd_instagram, pictures only from Instagram's CDN when `NEWERP_INSTAGRAM__IMAGE_DIR` is set) |
 | 62 | Remarketing module settings (pixels, feeds) | `extension/module/remarketing` | done (`/marketing/remarketing/settings`, admin only: the module's 184 settings by group; tokens, passwords and the Telegram bot only as "set" or "not set", JavaScript counters, custom SQL and lists read-only; page `/app/marketing/remarketing`) |
-| 63 | Settings page: the store settings in `dd_setting` | `setting/setting` | |
-| 64 | User groups with per-page permissions | `user/user_permission` | |
-| 65 | API users and keys | `user/api` | |
-| 66 | Error log viewer: view, download, clear | `tool/log` | |
-| 67 | Database backup download | `tool/backup` | |
-| 68 | Uploaded files: list, download, delete | `tool/upload` | |
+| 63 | Settings page: the store settings in `dd_setting` | `setting/setting` | done (`/admin/settings`: the `config` settings by group; passwords and keys only as "set", analytics code and file permissions read-only) |
+| 64 | User groups with per-page permissions | `user/user_permission` | done (`/admin/user-groups`: the OpenCart admin's groups and page permissions; the admin's own group keeps `user/user_permission`) |
+| 65 | API users and keys | `user/api` | done (`/admin/api-users`: IP lists, a server-made key shown once, sessions ended when it changes; OpenCart compares the key as text, so it cannot be a hash) |
+| 66 | Error log viewer: view, download, clear | `tool/log` | done (`/admin/error-log` with secrets masked, when `NEWERP_ADMIN_TOOLS__ERROR_LOG` is set) |
+| 67 | Database backup download | `tool/backup` | done (`/admin/backup.sql.gz`: dd_ and erp_ tables as SQL in gzip, logged; restore from the command line) |
+| 68 | Uploaded files: list, download, delete | `tool/upload` | done (`/admin/uploads` when `NEWERP_ADMIN_TOOLS__UPLOAD_DIR` is set; a path outside the folder is refused) |
 | 69 | Dictionaries: order statuses, return statuses, reasons and actions, stock statuses | `localisation/*` | |
 | 70 | Banners and SEO URLs | `design/banner`, `design/seo_url` | |
 | 71 | Standard reports: customer activity, searches, orders and transactions; products purchased; sales by order, coupon, return and shipping; marketing; statistics | `extension/report/*`, `report/statistics` | |
