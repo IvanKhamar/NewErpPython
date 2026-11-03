@@ -1,0 +1,39 @@
+{% from "_macros.html" import messages %}
+<form hx-post="/app/customers/{{ customer_id }}/edit" hx-target="#customer-edit">
+  {{ messages(error, (), saved) }}
+  <div class="grid">
+    <label>Ім'я <input name="firstname" value="{{ form.firstname }}" maxlength="32"></label>
+    <label>Прізвище <input name="lastname" value="{{ form.lastname }}" maxlength="32"></label>
+  </div>
+  <div class="grid">
+    <label>E-mail <input name="email" type="email" value="{{ form.email }}" maxlength="96" required></label>
+    <label>Телефон <input name="telephone" value="{{ form.telephone }}" maxlength="32"></label>
+    <label>Група
+      <select name="customer_group_id">
+        {% for group in groups %}
+        <option value="{{ group.id }}"{% if group.id == form.customer_group_id %} selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label><input type="checkbox" role="switch" name="enabled" value="1"{% if form.enabled %} checked{% endif %}> Обліковий запис увімкнений</label>
+  <label><input type="checkbox" name="newsletter" value="1"{% if form.newsletter %} checked{% endif %}> Розсилка</label>
+  <label><input type="checkbox" name="safe" value="1"{% if form.safe %} checked{% endif %}> Надійний (без перевірок на шахрайство)</label>
+  <table>
+    <thead><tr><th>Основна</th><th>Ім'я</th><th>Прізвище</th><th>Компанія</th><th>Адреса</th><th>Адреса 2</th><th>Місто</th><th>Індекс</th><th>Прибрати</th></tr></thead>
+    <tbody>
+    {% for address in form.addresses + [None] %}{% set id = address.id if address else 0 %}
+      <tr>
+        <td><input type="radio" name="default_address" value="{{ id }}"{% if address and address.default %} checked{% endif %} aria-label="Основна">
+          <input type="hidden" name="address_id" value="{{ id }}"></td>
+        {% for name in ("firstname", "lastname", "company", "address_1", "address_2", "city", "postcode") %}
+        <td><input name="address_{{ name }}" value="{{ address[name] if address else '' }}" aria-label="{{ name }}"></td>
+        {% endfor %}
+        <td>{% if address %}<input type="checkbox" name="remove_{{ id }}" value="1" aria-label="Прибрати">{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><small>Пароль тут не змінюється: покупець відновлює його на вітрині.</small></p>
+  <button type="submit">Зберегти</button>
+</form>

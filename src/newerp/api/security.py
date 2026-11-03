@@ -134,6 +134,9 @@ class Policies:
     ORDER_DELETE = (Roles.ADMIN,)
     # Changing many products at once (mass prices, the CSV import): the admin only.
     CATALOG_BULK = (Roles.ADMIN,)
+    # Customer groups and custom fields change the storefront's sign-up; logging in as a customer opens their account.
+    CUSTOMER_SETUP = (Roles.ADMIN,)
+    CUSTOMER_LOGIN_AS = (Roles.ADMIN,)
 
 
 # Every response gets these headers (SecurityHeaders.cs).

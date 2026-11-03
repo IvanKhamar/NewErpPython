@@ -46,4 +46,13 @@
   </div>
 </article>
 <article id="notes">{% include "customers/_notes.html" %}</article>
+<article id="customer-account" hx-get="/app/customers/{{ customer.id }}/account" hx-trigger="load">
+  <header>Баланс, бонуси, входи</header><p aria-busy="true">Завантаження…</p>
+</article>
+<article>
+  <details hx-get="/app/customers/{{ customer.id }}/edit" hx-trigger="toggle once" hx-target="#customer-edit">
+    <summary>Редагувати покупця й адреси</summary>
+    <div id="customer-edit"></div>
+  </details>
+</article>
 {% endblock %}

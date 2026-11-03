@@ -1,0 +1,89 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+{% set can_setup = user and user.role in setup_roles %}
+{% if tab == "approvals" %}
+<table>
+  <thead><tr><th>Покупець</th><th>E-mail</th><th>Тип</th><th>Коли</th><th></th></tr></thead>
+  <tbody>
+  {% for item in approvals %}
+    <tr>
+      <td><a href="/app/customers/{{ item.customer_id }}">{{ item.name }}</a></td><td>{{ item.email }}</td>
+      <td>{{ "партнер" if item.type == "affiliate" else "покупець" }}</td><td>{{ item.date_added|when }}</td>
+      <td role="group">
+        <button type="button" hx-post="/app/customers/settings/approvals/{{ item.customer_id }}/approve" hx-target="#customer-settings">Схвалити</button>
+        <button type="button" class="secondary outline" hx-post="/app/customers/settings/approvals/{{ item.customer_id }}/deny"
+                hx-target="#customer-settings" hx-confirm="Відхилити запит?">Відхилити</button>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Ніхто не чекає на схвалення.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif tab == "fields" %}
+{% for field in fields + [None] %}{% set id = field.id if field else 0 %}
+<details{% if not field and not fields %} open{% endif %}>
+  <summary>{{ field.name if field else "+ Нове поле" }}{% if field %} <small>({{ field.type }}, {{ field.location }})</small>{% endif %}</summary>
+  <form hx-post="/app/customers/settings/fields/{{ id }}/save" hx-target="#customer-settings">
+    <div class="grid">
+      <label>Назва <input name="name" value="{{ field.name if field else '' }}" maxlength="128"{% if not can_setup %} disabled{% endif %}></label>
+      <label>Тип
+        <select name="type">
+          {% for kind in ("text", "textarea", "select", "radio", "checkbox", "date", "time", "datetime") %}
+          <option value="{{ kind }}"{% if field and field.type == kind %} selected{% endif %}>{{ kind }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Де
+        <select name="location">
+          <option value="account"{% if field and field.location == "account" %} selected{% endif %}>обліковий запис</option>
+          <option value="address"{% if field and field.location == "address" %} selected{% endif %}>адреса</option>
+        </select>
+      </label>
+      <label>Порядок <input name="sort_order" value="{{ field.sort_order if field else 0 }}" inputmode="numeric"></label>
+    </div>
+    <label>Перевірка (регулярний вираз) <input name="validation" value="{{ field.validation if field else '' }}" maxlength="255"></label>
+    <label>Варіанти (по одному в рядку; для списку, перемикача, прапорців)
+      <textarea name="values" rows="3">{{ field['values']|join("\n") if field else "" }}</textarea></label>
+    <fieldset><legend>Групи покупців</legend>
+      {% for group in groups %}
+      <label><input type="checkbox" name="customer_group_ids" value="{{ group.id }}"{% if field and group.id in field.customer_group_ids %} checked{% endif %}> {{ group.name }}</label>
+      {% endfor %}
+    </fieldset>
+    <label><input type="checkbox" name="required" value="1"{% if field and field.required %} checked{% endif %}> Обов'язкове</label>
+    <label><input type="checkbox" name="enabled" value="1"{% if not field or field.enabled %} checked{% endif %}> Увімкнене</label>
+    {% if can_setup %}
+    <div role="group">
+      <button type="submit">{{ "Зберегти" if field else "Додати" }}</button>
+      {% if field %}<button type="button" class="secondary outline" hx-post="/app/customers/settings/fields/{{ id }}/delete"
+        hx-target="#customer-settings" hx-confirm="Видалити поле?">Видалити</button>{% endif %}
+    </div>
+    {% endif %}
+  </form>
+</details>
+{% endfor %}
+{% else %}
+<table>
+  <thead><tr><th>Назва</th><th>Опис</th><th>Схвалення</th><th>Порядок</th><th class="num">Покупців</th><th></th></tr></thead>
+  <tbody>
+  {% for group in groups + [None] %}{% set id = group.id if group else 0 %}
+    <tr>
+      <td><input form="group-{{ id }}" name="name" value="{{ group.name if group else '' }}" maxlength="32" aria-label="Назва" placeholder="Нова група"></td>
+      <td><input form="group-{{ id }}" name="description" value="{{ group.description if group else '' }}" aria-label="Опис"></td>
+      <td><input form="group-{{ id }}" type="checkbox" name="approval" value="1"{% if group and group.approval %} checked{% endif %} aria-label="Схвалення"></td>
+      <td><input form="group-{{ id }}" name="sort_order" value="{{ group.sort_order if group else 0 }}" size="3" aria-label="Порядок"></td>
+      <td class="num">{{ group.customers if group else "" }}</td>
+      <td>
+        {% if can_setup %}
+        <form id="group-{{ id }}" hx-post="/app/customers/settings/groups/{{ id }}/save" hx-target="#customer-settings" role="group">
+          <button type="submit">{{ "Зберегти" if group else "Додати" }}</button>
+          {% if group %}<button type="button" class="secondary outline" hx-post="/app/customers/settings/groups/{{ id }}/delete"
+            hx-target="#customer-settings" hx-confirm="Видалити групу?">Видалити</button>{% endif %}
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}

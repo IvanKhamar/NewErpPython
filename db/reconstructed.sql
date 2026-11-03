@@ -987,3 +987,81 @@ ALTER TABLE `dd_question`
   ADD COLUMN `status` tinyint(1) NOT NULL DEFAULT '0',
   ADD COLUMN `date_question` date NULL,
   ADD COLUMN `image` varchar(255) NULL;
+
+-- ═══ Покупці: IP, спроби входу, схвалення, групи, власні поля (стандартні таблиці OpenCart 3, install/opencart.sql) ═══
+CREATE TABLE `dd_customer_ip` (
+  `customer_ip_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) NOT NULL,
+  `ip` varchar(40) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`customer_ip_id`),
+  KEY `ip` (`ip`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_login` (
+  `customer_login_id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(96) NOT NULL,
+  `ip` varchar(40) NOT NULL,
+  `total` int(4) NOT NULL,
+  `date_added` datetime NOT NULL,
+  `date_modified` datetime NOT NULL,
+  PRIMARY KEY (`customer_login_id`),
+  KEY `email` (`email`),
+  KEY `ip` (`ip`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_approval` (
+  `customer_approval_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) NOT NULL,
+  `type` varchar(9) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`customer_approval_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_group` (
+  `customer_group_id` int(11) NOT NULL AUTO_INCREMENT,
+  `approval` int(1) NOT NULL,
+  `sort_order` int(3) NOT NULL,
+  PRIMARY KEY (`customer_group_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_custom_field` (
+  `custom_field_id` int(11) NOT NULL AUTO_INCREMENT,
+  `type` varchar(32) NOT NULL,
+  `value` text NOT NULL,
+  `validation` varchar(255) NOT NULL,
+  `location` varchar(10) NOT NULL,
+  `status` tinyint(1) NOT NULL,
+  `sort_order` int(3) NOT NULL,
+  PRIMARY KEY (`custom_field_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_custom_field_description` (
+  `custom_field_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `name` varchar(128) NOT NULL,
+  PRIMARY KEY (`custom_field_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_custom_field_value` (
+  `custom_field_value_id` int(11) NOT NULL AUTO_INCREMENT,
+  `custom_field_id` int(11) NOT NULL,
+  `sort_order` int(3) NOT NULL,
+  PRIMARY KEY (`custom_field_value_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_custom_field_value_description` (
+  `custom_field_value_id` int(11) NOT NULL,
+  `language_id` int(11) NOT NULL,
+  `custom_field_id` int(11) NOT NULL,
+  `name` varchar(128) NOT NULL,
+  PRIMARY KEY (`custom_field_value_id`,`language_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_custom_field_customer_group` (
+  `custom_field_id` int(11) NOT NULL,
+  `customer_group_id` int(11) NOT NULL,
+  `required` tinyint(1) NOT NULL,
+  PRIMARY KEY (`custom_field_id`,`customer_group_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+

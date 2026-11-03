@@ -1,0 +1,47 @@
+{% from "_macros.html" import messages %}
+<header>Баланс, бонуси, входи</header>
+{{ messages(error, (), saved) }}
+<div class="grid">
+  <div>
+    <p>Баланс: <strong>{{ account.balance|money }} грн</strong></p>
+    <form hx-post="/app/customers/{{ account.customer_id }}/account/transaction" hx-target="#customer-account" role="group">
+      <input name="description" placeholder="За що" maxlength="255" aria-label="За що">
+      <input name="amount" placeholder="+100 або -50" inputmode="decimal" aria-label="Сума" size="8">
+      <button type="submit" class="secondary">Змінити баланс</button>
+    </form>
+    <table>
+      <tbody>
+      {% for item in account.transactions[:10] %}
+        <tr><td>{{ item.date_added|when }}</td><td>{{ item.description }}</td><td class="num">{{ item.amount|money }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <p>Бонусні бали: <strong>{{ account.reward_points }}</strong></p>
+    <form hx-post="/app/customers/{{ account.customer_id }}/account/reward" hx-target="#customer-account" role="group">
+      <input name="description" placeholder="За що" maxlength="255" aria-label="За що">
+      <input name="amount" placeholder="+50 або -20" inputmode="numeric" aria-label="Бали" size="6">
+      <button type="submit" class="secondary">Змінити бали</button>
+    </form>
+    <table>
+      <tbody>
+      {% for item in account.rewards[:10] %}
+        <tr><td>{{ item.date_added|when }}</td><td>{{ item.description }}</td><td class="num">{{ item.points }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p>IP-адреси:
+  {% for ip in account.ips %}{{ ip.ip }}{% if ip.customers > 1 %} <span class="chip warning">ще {{ ip.customers - 1 }} покупців</span>{% endif %}{% if not loop.last %}, {% endif %}{% else %}немає{% endfor %}
+</p>
+<p>Невдалих входів: {{ account.failed_logins }}
+  {% if account.failed_logins %}<button type="button" class="secondary outline" hx-post="/app/customers/{{ account.customer_id }}/account/unlock"
+    hx-target="#customer-account">Розблокувати</button>{% endif %}
+</p>
+{% if user and user.role in login_roles %}
+<button type="button" class="secondary" hx-post="/app/customers/{{ account.customer_id }}/login-link" hx-target="#login-link"
+        hx-confirm="Створити одноразове посилання для входу на вітрину як цей покупець?">Увійти як покупець</button>
+<div id="login-link"></div>
+{% endif %}

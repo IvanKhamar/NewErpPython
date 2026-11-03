@@ -61,6 +61,7 @@ MENU = (
     MenuLink("Нове замовлення", "/app/orders/new", Policies.ORDERS),
     MenuLink("Повернення", "/app/returns", Policies.ORDERS),
     MenuLink("Покупці", "/app/customers", Policies.ORDERS),
+    MenuLink("Налаштування покупців", "/app/customers/settings", Policies.ORDERS),
     MenuLink("Доставка", "/app/delivery", Policies.ORDERS),
     MenuLink("Товари", "/app/catalog/products", Policies.ORDERS),
     MenuLink("Порядок товарів", "/app/catalog/sort", Policies.ORDERS),

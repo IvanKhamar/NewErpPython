@@ -10,6 +10,7 @@ from newerp.api import (
     cashbox,
     catalog,
     competitors,
+    customer_admin,
     customers,
     delivery,
     health,
@@ -78,6 +79,7 @@ app.include_router(pre_orders.router)
 app.include_router(marketing.router)
 app.include_router(marketing.order_router)
 app.include_router(returns.router)
+app.include_router(customer_admin.router)  # before customers: its fixed paths win over /customers/{id}
 app.include_router(customers.router)
 app.include_router(reports.router)
 app.include_router(reports.feed_router)

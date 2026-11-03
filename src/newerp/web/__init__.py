@@ -16,6 +16,7 @@ from newerp.web import (
     catalog_dictionaries,
     competitors,
     content,
+    customer_admin,
     customers,
     delivery,
     home,
@@ -35,9 +36,10 @@ from newerp.web.common import HERE, PageForbidden, Redirect, render
 
 def add_web(app: FastAPI) -> None:
     app.mount("/app/static", StaticFiles(directory=HERE / "static"), name="web-static")
-    modules = (auth, home, orders, returns, customers, delivery, cashbox, payments, catalog, catalog_dictionaries,
-               content, marketing, partners, competitors, reports, stock, production, production_specs,
-               users)  # fmt: skip
+    # customer_admin before customers: /app/customers/settings must not be read as a customer number.
+    modules = (auth, home, orders, returns, customer_admin, customers, delivery, cashbox, payments, catalog,
+               catalog_dictionaries, content, marketing, partners, competitors, reports, stock, production,
+               production_specs, users)  # fmt: skip
     for module in modules:
         app.include_router(module.router)
 

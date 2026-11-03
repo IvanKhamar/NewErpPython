@@ -18,6 +18,7 @@ from newerp.application.cashbox.services import CashboxService
 from newerp.application.catalog.pre_orders import PreOrderService
 from newerp.application.common import SystemClock
 from newerp.application.competitors import CompetitorService
+from newerp.application.customer_admin import CustomerAdminService
 from newerp.application.delivery.services import DeliveryService
 from newerp.application.stock.alerts import LowStockAlertOptions, LowStockAlertService
 from newerp.config import Settings, get_settings
@@ -25,6 +26,7 @@ from newerp.infrastructure.cashbox.checkbox import checkbox_client
 from newerp.infrastructure.cashbox.repository import SqlCashboxRepository
 from newerp.infrastructure.catalog.pre_orders import SqlPreOrderStore
 from newerp.infrastructure.competitors import HttpPageFetcher, SqlCompetitorStore
+from newerp.infrastructure.customer_admin import SqlCustomerAdminStore
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
 from newerp.infrastructure.delivery.repositories import SqlShipmentRepository
 from newerp.infrastructure.sms import sms_sender
@@ -149,6 +151,8 @@ def beat_schedule_for(config: Settings) -> dict[str, dict]:
     # Without phones there is no one to tell.
     if config.stock.alert_phones and (alert_at := daily_at(config.stock.alert_time, "stock.alert_time")) is not None:
         schedule["stock-low-stock-alert"] = {"task": "stock.low_stock_alert", "schedule": alert_at}
+    if config.customers.login_link_minutes > 0:
+        schedule["customers-expire-login-links"] = {"task": "customers.expire_login_links", "schedule": 60}
     # Without a key the stub has no waybills to track.
     if config.nova_poshta.tracking_key is not None and config.nova_poshta.tracking_interval_minutes > 0:
         schedule["delivery-refresh-tracking"] = {
@@ -159,3 +163,19 @@ def beat_schedule_for(config: Settings) -> dict[str, dict]:
 
 
 app.conf.beat_schedule = beat_schedule_for(settings)
+
+
+@app.task(name="customers.expire_login_links")
+def customers_expire_login_links() -> int:
+    """Removes "log in as the customer" tokens older than their few minutes, if the storefront has not used them."""
+
+    async def work(session: AsyncSession) -> int:
+        service = CustomerAdminService(
+            SqlCustomerAdminStore(session, settings.language_id),
+            SystemClock(),
+            settings.customers.store_url,
+            settings.customers.login_link_minutes,
+        )
+        return await service.expire_login_links()
+
+    return asyncio.run(with_session(work))

@@ -24,6 +24,9 @@ class DdCustomer(Base):
     address_id: Mapped[int] = mapped_column(default=0)  # the default address
     status: Mapped[bool]
     date_added: Mapped[datetime]
+    # Read only when asked: "safe" skips the fraud checks; token is the one-time login link of "log in as".
+    safe: Mapped[bool] = mapped_column(default=False, deferred=True)
+    token: Mapped[str] = mapped_column(Text, default="", deferred=True)
 
 
 class DdCustomerGroupDescription(Base):
@@ -44,6 +47,11 @@ class DdAddress(Base):
     address_1: Mapped[str] = mapped_column(String(128))
     address_2: Mapped[str] = mapped_column(String(128))
     city: Mapped[str] = mapped_column(String(128))
+    company: Mapped[str] = mapped_column(String(40), default="", deferred=True)
+    postcode: Mapped[str] = mapped_column(String(10), default="", deferred=True)
+    country_id: Mapped[int] = mapped_column(default=0, deferred=True)
+    zone_id: Mapped[int] = mapped_column(default=0, deferred=True)
+    custom_field: Mapped[str] = mapped_column(Text, default="", deferred=True)
 
 
 class DdCustomerHistory(Base):

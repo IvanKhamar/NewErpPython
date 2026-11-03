@@ -183,6 +183,13 @@ class ProductSortSettings(BaseModel):
     default_days: int = 90
 
 
+class CustomerSettings(BaseModel):
+    """Logging in as a customer opens the storefront: its address, and how long the one-time link works."""
+
+    store_url: str = ""  # https://vidro.example/ (the storefront's base address)
+    login_link_minutes: int = 5
+
+
 class PreOrderSettings(BaseModel):
     # How often what was sold ahead is taken off the limits (minutes); 0: only by hand (POST /preorders/settle).
     settle_interval_minutes: int = 60
@@ -265,6 +272,7 @@ class Settings(BaseSettings):
     partner_feed: PartnerFeedSettings = PartnerFeedSettings()
     product_sort: ProductSortSettings = ProductSortSettings()
     pre_orders: PreOrderSettings = PreOrderSettings()
+    customers: CustomerSettings = CustomerSettings()
     marketing: MarketingSettings = MarketingSettings()
     vouchers: VoucherSettings = VoucherSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
