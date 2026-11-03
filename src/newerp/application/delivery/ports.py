@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Protocol
 
 from newerp.application.delivery.models import (
@@ -18,6 +19,7 @@ from newerp.application.delivery.models import (
     WarehouseDto,
 )
 from newerp.domain.delivery import NovaPoshtaWarehouse, ShipmentDocument, TrackingInfo
+from newerp.domain.orders import ParcelItem
 
 
 class NovaPoshtaClient(Protocol):
@@ -66,8 +68,18 @@ class NovaPoshtaClient(Protocol):
         """Streets of a city whose name contains search (Address.getStreet), for delivery to the door."""
         ...
 
+    async def document_price(
+        self, city_ref: str, to_door: bool, weight: Decimal, volume: Decimal, cost: Decimal
+    ) -> Decimal:
+        """What a parcel from the default drop-off point would cost (InternetDocument.getDocumentPrice). Read only."""
+        ...
+
 
 class ShipmentRepository(Protocol):
+    async def parcel_items(self, lines: list[tuple[int, int]]) -> list[ParcelItem]:
+        """(product id, quantity) with the catalog weight in kg and size in cm; unknown products are left out."""
+        ...
+
     async def get_for_order(self, order_id: int) -> ShipmentDto | None: ...
 
     async def list_open_for_tracking(self) -> list[OpenShipment]:

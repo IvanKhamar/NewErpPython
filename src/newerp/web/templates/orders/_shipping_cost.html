@@ -1,0 +1,6 @@
+<div id="shipping-cost">
+  <label>Доставка, грн <input name="shipping_cost" value="{{ cost }}" inputmode="decimal"></label>
+  <button type="button" class="secondary outline" hx-post="/app/orders/new/shipping-cost" hx-include="closest form"
+          hx-target="#shipping-cost" hx-swap="outerHTML">Порахувати (Нова Пошта)</button>
+  {% if error %}<small class="error" role="alert">{{ error }}</small>{% elif calculated %}<small class="ok">За тарифом Нової Пошти.</small>{% endif %}
+</div>

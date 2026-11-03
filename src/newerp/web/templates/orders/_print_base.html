@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %}</title>
+<style>
+  body { font: 14px/1.4 Arial, sans-serif; color: #000; background: #fff; margin: 24px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; vertical-align: top; }
+  .num { text-align: right; white-space: nowrap; }
+  .page { page-break-after: always; margin-bottom: 32px; }
+  .page:last-child { page-break-after: auto; }
+  .head { display: flex; justify-content: space-between; gap: 24px; }
+  @media print { .no-print { display: none; } body { margin: 0; } }
+</style>
+</head>
+<body>
+<p class="no-print"><button type="button" onclick="window.print()">Друкувати</button></p>
+{% for order in orders %}
+<section class="page">
+  <div class="head">
+    <div><strong>{{ order.store.name }}</strong><br>{{ order.store.address }}<br>{{ order.store.telephone }}<br>{{ order.store.email }}</div>
+    <div>{% block heading scoped %}{% endblock %}<br>Дата: {{ order.date_added|when }}</div>
+  </div>
+  <table>
+    <tr><th>Покупець</th><th>Доставка</th></tr>
+    <tr>
+      <td>{{ order.customer }}<br>{{ order.telephone }}{% if order.email %}<br>{{ order.email }}{% endif %}</td>
+      <td>{{ order.shipping_method }}<br>{{ order.shipping_address }}<br>Оплата: {{ order.payment_method }}</td>
+    </tr>
+  </table>
+  {% block lines scoped %}{% endblock %}
+  {% if order.comment %}<p>Коментар: {{ order.comment }}</p>{% endif %}
+</section>
+{% endfor %}
+</body>
+</html>

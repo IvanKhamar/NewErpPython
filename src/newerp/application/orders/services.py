@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import datetime
 
@@ -11,17 +12,21 @@ from newerp.application.orders.models import (
     CustomerPickDto,
     CustomerRiskDto,
     CustomerRiskQuery,
+    InvoiceDto,
     NewOrderLineRecord,
     NewOrderLineRequest,
     NewOrderRecord,
     OrderCompositionDto,
     OrderCreatedEvent,
+    OrderCustomerDto,
     OrderMethodsDto,
     ProductOptionValueDto,
     ProductPickDto,
     SharedIpDto,
+    ShippingDateRequest,
     UpdateOrderCompositionRequest,
     UpdateOrderCompositionResult,
+    UpdateOrderCustomerRequest,
 )
 from newerp.application.orders.ports import NewOrderStore, OrderEvents, OrderStatusHandler, OrderStore
 from newerp.domain.common import DomainError, plain
@@ -35,6 +40,8 @@ from newerp.domain.orders import (
 )
 
 MAX_CHECKED_IPS = 3  # the latest addresses of the customer's site orders
+# Deleting orders and changing customer data are written to this log (who, when, what), not only to the database.
+audit = logging.getLogger("newerp.audit")
 
 
 class OrderService:
@@ -97,6 +104,39 @@ class OrderService:
         await self._require_active_user(request.manager_id)
         await self._require_active_user(user_id)
         await self._store.save_manager(order_id, request.manager_id, user_id, self._clock.now())
+
+    async def set_shipping_date(self, order_id: int, request: ShippingDateRequest) -> None:
+        await self._require_order(order_id)
+        await self._store.save_shipping_date(order_id, request.date_shipping)
+
+    async def create_invoice(self, order_id: int) -> InvoiceDto:
+        await self._require_order(order_id)
+        return InvoiceDto(invoice=await self._store.create_invoice_no(order_id))
+
+    async def delete(self, order_id: int, user_id: int) -> list[str]:
+        """
+        Deletes an order nothing else points to. As on the old site, it first leaves its status, so the handlers
+        give back what it held (sewn pieces, consumables); their warnings are returned.
+        """
+        status_id = await self._require_order(order_id)
+        await self._require_active_user(user_id)
+        blockers = await self._store.delete_blockers(order_id)
+        if blockers:
+            raise DomainError("Замовлення не можна видалити: " + "; ".join(blockers) + ". Скасуйте його статусом.")
+        warnings: list[str] = []
+        if status_id > 0:
+            leave = OrderStatusChange(order_id, status_id, 0, user_id, self._clock.now())
+            for handler in self._handlers:
+                warnings += await handler.on_status_changing(leave)
+        await self._store.delete(order_id)
+        audit.info("order deleted: order %s, status %s, by user %s", order_id, status_id, user_id)
+        return warnings
+
+    async def _require_order(self, order_id: int) -> int:
+        status_id = await self._store.get_status_id(order_id)
+        if status_id is None:
+            raise NotFoundError(f"Замовлення {order_id} не знайдено.")
+        return status_id
 
     async def _require_active_user(self, user_id: int) -> None:
         if not await self._store.is_active_user(user_id):
@@ -235,6 +275,27 @@ class NewOrderService:
 
         warnings = await self._order_service.reapply_status(order_id, current.status_id, replace, user_id)
         return UpdateOrderCompositionResult(total=total, warnings=warnings)
+
+    async def get_customer(self, order_id: int) -> OrderCustomerDto:
+        customer = await self._store.get_customer(order_id)
+        if customer is None:
+            raise NotFoundError(f"Замовлення {order_id} не знайдено.")
+        return customer
+
+    async def update_customer(self, order_id: int, request: UpdateOrderCustomerRequest, user_id: int) -> None:
+        """The same rules as a new order: a name or a phone, a shipping and a payment method."""
+        current = await self.get_customer(order_id)
+        if not (request.firstname or "").strip() and not (request.telephone or "").strip():
+            raise DomainError("Вкажіть ім'я або телефон клієнта.")
+        if not (request.shipping_method or "").strip():
+            raise DomainError("Необхідний спосіб доставки.")
+        if not (request.payment_method or "").strip():
+            raise DomainError("Необхідний спосіб оплати.")
+        if not await self._orders.is_active_user(user_id):
+            raise DomainError(f"Користувача {user_id} не знайдено або його вимкнено.")
+        await self._store.update_customer(order_id, request, self._clock.now())
+        changed = [name for name, value in request.model_dump().items() if (value or "") != getattr(current, name, "")]
+        audit.info("order customer changed: order %s, fields %s, by user %s", order_id, ", ".join(changed), user_id)
 
     async def _records(self, lines: list[OrderDraftLine]) -> list[NewOrderLineRecord]:
         product_ids = list(dict.fromkeys(line.product_id for line in lines))

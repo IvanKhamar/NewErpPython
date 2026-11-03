@@ -1,0 +1,16 @@
+{% from "_macros.html" import messages %}
+<header>Документи</header>
+<p>Рахунок: {{ order.invoice or "номер ще не надано" }}</p>
+{% if not order.invoice %}
+<button type="button" class="secondary" hx-post="/app/orders/{{ order.id }}/invoice" hx-target="#documents">Надати номер рахунку</button>
+{% endif %}
+<p>
+  <a href="/app/orders/print/invoice?id={{ order.id }}" target="_blank" rel="noopener">Друк рахунку</a> ·
+  <a href="/app/orders/print/shipping?id={{ order.id }}" target="_blank" rel="noopener">Пакувальний лист</a>
+</p>
+{{ messages(error) }}
+{% if user and user.role in delete_roles %}
+<button type="button" class="secondary outline" hx-post="/app/orders/{{ order.id }}/delete" hx-target="#delete-result"
+        hx-confirm="Видалити замовлення №{{ order.id }}? Це не можна скасувати.">Видалити замовлення</button>
+<div id="delete-result"></div>
+{% endif %}

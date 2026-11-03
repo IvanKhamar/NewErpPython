@@ -2,8 +2,9 @@
 
 import random
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
+from math import ceil
 from typing import Any
 from urllib.parse import quote
 
@@ -220,6 +221,32 @@ class HttpNovaPoshtaClient:
         ]
         return streets[:STREETS_LIMIT]
 
+    async def document_price(
+        self, city_ref: str, to_door: bool, weight: Decimal, volume: Decimal, cost: Decimal
+    ) -> Decimal:
+        point = next((p for p in self._settings.dropoff_points if p.is_default), None) or next(
+            iter(self._settings.dropoff_points), None
+        )
+        if point is None:
+            raise DomainError("У налаштуваннях Нової Пошти немає місця відправки.")
+        data = await self._call(
+            self._settings.tracking_key,
+            "InternetDocument",
+            "getDocumentPrice",
+            {
+                "CitySender": point.city_ref,
+                "CityRecipient": city_ref,
+                "Weight": number(weight),
+                "VolumeGeneral": number(volume),
+                "ServiceType": "WarehouseDoors" if to_door else "WarehouseWarehouse",
+                "CargoType": "Parcel",
+                "SeatsAmount": "1",
+                "Cost": number(cost),
+                "DateTime": date.today().strftime("%d.%m.%Y"),
+            },
+        )
+        return decimal_or_zero(text(data[0], "Cost")) if data else Decimal(0)
+
     def _sender(self, sender_id: str) -> NovaPoshtaSender:
         sender = next((s for s in self._settings.senders if s.id == sender_id), None)
         if sender is None:
@@ -363,6 +390,14 @@ class StubNovaPoshtaClient:
             return []
         streets = [StreetDto(ref=f"{city_ref}-street-{n}", name=name) for n, name in enumerate(TEST_STREETS, 1)]
         return [s for s in streets if search.casefold() in s.name.casefold()]
+
+    async def document_price(
+        self, city_ref: str, to_door: bool, weight: Decimal, volume: Decimal, cost: Decimal
+    ) -> Decimal:
+        """With test waybills, an invented tariff (70 per kg begun, +30 to the door, 0.5% of the value)."""
+        if not self._fake:
+            raise DomainError("Ключ API Нової Пошти не задано, тож вартість доставки порахувати не можна.")
+        return Decimal(70 * ceil(weight) + (30 if to_door else 0)) + (cost * Decimal("0.005")).quantize(Decimal(1))
 
 
 def nova_poshta_client(settings: NovaPoshtaSettings) -> HttpNovaPoshtaClient | StubNovaPoshtaClient:

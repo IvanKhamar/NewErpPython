@@ -73,14 +73,14 @@ missing in all three new versions, so every item is Python first):
 
 | # | Item | Old admin | Status |
 |---|---|---|---|
-| 35 | Full order edit: customer, phone, e-mail, address, shipping and payment method; the status handlers run again like for the composition | `sale/order` edit | |
-| 36 | Status-change checks: before "Чекає на відправку" (21) and "Відправлено" (22) the order must have a waybill and its SMS; problems come back as warnings | `sale/order` checkShipping | |
-| 37 | Shipping discrepancies report for the last N days (status and waybill state do not match) | `sale/order` getDiscrepancies | |
-| 38 | Planned shipping date of an order | `sale/order` updateDateShipping | |
-| 39 | Printing: the invoice with its invoice number, and the shipping list | `sale/order` invoice, shipping, createInvoiceNo | |
-| 40 | Reward points and partner commission of an order: add and take back | `sale/order` addReward, addCommission | |
-| 41 | Shipping cost from Nova Poshta in a new order | `sale/quick_order` getShippingCost | |
-| 42 | Order delete: admin only, the status handlers give the stock back first, logged | `sale/order` delete | |
+| 35 | Full order edit: customer, phone, e-mail, address, shipping and payment method (`GET`/`PUT /orders/{id}/customer`, the "Редагувати" section of the card); the rules of a new order; the audit log gets the changed field names, not the values | `sale/order` edit | done |
+| 36 | Status-change checks: before "Чекає на відправку" (21) and "Відправлено" (22) the order must have a waybill and its SMS; problems come back as warnings | `sale/order` checkShipping | done (`GET /orders/{id}/shipping-check`; the card asks to confirm) |
+| 37 | Shipping discrepancies report for the last N days (status and waybill state do not match) | `sale/order` getDiscrepancies | done (`GET /orders/discrepancies`, under the list) |
+| 38 | Planned shipping date of an order | `sale/order` updateDateShipping | done (`PUT /orders/{id}/shipping-date`; `dd_order.date_shipping` in `db/reconstructed.sql`) |
+| 39 | Printing: the invoice with its invoice number, and the shipping list | `sale/order` invoice, shipping, createInvoiceNo | done (`POST /orders/{id}/invoice`, `/app/orders/print/invoice|shipping?id=…`) |
+| 40 | Reward points and partner commission of an order: add and take back | `sale/order` addReward, addCommission | done (`/orders/{id}/credits`, `reward`, `commission`; `dd_customer_transaction` reconstructed) |
+| 41 | Shipping cost from Nova Poshta in a new order | `sale/quick_order` getShippingCost | done (`POST /orders/new/shipping-cost`; weight times quantity, the old site counted each product once) |
+| 42 | Order delete: admin only, the status handlers give the stock back first, logged | `sale/order` delete | done (`DELETE /orders/{id}`; refused with a waybill, cheque, bank payment, return or gift voucher) |
 | 43 | Product editing: create, edit (name, description, price, model, SKU, status, images, options and sizes, attributes, SEO), copy, enable and disable | `catalog/product` | |
 | 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | |
 | 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | |

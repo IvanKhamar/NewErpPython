@@ -31,4 +31,9 @@
   <button type="submit">Знайти</button>
 </form>
 <div id="orders">{% include "orders/_table.html" %}</div>
+{# Loaded each time it is opened: the old admin's button under the list. #}
+<details hx-get="/app/orders/discrepancies" hx-trigger="toggle" hx-target="find .discrepancies">
+  <summary>Розбіжності статусу й ТТН за {{ discrepancy_days }} дні</summary>
+  <div class="discrepancies"></div>
+</details>
 {% endblock %}

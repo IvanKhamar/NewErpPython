@@ -1,0 +1,13 @@
+{% extends "orders/_print_base.html" %}
+{% block title %}Пакувальний лист{% endblock %}
+{% block heading %}<strong>Пакувальний лист</strong><br>Замовлення №{{ order.id }}{% endblock %}
+{% block lines %}
+<table>
+  <thead><tr><th>Товар</th><th>Модель</th><th>Розмір, опції</th><th class="num">Кількість</th></tr></thead>
+  <tbody>
+  {% for line in order.lines %}
+    <tr><td>{{ line.name }}</td><td>{{ line.model }}</td><td>{{ line.options }}</td><td class="num">{{ line.quantity }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

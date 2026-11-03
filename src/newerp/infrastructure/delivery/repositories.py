@@ -20,7 +20,9 @@ from newerp.domain.delivery import (
     NovaPoshtaWarehouse,
     ShipmentDocument,
 )
+from newerp.domain.orders import ParcelItem
 from newerp.infrastructure.delivery.mapping import nova_poshta_warehouses, shipment_documents, shipment_senders
+from newerp.infrastructure.models.catalog import DdProduct
 from newerp.infrastructure.models.orders import DdOrder, DdOrderProduct, ErpOrderManager
 from newerp.infrastructure.models.users import DdUser
 
@@ -31,6 +33,23 @@ class SqlShipmentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._pending_senders: list[tuple[ShipmentDocument, str, int, datetime]] = []
+
+    async def parcel_items(self, lines: list[tuple[int, int]]) -> list[ParcelItem]:
+        p = DdProduct
+        rows = (
+            await self._session.execute(
+                select(p.product_id, p.weight, p.length, p.width, p.height).where(
+                    p.product_id.in_({product_id for product_id, _ in lines})
+                )
+            )
+        ).all()
+        sizes = {row[0]: row[1:] for row in rows}
+        # The shop keeps weights in grams (the old site divided them by 1000 for Nova Poshta).
+        return [
+            ParcelItem(quantity, sizes[product_id][0] / 1000, *sizes[product_id][1:])
+            for product_id, quantity in lines
+            if product_id in sizes
+        ]
 
     async def get_for_order(self, order_id: int) -> ShipmentDto | None:
         # One waybill per order; if there are several (made again), the latest is shown, as on the old site.

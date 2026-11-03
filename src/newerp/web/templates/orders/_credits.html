@@ -1,0 +1,21 @@
+{% from "_macros.html" import messages %}
+<header>Бонуси й комісія</header>
+<p>Бонусні бали клієнта: {{ credits.reward_points }}
+  {% if credits.reward_added %}— нараховано
+  <button type="button" class="secondary outline" hx-post="/app/orders/{{ credits.order_id }}/credits/remove-reward" hx-target="#credits">Зняти</button>
+  {% elif credits.customer_id and credits.reward_points > 0 %}
+  <button type="button" class="secondary" hx-post="/app/orders/{{ credits.order_id }}/credits/add-reward" hx-target="#credits">Нарахувати</button>
+  {% endif %}
+</p>
+{% if credits.affiliate_id %}
+<p>Комісія партнера: {{ credits.commission|money }} грн
+  {% if credits.commission_added %}— нараховано
+  <button type="button" class="secondary outline" hx-post="/app/orders/{{ credits.order_id }}/credits/remove-commission" hx-target="#credits">Зняти</button>
+  {% elif credits.commission > 0 %}
+  <button type="button" class="secondary" hx-post="/app/orders/{{ credits.order_id }}/credits/add-commission" hx-target="#credits">Нарахувати</button>
+  {% endif %}
+</p>
+{% else %}
+<p>Замовлення не від партнера.</p>
+{% endif %}
+{{ messages(error) }}

@@ -668,3 +668,18 @@ CREATE TABLE `dd_customer_reward` (
   `date_added` datetime NOT NULL,
   PRIMARY KEY (`customer_reward_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `dd_customer_transaction` (
+  `customer_transaction_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `description` text NOT NULL,
+  `amount` decimal(15,4) NOT NULL,
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`customer_transaction_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Планова дата відправки замовлення (admin/model/sale/order.php updateDateShipping, список виробництва).
+-- Тип узято з DATE(...) у запиті; старий сайт міг мати '0000-00-00' замість NULL, NewErp читає такі як порожні.
+ALTER TABLE `dd_order`
+  ADD COLUMN `date_shipping` date NULL;

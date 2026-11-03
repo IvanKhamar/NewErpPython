@@ -73,6 +73,8 @@ class OrderDetails(Dto):
     manager_name: str | None
     products: list[OrderProductLine]
     status_history: list[OrderStatusHistoryEntry]
+    date_shipping: date | None = None  # the planned shipping day (Python first)
+    invoice: str | None = None  # prefix and number, once the invoice number is made
 
 
 class ChangeOrderStatusRequest(Dto):
@@ -283,3 +285,119 @@ class UpdateOrderCompositionRequest(Dto):
 class UpdateOrderCompositionResult(Dto):
     total: Money
     warnings: list[str]
+
+
+# ── Editing an existing order (Python first; the old admin's order form) ──
+
+
+class OrderCustomerDto(Dto):
+    """The customer, address and methods of an order, as the edit form shows them."""
+
+    order_id: int
+    firstname: str
+    lastname: str
+    telephone: str
+    email: str
+    instagram: str
+    shipping_code: str
+    shipping_method: str
+    city: str
+    address1: str
+    address2: str
+    house: str
+    flat: str
+    payment_code: str
+    payment_method: str
+    comment: str
+
+
+class UpdateOrderCustomerRequest(Dto):
+    """Replaces these fields; the payment address stays the same as the shipping one, like a new order. The
+    lengths are the OpenCart columns', so nothing is cut silently."""
+
+    firstname: str | None = Field(default=None, max_length=32)
+    lastname: str | None = Field(default=None, max_length=32)
+    telephone: str | None = Field(default=None, max_length=32)
+    email: str | None = Field(default=None, max_length=96)
+    instagram: str | None = Field(default=None, max_length=128)
+    shipping_code: str | None = Field(default=None, max_length=128)
+    shipping_method: str | None = Field(default=None, max_length=128)
+    city: str | None = Field(default=None, max_length=128)
+    address1: str | None = Field(default=None, max_length=128)
+    address2: str | None = Field(default=None, max_length=128)
+    house: str | None = Field(default=None, max_length=32)
+    flat: str | None = Field(default=None, max_length=32)
+    payment_code: str | None = Field(default=None, max_length=128)
+    payment_method: str | None = Field(default=None, max_length=128)
+    comment: str | None = Field(default=None, max_length=4000)
+
+
+class ShippingDateRequest(Dto):
+    """null clears the date."""
+
+    date_shipping: date | None = None
+
+
+class InvoiceDto(Dto):
+    invoice: str
+
+
+class ShippingCostLine(Dto):
+    product_id: int = 0
+    quantity: int = Field(default=1, ge=1, le=1000)
+
+
+class ShippingCostRequest(Dto):
+    """cost: the declared value (the products' sum), as the old quick order sent it."""
+
+    city: str = Field(default="", max_length=128)
+    shipping_code: str = Field(default="", max_length=128)
+    lines: list[ShippingCostLine] = Field(default_factory=list, max_length=100)
+    cost: Decimal = Field(default=Decimal(0), ge=0, le=10_000_000)
+
+
+class ShippingCostDto(Dto):
+    cost: Money
+
+
+# ── Printing: the invoice and the shipping list (the old admin's print buttons) ──
+
+
+class PrintStoreDto(Dto):
+    """The shop's own details from the OpenCart settings."""
+
+    name: str
+    address: str
+    telephone: str
+    email: str
+
+
+class PrintLineDto(Dto):
+    name: str
+    model: str
+    options: str  # "Розмір: M"
+    quantity: int
+    price: Money
+    total: Money
+
+
+class PrintTotalDto(Dto):
+    title: str
+    value: Money
+
+
+class PrintOrderDto(Dto):
+    id: int
+    invoice: str | None
+    date_added: datetime
+    customer: str
+    telephone: str
+    email: str
+    shipping_method: str
+    shipping_address: str
+    payment_method: str
+    comment: str
+    currency_code: str
+    store: PrintStoreDto
+    lines: list[PrintLineDto]
+    totals: list[PrintTotalDto]

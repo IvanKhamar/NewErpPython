@@ -9,12 +9,14 @@ from newerp.application.orders.models import (
     NewOrderRecord,
     OrderCompositionDto,
     OrderCreatedEvent,
+    OrderCustomerDto,
     OrderDetails,
     OrderFilter,
     OrderListItem,
     OrderMethodsDto,
     OrderStatusDto,
     ProductPickDto,
+    UpdateOrderCustomerRequest,
 )
 from newerp.domain.catalog import SpecialPrice
 from newerp.domain.orders import OrderDraft, OrderStatusChange
@@ -50,6 +52,20 @@ class OrderStore(Protocol):
     async def save_manager(
         self, order_id: int, manager_id: int, assigned_by_user_id: int, assigned_at: datetime
     ) -> None: ...
+
+    async def save_shipping_date(self, order_id: int, day: date | None) -> None: ...
+
+    async def create_invoice_no(self, order_id: int) -> str:
+        """The next number of the order's invoice prefix, once; an order that has one keeps it. Returns both."""
+        ...
+
+    async def delete_blockers(self, order_id: int) -> list[str]:
+        """Why the order must not be deleted (a waybill, a cheque, a payment, a return, a gift voucher)."""
+        ...
+
+    async def delete(self, order_id: int) -> None:
+        """The order with its lines, options, totals, manager, reward points and commission. The status log stays."""
+        ...
 
 
 class OrderStatusHandler(Protocol):
@@ -105,6 +121,10 @@ class NewOrderStore(Protocol):
     async def voucher_paid(self, order_id: int) -> Decimal:
         """How much of the order gift vouchers paid (positive), by its "voucher" total rows."""
         ...
+
+    async def get_customer(self, order_id: int) -> OrderCustomerDto | None: ...
+
+    async def update_customer(self, order_id: int, request: UpdateOrderCustomerRequest, now: datetime) -> None: ...
 
 
 class OrderEvents(Protocol):

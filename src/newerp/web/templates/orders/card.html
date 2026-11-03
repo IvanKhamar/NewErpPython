@@ -4,14 +4,14 @@
 <p><a href="/app/orders">← Замовлення</a></p>
 <h1>Замовлення №{{ order.id }} <small>від {{ order.date_added|when }}</small></h1>
 <div class="grid">
-  <article>
-    <header>Покупець і доставка</header>
-    <p><strong>{{ order.customer }}</strong><br>{{ order.telephone }}{% if order.email %}<br>{{ order.email }}{% endif %}</p>
-    <p>{{ order.shipping_method }}<br>{{ order.shipping_city }}{% if order.shipping_address %}, {{ order.shipping_address }}{% endif %}</p>
-    <p>Оплата: {{ order.payment_method or "—" }}<br>Джерело: {{ order.source_name or "—" }}</p>
-    {% if order.comment %}<p>Коментар: {{ order.comment }}</p>{% endif %}
-  </article>
+  <article id="customer">{% include "orders/_customer.html" %}</article>
   <article id="manager">{% include "orders/_manager.html" %}</article>
+</div>
+<div class="grid">
+  <article id="documents">{% include "orders/_documents.html" %}</article>
+  <article id="credits" hx-get="/app/orders/{{ order.id }}/credits" hx-trigger="load">
+    <header>Бонуси й комісія</header><p aria-busy="true">Завантаження…</p>
+  </article>
 </div>
 <article>
   <header>Товари</header>

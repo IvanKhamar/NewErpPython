@@ -1,11 +1,32 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.domain.orders import OrderStatusChange
-from newerp.infrastructure.models.orders import DdOrder, DdOrderStatus, DdOrderStatusLog, ErpOrderManager
+from newerp.infrastructure.cashbox.mapping import cheques
+from newerp.infrastructure.delivery.mapping import shipment_documents
+from newerp.infrastructure.models.customers import DdReturn
+from newerp.infrastructure.models.marketing import DdVoucher
+from newerp.infrastructure.models.orders import (
+    DdOrder,
+    DdOrderOption,
+    DdOrderProduct,
+    DdOrderStatus,
+    DdOrderStatusLog,
+    DdOrderTotal,
+    ErpOrderManager,
+)
 from newerp.infrastructure.models.users import DdUser
+from newerp.infrastructure.orders.credits import customer_reward, customer_transaction
+from newerp.infrastructure.payments import bank_payments
+
+# One statement, so two clicks at once cannot take the same number (MyISAM locks the table for it). MySQL refuses
+# a subquery on the updated table itself, hence the derived table t.
+_NEXT_INVOICE_NO = text(
+    "UPDATE dd_order SET invoice_no = (SELECT n FROM (SELECT COALESCE(MAX(invoice_no), 0) + 1 AS n FROM dd_order "
+    "WHERE invoice_prefix = :prefix) t) WHERE order_id = :id AND invoice_no = 0"
+)
 
 
 class SqlOrderStore:
@@ -50,4 +71,44 @@ class SqlOrderStore:
         row.user_id = manager_id
         row.assigned_by_user_id = assigned_by_user_id
         row.assigned_at = assigned_at
+        await self._session.commit()
+
+    async def save_shipping_date(self, order_id: int, day: date | None) -> None:
+        await self._session.execute(update(DdOrder).where(DdOrder.order_id == order_id).values(date_shipping=day))
+        await self._session.commit()
+
+    async def create_invoice_no(self, order_id: int) -> str:
+        prefix = await self._session.scalar(select(DdOrder.invoice_prefix).where(DdOrder.order_id == order_id))
+        await self._session.execute(_NEXT_INVOICE_NO, {"id": order_id, "prefix": prefix})
+        await self._session.commit()
+        number = await self._session.scalar(select(DdOrder.invoice_no).where(DdOrder.order_id == order_id))
+        return f"{prefix}{number}"
+
+    async def delete_blockers(self, order_id: int) -> list[str]:
+        checks = (
+            ("є ТТН", exists().where(shipment_documents.c.order_id == order_id, shipment_documents.c.number != "")),
+            ("є фіскальний чек", exists().where(cheques.c.order_id == order_id)),
+            ("до нього прив'язана банківська оплата", exists().where(bank_payments.c.order_id == order_id)),
+            ("є повернення", exists().where(DdReturn.order_id == order_id)),
+            ("у ньому куплено подарунковий сертифікат", exists().where(DdVoucher.order_id == order_id)),
+            (
+                "його оплачено сертифікатом",
+                exists().where(DdOrderTotal.order_id == order_id, DdOrderTotal.code == "voucher"),
+            ),
+        )
+        return [reason for reason, check in checks if await self._session.scalar(select(check))]
+
+    async def delete(self, order_id: int) -> None:
+        # MyISAM: each delete stands alone. The order row goes last, so after a crash the order is still there
+        # (without some lines) and can be deleted again.
+        for table, column in (
+            (DdOrderOption, DdOrderOption.order_id),
+            (DdOrderProduct, DdOrderProduct.order_id),
+            (DdOrderTotal, DdOrderTotal.order_id),
+            (ErpOrderManager, ErpOrderManager.order_id),
+            (customer_reward, customer_reward.c.order_id),
+            (customer_transaction, customer_transaction.c.order_id),
+            (DdOrder, DdOrder.order_id),
+        ):
+            await self._session.execute(delete(table).where(column == order_id))
         await self._session.commit()

@@ -11,10 +11,12 @@ from newerp.application.orders.models import (
     NewOrderRecord,
     OrderCompositionDto,
     OrderCompositionLine,
+    OrderCustomerDto,
     OrderMethodDto,
     OrderMethodsDto,
     ProductOptionValueDto,
     ProductPickDto,
+    UpdateOrderCustomerRequest,
 )
 from newerp.domain.catalog import SpecialPrice
 from newerp.domain.orders import CustomerRisk, OrderDraft
@@ -401,6 +403,76 @@ class SqlNewOrderStore:
             update(DdOrder)
             .where(DdOrder.order_id == order_id)
             .values(total=total, prepayment=draft.prepayment, date_modified=now)
+        )
+        await self._session.commit()
+
+    async def get_customer(self, order_id: int) -> OrderCustomerDto | None:
+        o = DdOrder
+        row = (
+            await self._session.execute(
+                select(
+                    o.firstname,
+                    o.lastname,
+                    o.telephone,
+                    o.email,
+                    o.instagram,
+                    o.shipping_code,
+                    o.shipping_method,
+                    o.shipping_city,
+                    o.shipping_address_1,
+                    o.shipping_address_2,
+                    o.shipping_house,
+                    o.shipping_flat,
+                    o.payment_code,
+                    o.payment_method,
+                    o.comment,
+                ).where(o.order_id == order_id)  # fmt: skip
+            )
+        ).first()
+        if row is None:
+            return None
+        names = (
+            "firstname lastname telephone email instagram shipping_code shipping_method city address1 address2 house "
+            "flat payment_code payment_method comment"
+        ).split()
+        return OrderCustomerDto(order_id=order_id, **dict(zip(names, row, strict=True)))
+
+    async def update_customer(self, order_id: int, request: UpdateOrderCustomerRequest, now: datetime) -> None:
+        def text(value: str | None) -> str:
+            return (value or "").strip()
+
+        r = request
+        firstname, lastname = text(r.firstname), text(r.lastname)
+        city, address1, address2 = text(r.city), text(r.address1), text(r.address2)
+        # As for a new order, the payment address is the shipping one.
+        await self._session.execute(
+            update(DdOrder)
+            .where(DdOrder.order_id == order_id)
+            .values(
+                firstname=firstname,
+                lastname=lastname,
+                telephone=text(r.telephone),
+                email=text(r.email),
+                instagram=text(r.instagram),
+                shipping_code=text(r.shipping_code),
+                shipping_method=text(r.shipping_method),
+                payment_code=text(r.payment_code),
+                payment_method=text(r.payment_method),
+                comment=text(r.comment),
+                shipping_house=text(r.house),
+                shipping_flat=text(r.flat),
+                shipping_firstname=firstname,
+                payment_firstname=firstname,
+                shipping_lastname=lastname,
+                payment_lastname=lastname,
+                shipping_city=city,
+                payment_city=city,
+                shipping_address_1=address1,
+                payment_address_1=address1,
+                shipping_address_2=address2,
+                payment_address_2=address2,
+                date_modified=now,
+            )  # fmt: skip
         )
         await self._session.commit()
 

@@ -1,9 +1,9 @@
 """OpenCart order tables (MyISAM: no transactions, so multi-step writes are not atomic) and erp_order_manager."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Numeric, String, Text
+from sqlalchemy import Numeric, String, Text, case
 from sqlalchemy.orm import Mapped, mapped_column
 
 from newerp.infrastructure.db import Base
@@ -86,6 +86,14 @@ class DdOrder(Base):
     shipping_flat: Mapped[str] = mapped_column(String(32), default="")
     callback: Mapped[bool] = mapped_column(default=False)
     user_id: Mapped[int] = mapped_column(default=0)
+    # The real database may hold '0000-00-00' here, which no date type can read: deferred, so loading an order never
+    # reads it; queries select it through shipping_date() below.
+    date_shipping: Mapped[date | None] = mapped_column(deferred=True)
+
+
+def shipping_date():
+    """date_shipping, with the old site's zero dates as NULL."""
+    return case((DdOrder.date_shipping < date(1000, 1, 1), None), else_=DdOrder.date_shipping)
 
 
 class DdOrderProduct(Base):

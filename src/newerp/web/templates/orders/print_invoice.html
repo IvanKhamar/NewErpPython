@@ -1,0 +1,17 @@
+{% extends "orders/_print_base.html" %}
+{% block title %}Рахунок{% endblock %}
+{% block heading %}<strong>Рахунок {{ order.invoice or "" }}</strong><br>Замовлення №{{ order.id }}{% endblock %}
+{% block lines %}
+<table>
+  <thead><tr><th>Товар</th><th>Модель</th><th class="num">Кількість</th><th class="num">Ціна</th><th class="num">Сума</th></tr></thead>
+  <tbody>
+  {% for line in order.lines %}
+    <tr><td>{{ line.name }}{% if line.options %}<br><small>{{ line.options }}</small>{% endif %}</td><td>{{ line.model }}</td>
+      <td class="num">{{ line.quantity }}</td><td class="num">{{ line.price|money }}</td><td class="num">{{ line.total|money }}</td></tr>
+  {% endfor %}
+  {% for total in order.totals %}
+    <tr><td colspan="4" class="num"><strong>{{ total.title }}</strong></td><td class="num">{{ total.value|money }} {{ order.currency_code }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

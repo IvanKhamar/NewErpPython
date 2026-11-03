@@ -23,8 +23,10 @@ from newerp.application.delivery.models import (
     WarehouseRefreshResult,
 )
 from newerp.application.delivery.ports import NovaPoshtaClient, ShipmentRepository, WarehouseDirectory
+from newerp.application.orders.models import ShippingCostDto, ShippingCostRequest
 from newerp.domain.common import DomainError
 from newerp.domain.delivery import INTERNATIONAL, ShipmentDocument
+from newerp.domain.orders import NOVA_POSHTA_DOOR_CODE, NOVA_POSHTA_SHIPPING_CODES, parcel_volume, parcel_weight
 from newerp.domain.sms import normalize_phone
 
 TRACKING_BATCH_SIZE = 100  # the Nova Poshta API takes up to 100 waybills per tracking request
@@ -169,6 +171,22 @@ class ShipmentService:
         if not city_ref or len(term) < 2 or not await self._directory.city_exists(city_ref):
             return []
         return await self._client.search_streets(city_ref, term)
+
+    async def estimate_cost(self, request: ShippingCostRequest) -> ShippingCostDto:
+        """The shipping cost of a new order by Nova Poshta's tariff, like the old quick order's button."""
+        if request.shipping_code not in NOVA_POSHTA_SHIPPING_CODES:
+            raise DomainError("Вартість доставки рахується лише для Нової Пошти.")
+        city = await self._directory.find_city(request.city.strip())
+        if city is None:
+            raise DomainError(f"Міста «{request.city.strip()}» немає в довіднику Нової Пошти.")
+        items = await self._repository.parcel_items([(line.product_id, line.quantity) for line in request.lines])
+        if not items:
+            raise DomainError("Додайте товари, щоб порахувати доставку.")
+        cost = await self._client.document_price(
+            city.ref, request.shipping_code == NOVA_POSHTA_DOOR_CODE, parcel_weight(items), parcel_volume(items),
+            request.cost,
+        )  # fmt: skip
+        return ShippingCostDto(cost=cost)
 
     async def refresh_warehouses(self) -> WarehouseRefreshResult:
         """Loads a fresh branch directory from the API and replaces the local one (and the old storefront's)."""

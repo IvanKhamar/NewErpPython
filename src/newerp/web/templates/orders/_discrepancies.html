@@ -1,0 +1,10 @@
+{% for group in groups %}
+<h4>{{ group.title }}</h4>
+{% for item in group['items'] %}
+<p class="{{ 'error' if item.level == 'danger' else 'warning' }}">
+  <a href="/app/orders/{{ item.order_id }}">№{{ item.order_id }}</a> {{ item.customer }}: {{ item.text }}
+</p>
+{% else %}
+<p class="ok">Розбіжностей немає.</p>
+{% endfor %}
+{% endfor %}

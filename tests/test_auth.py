@@ -47,7 +47,10 @@ def test_logout_ends_session(api):
 
 def test_tampered_cookie_returns_401(api):
     client = api(MANAGER)
-    tampered = client.cookies["newerp.auth"][:-2] + "xx"
+    cookie = client.cookies["newerp.auth"]
+    # A character inside the signature, always a different one: the last base64 characters may carry padding bits,
+    # so overwriting them sometimes changed nothing and the test failed at random.
+    tampered = cookie[:-6] + ("A" if cookie[-6] != "A" else "B") + cookie[-5:]
     client.cookies.clear()
     client.cookies.set("newerp.auth", tampered)
 

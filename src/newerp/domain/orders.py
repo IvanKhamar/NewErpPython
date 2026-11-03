@@ -5,7 +5,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_HALF_EVEN, Decimal
-from enum import IntEnum
+from enum import IntEnum, StrEnum
+from math import ceil
 
 from newerp.domain.common import DomainError
 
@@ -177,3 +178,98 @@ def shared_ip(ip: str, orders: Iterable[tuple[str, str, str]]) -> SharedIp | Non
     if len(clients) < SHARED_IP_MIN_CLIENTS:
         return None
     return SharedIp(ip, len(clients), tuple(list(clients.values())[:SHARED_IP_LISTED]))
+
+
+# ── Shipping checks (the old admin's check before a status change and its "discrepancies" button) ──
+
+ACCEPTED_STATUS_ID = 18  # "Прийнято"
+AWAITING_SHIPMENT_STATUS_ID = 21  # "Чекає на відправку": only pickups handed to the showroom
+SHIPPED_STATUS_ID = 22  # "Відправлено"
+URGENT_STATUS_ID = 23  # "Терміново"
+# Domestic Nova Poshta: a branch, a parcel locker, the courier. Pickup, abroad and partners need no waybill.
+NOVA_POSHTA_SHIPPING_CODES = (
+    "novaposhta_warehouse.novaposhta_warehouse",
+    "novaposhta_postomat.novaposhta_postomat",
+    "novaposhta_address.novaposhta_address",
+)
+NOVA_POSHTA_DOOR_CODE = "novaposhta_address.novaposhta_address"
+WAYBILL_STALE_HOURS = 4  # a waybill this old while the order is still "accepted" or "urgent" is a discrepancy
+DISCREPANCY_DAYS = 3
+DISCREPANCY_MAX_DAYS = 30
+
+
+class IssueLevel(StrEnum):
+    DANGER = "danger"  # the order cannot go like this
+    WARNING = "warning"  # worth a look
+
+
+@dataclass(frozen=True)
+class ShippingIssue:
+    level: IssueLevel
+    text: str
+
+
+def waybill_digits(number: str) -> str:
+    return re.sub(r"[^0-9]", "", number)
+
+
+def shipped_issues(shipping_code: str, telephone: str, waybill: str, sms_phones: list[str]) -> list[ShippingIssue]:
+    """
+    Before "Відправлено": a Nova Poshta order needs a waybill, and the SMS with its number must have gone to the
+    order's phone. sms_phones: where the SMS with this waybill went since the order was placed.
+    """
+    if shipping_code not in NOVA_POSHTA_SHIPPING_CODES:
+        return []
+    if not waybill:
+        return [ShippingIssue(IssueLevel.DANGER, "ТТН для цього замовлення не створена")]
+    if not sms_phones:
+        return [ShippingIssue(IssueLevel.WARNING, "SMS з номером ТТН клієнту не надсилалась")]
+    order_phone = CustomerRisk.phone_key(telephone)
+    if any(CustomerRisk.phone_key(phone) == order_phone for phone in sms_phones):
+        return []
+    others = ", ".join(dict.fromkeys(sms_phones))
+    return [ShippingIssue(IssueLevel.DANGER, f"SMS з цією ТТН пішла на номер {others}, а в замовленні {telephone}")]
+
+
+def pickup_issues(shipping_code: str, shipping_method: str, waybill: str) -> list[ShippingIssue]:
+    """Before "Чекає на відправку", which is only for pickups handed to the showroom."""
+    if waybill:
+        return [
+            ShippingIssue(
+                IssueLevel.DANGER,
+                "У замовлення є ТТН Нової Пошти. «Чекає на відправку» ставиться лише самовивозам, переданим у шоурум",
+            )
+        ]
+    if shipping_code in NOVA_POSHTA_SHIPPING_CODES:
+        return [
+            ShippingIssue(
+                IssueLevel.WARNING,
+                f"Спосіб доставки в замовленні: {shipping_method}. Перевірте, чи це справді самовивіз",
+            )
+        ]
+    return []
+
+
+# ── Shipping cost of a new order (the old quick order asked Nova Poshta) ──
+
+
+@dataclass(frozen=True)
+class ParcelItem:
+    """A product of the order with its catalog weight (kg) and size (cm), times the quantity."""
+
+    quantity: int
+    weight: Decimal
+    length: Decimal
+    width: Decimal
+    height: Decimal
+
+
+def parcel_weight(items: Iterable[ParcelItem]) -> Decimal:
+    """In kg, at least 0.1 (Nova Poshta's minimum). The old site counted each product once; here times quantity."""
+    return max(sum((i.weight * i.quantity for i in items), Decimal(0)), Decimal("0.1"))
+
+
+def parcel_volume(items: Iterable[ParcelItem]) -> Decimal:
+    """In cubic metres, each size rounded up to a whole centimetre like the old site."""
+    cm3 = sum((Decimal(i.quantity * ceil(i.length) * ceil(i.width) * ceil(i.height)) for i in items), Decimal(0))
+    return cm3 / 1_000_000

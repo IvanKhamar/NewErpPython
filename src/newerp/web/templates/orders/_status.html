@@ -9,6 +9,17 @@
   <button type="submit">Змінити статус</button>
 </form>
 {{ messages(error, warnings or (), "Статус змінено." if saved else None) }}
+{% if check %}
+<article class="warning" role="alert">
+  <p><strong>Перед зміною статусу перевірте{% if check.waybill %} (ТТН {{ check.waybill }}){% endif %}:</strong></p>
+  {% for issue in check.issues %}<p class="{{ 'error' if issue.level == 'danger' else 'warning' }}">{{ issue.text }}</p>{% endfor %}
+  <form hx-post="/app/orders/{{ order.id }}/status" hx-target="#status">
+    <input type="hidden" name="status_id" value="{{ check.status_id }}">
+    <input type="hidden" name="confirmed" value="1">
+    <button type="submit" class="secondary">Все одно змінити статус</button>
+  </form>
+</article>
+{% endif %}
 <h3>Історія статусів</h3>
 <table>
   <thead><tr><th>Коли</th><th>Статус</th><th>Хто</th></tr></thead>

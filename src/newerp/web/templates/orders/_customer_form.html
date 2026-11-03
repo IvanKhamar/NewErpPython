@@ -1,0 +1,40 @@
+{% from "_macros.html" import messages %}
+<form hx-post="/app/orders/{{ customer.order_id }}/customer" hx-target="this" hx-swap="outerHTML">
+  <div class="grid">
+    <label>Ім'я <input name="firstname" value="{{ customer.firstname }}" maxlength="32"></label>
+    <label>Прізвище <input name="lastname" value="{{ customer.lastname }}" maxlength="32"></label>
+  </div>
+  <div class="grid">
+    <label>Телефон <input name="telephone" value="{{ customer.telephone }}" maxlength="32"></label>
+    <label>E-mail <input name="email" type="email" value="{{ customer.email }}" maxlength="96"></label>
+    <label>Instagram <input name="instagram" value="{{ customer.instagram }}" maxlength="128"></label>
+  </div>
+  <div class="grid">
+    <label>Доставка
+      <select name="shipping_code">
+        {% for method in methods.shipping %}
+        <option value="{{ method.code }}"{% if method.code == customer.shipping_code %} selected{% endif %}>{{ method.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Оплата
+      <select name="payment_code">
+        {% for method in methods.payment %}
+        <option value="{{ method.code }}"{% if method.code == customer.payment_code %} selected{% endif %}>{{ method.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="grid">
+    <label>Місто <input name="city" value="{{ customer.city }}" maxlength="128"></label>
+    <label>Відділення <input name="address2" value="{{ customer.address2 }}" maxlength="128"></label>
+  </div>
+  <div class="grid">
+    <label>Вулиця <input name="address1" value="{{ customer.address1 }}" maxlength="128"></label>
+    <label>Будинок <input name="house" value="{{ customer.house }}" maxlength="32"></label>
+    <label>Квартира <input name="flat" value="{{ customer.flat }}" maxlength="32"></label>
+  </div>
+  <label>Коментар <textarea name="comment" rows="2" maxlength="4000">{{ customer.comment }}</textarea></label>
+  {{ messages(error) }}
+  <button type="submit">Зберегти</button>
+</form>

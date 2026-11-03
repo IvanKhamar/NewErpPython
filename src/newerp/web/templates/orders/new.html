@@ -79,7 +79,7 @@
     </table>
     </div>
     <div class="grid">
-      <label>Доставка, грн <input name="shipping_cost" value="0" inputmode="decimal"></label>
+      {% with cost="0" %}{% include "orders/_shipping_cost.html" %}{% endwith %}
       <label>Знижка, грн <input name="discount" value="0" inputmode="decimal"></label>
       <label>Передоплата, грн <input name="prepayment" value="0" inputmode="decimal"></label>
     </div>

@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from newerp.application.auth.services import AuthService, UserAdminService
 from newerp.application.auth.throttle import LoginThrottle, LoginThrottleOptions
 from newerp.application.common import Clock, SystemClock
+from newerp.application.orders.checks import ShippingCheckService
+from newerp.application.orders.credits import OrderCreditService
 from newerp.application.orders.ports import OrderEvents, OrderStatusHandler
 from newerp.application.orders.services import NewOrderService, OrderService
 from newerp.application.production.services import OrderSewnStockHandler
@@ -23,6 +25,8 @@ from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
 from newerp.infrastructure.auth.redis_throttle import RedisLoginThrottle
 from newerp.infrastructure.auth.user_login_store import SqlUserLoginStore
 from newerp.infrastructure.db import get_session
+from newerp.infrastructure.orders.checks import SqlShippingCheckStore
+from newerp.infrastructure.orders.credits import SqlOrderCreditStore
 from newerp.infrastructure.orders.new_order_store import SqlNewOrderStore
 from newerp.infrastructure.orders.queries import SqlOrderQueries
 from newerp.infrastructure.orders.store import SqlOrderStore
@@ -136,3 +140,11 @@ def enum_from_query[E: Enum](enum: type[E], value: str) -> E:
         if member.name.replace("_", "").lower() == text.lower():
             return member
     raise DomainError(f"Невідоме значення «{value}».")
+
+
+def get_shipping_check_service(session: Session, clock: ClockDep) -> ShippingCheckService:
+    return ShippingCheckService(SqlShippingCheckStore(session), clock)
+
+
+def get_order_credit_service(session: Session, clock: ClockDep) -> OrderCreditService:
+    return OrderCreditService(SqlOrderCreditStore(session), clock)

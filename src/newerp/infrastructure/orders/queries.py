@@ -13,17 +13,27 @@ from newerp.application.orders.models import (
     OrderProductLine,
     OrderStatusDto,
     OrderStatusHistoryEntry,
+    PrintLineDto,
+    PrintOrderDto,
+    PrintStoreDto,
+    PrintTotalDto,
 )
 from newerp.infrastructure.delivery.mapping import shipment_documents
 from newerp.infrastructure.models.orders import (
     DdOrder,
+    DdOrderOption,
     DdOrderProduct,
     DdOrderSource,
     DdOrderStatus,
     DdOrderStatusLog,
+    DdOrderTotal,
     ErpOrderManager,
+    shipping_date,
 )
+from newerp.infrastructure.models.settings import DdSetting
 from newerp.infrastructure.models.users import DdUser
+
+STORE_SETTINGS = ("config_name", "config_address", "config_telephone", "config_email")
 
 _INT32 = 2**31
 
@@ -143,6 +153,7 @@ class SqlOrderQueries:
         products = await self._session.scalars(
             select(DdOrderProduct).where(DdOrderProduct.order_id == order_id).order_by(DdOrderProduct.order_product_id)
         )
+        extra = (await self._session.execute(select(shipping_date()).where(DdOrder.order_id == order_id))).first()
         history = await self._session.execute(
             select(DdOrderStatusLog, full_name(DdUser))
             .outerjoin(DdUser, DdUser.user_id == DdOrderStatusLog.user_id)
@@ -191,6 +202,8 @@ class SqlOrderQueries:
                 )
                 for log, user_name in history
             ],
+            date_shipping=extra[0] if extra else None,
+            invoice=f"{o.invoice_prefix}{o.invoice_no}" if o.invoice_no > 0 else None,
         )
 
     async def list_statuses(self) -> list[OrderStatusDto]:
@@ -215,3 +228,76 @@ class SqlOrderQueries:
             .order_by(DdOrderSource.order_source_id)
         )
         return [LookupItem(id=s.order_source_id, name=s.name) for s in rows]
+
+    async def print_orders(self, order_ids: list[int]) -> list[PrintOrderDto]:
+        """The invoice and the shipping list of these orders, in the given order; unknown ids are left out."""
+        settings = dict(
+            (
+                await self._session.execute(
+                    select(DdSetting.key, DdSetting.value).where(
+                        DdSetting.store_id == 0, DdSetting.code == "config", DdSetting.key.in_(STORE_SETTINGS)
+                    )
+                )
+            ).all()
+        )
+        store = PrintStoreDto(
+            name=settings.get("config_name", ""),
+            address=settings.get("config_address", ""),
+            telephone=settings.get("config_telephone", ""),
+            email=settings.get("config_email", ""),
+        )
+        orders = {
+            o.order_id: o for o in await self._session.scalars(select(DdOrder).where(DdOrder.order_id.in_(order_ids)))
+        }
+        options: dict[int, list[str]] = {}
+        for option in await self._session.scalars(
+            select(DdOrderOption).where(DdOrderOption.order_id.in_(orders)).order_by(DdOrderOption.order_option_id)
+        ):
+            options.setdefault(option.order_product_id, []).append(f"{option.name}: {option.value}")
+        lines: dict[int, list[PrintLineDto]] = {}
+        for p in await self._session.scalars(
+            select(DdOrderProduct).where(DdOrderProduct.order_id.in_(orders)).order_by(DdOrderProduct.order_product_id)
+        ):
+            lines.setdefault(p.order_id, []).append(
+                PrintLineDto(
+                    name=p.name,
+                    model=p.model,
+                    options=", ".join(options.get(p.order_product_id, [])),
+                    quantity=p.quantity,
+                    price=p.price,
+                    total=p.total,
+                )  # fmt: skip
+            )
+        totals: dict[int, list[PrintTotalDto]] = {}
+        for t in await self._session.scalars(
+            select(DdOrderTotal).where(DdOrderTotal.order_id.in_(orders)).order_by(DdOrderTotal.sort_order)
+        ):
+            totals.setdefault(t.order_id, []).append(PrintTotalDto(title=t.title, value=t.value))
+
+        def address(o: DdOrder) -> str:
+            house = ", ".join(
+                part for part in (o.shipping_house, f"кв. {o.shipping_flat}" if o.shipping_flat else "") if part
+            )
+            parts = (o.shipping_city, o.shipping_address_1, o.shipping_address_2, house)
+            return ", ".join(part.strip() for part in parts if part and part.strip())
+
+        return [
+            PrintOrderDto(
+                id=o.order_id,
+                invoice=f"{o.invoice_prefix}{o.invoice_no}" if o.invoice_no > 0 else None,
+                date_added=o.date_added,
+                customer=f"{o.firstname} {o.lastname}".strip(),
+                telephone=o.telephone,
+                email=o.email,
+                shipping_method=o.shipping_method,
+                shipping_address=address(o),
+                payment_method=o.payment_method,
+                comment=o.comment,
+                currency_code=o.currency_code,
+                store=store,
+                lines=lines.get(o.order_id, []),
+                totals=totals.get(o.order_id, []),
+            )
+            for o in (orders.get(order_id) for order_id in dict.fromkeys(order_ids))
+            if o is not None
+        ]

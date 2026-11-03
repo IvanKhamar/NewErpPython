@@ -130,6 +130,8 @@ class Policies:
     # Cashbox and bank: receipts and shifts for managers, cashier setup for the admin only.
     FINANCE = (Roles.ADMIN, Roles.MANAGER)
     FINANCE_SETUP = (Roles.ADMIN,)
+    # Deleting an order cannot be undone: the admin only, and only an order nothing else points to.
+    ORDER_DELETE = (Roles.ADMIN,)
 
 
 # Every response gets these headers (SecurityHeaders.cs).

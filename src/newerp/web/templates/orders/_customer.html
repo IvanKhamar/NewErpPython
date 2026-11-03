@@ -1,0 +1,16 @@
+{% from "_macros.html" import messages %}
+<header>Покупець і доставка</header>
+<p><strong>{{ order.customer }}</strong><br>{{ order.telephone }}{% if order.email %}<br>{{ order.email }}{% endif %}</p>
+<p>{{ order.shipping_method }}<br>{{ order.shipping_city }}{% if order.shipping_address %}, {{ order.shipping_address }}{% endif %}</p>
+<p>Оплата: {{ order.payment_method or "—" }}<br>Джерело: {{ order.source_name or "—" }}</p>
+{% if order.comment %}<p>Коментар: {{ order.comment }}</p>{% endif %}
+<form hx-post="/app/orders/{{ order.id }}/shipping-date" hx-target="#customer" role="group">
+  <input type="date" name="date_shipping" value="{{ order.date_shipping or '' }}" aria-label="Планова дата відправки">
+  <button type="submit" class="secondary">Дата відправки</button>
+</form>
+{{ messages(error, (), "Дату відправки збережено." if date_saved else ("Дані покупця збережено." if saved else None)) }}
+{# The edit form loads the first time the section is opened. #}
+<details hx-get="/app/orders/{{ order.id }}/customer/edit" hx-trigger="toggle once" hx-target="find .customer-form">
+  <summary>Редагувати покупця й доставку</summary>
+  <div class="customer-form"></div>
+</details>
