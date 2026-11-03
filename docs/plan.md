@@ -68,8 +68,68 @@ Security (found in the review of 2026-11-02; HSTS was added then):
 | 33 | The login throttle keeps its counters in Redis outside development (`RedisLoginThrottle`), so all workers and containers count together; uvicorn takes the client address from X-Forwarded-For only from `FORWARDED_ALLOW_IPS` (`NEWERP_TRUSTED_PROXIES` in docker-compose) | done |
 | 34 | Login CSRF: the login page puts a random token into a SameSite=Strict cookie and the form; a login POST without both, equal, is refused (double submit) | done |
 
-Not planned on purpose (they stay in OpenCart or were replaced): storefront features (colors and variants, FAQ,
-product questions, blog, reviews), customer account editing, LiqPay e-mail invoices (replaced by the payment link).
+Compared with the old PHP admin directly (2026-11-03, every custom `admin/controller/*` action and the admin menu;
+missing in all three new versions, so every item is Python first):
+
+| # | Item | Old admin | Status |
+|---|---|---|---|
+| 35 | Full order edit: customer, phone, e-mail, address, shipping and payment method; the status handlers run again like for the composition | `sale/order` edit | |
+| 36 | Status-change checks: before "Чекає на відправку" (21) and "Відправлено" (22) the order must have a waybill and its SMS; problems come back as warnings | `sale/order` checkShipping | |
+| 37 | Shipping discrepancies report for the last N days (status and waybill state do not match) | `sale/order` getDiscrepancies | |
+| 38 | Planned shipping date of an order | `sale/order` updateDateShipping | |
+| 39 | Printing: the invoice with its invoice number, and the shipping list | `sale/order` invoice, shipping, createInvoiceNo | |
+| 40 | Reward points and partner commission of an order: add and take back | `sale/order` addReward, addCommission | |
+| 41 | Shipping cost from Nova Poshta in a new order | `sale/quick_order` getShippingCost | |
+| 42 | Order delete: admin only, the status handlers give the stock back first, logged | `sale/order` delete | |
+| 43 | Product editing: create, edit (name, description, price, model, SKU, status, images, options and sizes, attributes, SEO), copy, enable and disable | `catalog/product` | |
+| 44 | Quick inline edit in the product list, and CSV import of products and prices | `catalog/product` quickUpdate, importProducts | |
+| 45 | Remove the "New" label by SKU after printing | `catalog/product` removeNewByPrint | |
+| 46 | Mass price control (by category, manufacturer, percent or sum), with a preview before saving | `extension/module/price_control` | |
+| 47 | Label dictionary and search presets | `catalog/label`, `catalog/search_preset` | |
+| 48 | Categories: create, edit, delete, rebuild the paths | `catalog/category` | |
+| 49 | Manufacturers, filters and filter groups, attributes and attribute groups, options, downloads | `catalog/manufacturer`, `filter`, `attribute`, `attribute_group`, `option`, `download` | |
+| 50 | Content: information pages, FAQ, blog (categories and posts), the "Про нас" and NFT blocks | `catalog/information`, `catalog/faq`, `blog/*`, `extension/module/about`, `nft` | |
+| 51 | Reviews and product questions: moderation and answers | `catalog/review`, `catalog/question` | |
+| 52 | Maintenance: rebuild the filters and size filters, recount pre-order quantities | `tool/console` | |
+| 53 | Customer card: edit, unlock, log in as the customer, balance transactions, reward points, IP list, history | `customer/customer` | |
+| 54 | Customer groups, customer approval, custom fields | `customer/customer_group`, `customer_approval`, `custom_field` | |
+| 55 | monobank: payment check, payment list, matching with orders | `extension/payment/mono` | |
+| 56 | PrivatBank business cards: their payments next to the statement | `sale/privatbank` checkBusinessCards | |
+| 57 | Marketing tracking codes | `marketing/marketing` | |
+| 58 | Gift vouchers: sending by e-mail, editing the voucher themes | `sale/voucher` send, `sale/voucher_theme` | |
+| 59 | Klaviyo: customer and subscriber exports, events | `extension/module/klaviyo` | |
+| 60 | TikTok Business: catalog sync | `extension/module/tiktok_business` | |
+| 61 | Instagram: image update | `extension/module/instagram` | |
+| 62 | Remarketing module settings (pixels, feeds) | `extension/module/remarketing` | |
+| 63 | Settings page: the store settings in `dd_setting` | `setting/setting` | |
+| 64 | User groups with per-page permissions | `user/user_permission` | |
+| 65 | API users and keys | `user/api` | |
+| 66 | Error log viewer: view, download, clear | `tool/log` | |
+| 67 | Database backup download | `tool/backup` | |
+| 68 | Uploaded files: list, download, delete | `tool/upload` | |
+| 69 | Dictionaries: order statuses, return statuses, reasons and actions, stock statuses | `localisation/*` | |
+| 70 | Banners and SEO URLs | `design/banner`, `design/seo_url` | |
+| 71 | Standard reports: customer activity, searches, orders and transactions; products purchased; sales by order, coupon, return and shipping; marketing; statistics | `extension/report/*`, `report/statistics` | |
+
+Security rules for items 35–71 (the old admin had none of them; each item is done only with its rules and tests):
+
+- Every page and endpoint has a role policy, deny by default; every input is validated by a Pydantic model on the server.
+- Rich text (descriptions, information pages, blog, FAQ, answers) is cleaned with an allowlist before saving (XSS).
+- Uploads (CSV import, images): size limit, the type checked by content, the name made by the server, stored outside
+  the static folder, never run.
+- Secrets (monobank, Klaviyo, TikTok, business card tokens) only in `.env` / `NEWERP_*`; the settings page never shows
+  or edits a secret.
+- Money and prices (rewards, transactions, commission, mass prices, order delete) are logged: who, when, old and new.
+- "Log in as the customer": admins only, a one-time signed token with a short life, logged.
+- API keys are stored as hashes, shown once, can be revoked.
+- Backup is download only, for admins; a restore stays a command-line step. The log viewer hides secrets.
+- Per-page permissions: an admin cannot take away their own admin access.
+
+Each item (or a small group) starts with a plan the user approves, like the earlier phases.
+
+Not planned on purpose (they stay in OpenCart or were replaced): Ukrposhta, WayForPay and Justin (closed in 2022),
+LiqPay e-mail invoices (replaced by the payment link), OpenCart engine settings (extensions, marketplace, themes,
+layouts, translations, countries, zones, taxes, currencies, units), subscriptions (`recurring`).
 
 ## Conventions (decided once, used everywhere)
 
