@@ -3,7 +3,7 @@
 import calendar
 import re
 import secrets
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -153,11 +153,17 @@ def contacts_csv(field: ContactField, rows: Iterable[ContactRow]) -> str:
     return "".join(line + "\r\n" for line in lines)
 
 
-def _escape(value: str) -> str:
-    """Quotes for fields with ; " or a line break, and an apostrophe before =+-@, so Excel does not run a formula."""
+def csv_text(rows: Iterable[Sequence[str]], separator: str = ";") -> str:
+    """Rows as CSV lines with the same protection as the contacts export, for any separator."""
+    return "".join(separator.join(_escape(v, separator) for v in row) + "\r\n" for row in rows)
+
+
+def _escape(value: str, separator: str = ";") -> str:
+    """Quotes for fields with the separator, " or a line break, and an apostrophe before =+-@, so Excel does not run
+    a formula."""
     if value and value[0] in "=+-@":
         value = "'" + value
-    if any(c in value for c in ';"\r\n'):
+    if any(c in value for c in (separator, '"', "\r", "\n")):
         return '"' + value.replace('"', '""') + '"'
     return value
 

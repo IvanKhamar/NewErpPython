@@ -20,6 +20,7 @@ from newerp.application.common import SystemClock
 from newerp.application.competitors import CompetitorService
 from newerp.application.customer_admin import CustomerAdminService
 from newerp.application.delivery.services import DeliveryService
+from newerp.application.marketing.integrations import InstagramService
 from newerp.application.monobank import MonobankService
 from newerp.application.stock.alerts import LowStockAlertOptions, LowStockAlertService
 from newerp.config import Settings, get_settings
@@ -30,6 +31,7 @@ from newerp.infrastructure.competitors import HttpPageFetcher, SqlCompetitorStor
 from newerp.infrastructure.customer_admin import SqlCustomerAdminStore
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
 from newerp.infrastructure.delivery.repositories import SqlShipmentRepository
+from newerp.infrastructure.marketing.integrations import HttpInstagramClient, LocalPictureFolder, SqlInstagramStore
 from newerp.infrastructure.monobank import SqlMonoInvoiceStore, monobank_gateway
 from newerp.infrastructure.orders.queries import SqlOrderQueries
 from newerp.infrastructure.sms import sms_sender
@@ -160,6 +162,11 @@ def beat_schedule_for(config: Settings) -> dict[str, dict]:
             "task": "payments.mono_check",
             "schedule": config.monobank.check_interval_minutes * 60,
         }
+    if config.instagram.update_interval_hours > 0:
+        schedule["marketing-instagram-update"] = {
+            "task": "marketing.instagram_update",
+            "schedule": config.instagram.update_interval_hours * 3600,
+        }
     if config.customers.login_link_minutes > 0:
         schedule["customers-expire-login-links"] = {"task": "customers.expire_login_links", "schedule": 60}
     # Without a key the stub has no waybills to track.
@@ -205,5 +212,17 @@ def payments_mono_check() -> dict:
             mono.check_days,
         )
         return (await service.check()).model_dump(by_alias=True)
+
+    return asyncio.run(with_session(work))
+
+
+@app.task(name="marketing.instagram_update")
+def marketing_instagram_update() -> dict:
+    """New Instagram posts for the storefront's block (the old module's updateImages)."""
+
+    async def work(session: AsyncSession) -> dict:
+        folder = LocalPictureFolder(settings.instagram.image_dir)
+        service = InstagramService(HttpInstagramClient(), SqlInstagramStore(session), folder, SystemClock())
+        return (await service.update()).model_dump(by_alias=True)
 
     return asyncio.run(with_session(work))

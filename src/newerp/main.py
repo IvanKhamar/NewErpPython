@@ -78,6 +78,7 @@ app.include_router(catalog.prices_router)
 app.include_router(catalog.dictionaries_router)
 app.include_router(pre_orders.router)
 app.include_router(marketing.router)
+app.include_router(marketing.feeds_router)
 app.include_router(marketing.order_router)
 app.include_router(returns.router)
 app.include_router(customer_admin.router)  # before customers: its fixed paths win over /customers/{id}

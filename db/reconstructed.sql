@@ -1091,3 +1091,16 @@ CREATE TABLE `dd_marketing` (
   `date_added` datetime NOT NULL,
   PRIMARY KEY (`marketing_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- ═══ Instagram-блок вітрини (admin/model/extension/module/instagram.php addImage) ═══
+-- Колонки із запиту; instagram_id — bigint, бо номери дописів Instagram довші за int. Типи вгадані, звірити.
+CREATE TABLE `dd_instagram` (
+  `instagram_id` bigint(20) NOT NULL,
+  `media_type` varchar(32) NOT NULL DEFAULT '',
+  `media_url` text NOT NULL,
+  `caption` text NOT NULL,
+  `thumbnail_url` text NOT NULL,
+  `permalink` varchar(255) NOT NULL DEFAULT '',
+  `date_added` datetime NOT NULL,
+  PRIMARY KEY (`instagram_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

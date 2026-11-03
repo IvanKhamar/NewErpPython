@@ -9,10 +9,12 @@ from pydantic import ValidationError
 from starlette.datastructures import FormData
 
 from newerp.api.deps import Session
-from newerp.api.marketing import Tracking, VoucherAdmin
+from newerp.api.marketing import Instagram, Klaviyo, Tracking, VoucherAdmin
 from newerp.api.security import Policies
+from newerp.application.marketing.integrations import KlaviyoSettingsDto
 from newerp.application.marketing.tracking import TrackingCodeDto
 from newerp.application.marketing.voucher_admin import VoucherThemeDto
+from newerp.config import get_settings
 from newerp.web.common import BUSINESS_ERRORS, WebUser, is_fragment, page_roles, render, undo
 
 router = APIRouter(
@@ -103,3 +105,52 @@ async def email_voucher(
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     return render(request, "_note.html", text=f"Лист надіслано на {result.to}.")
+
+
+# ── Integrations: Klaviyo, the TikTok feed, Instagram (the admin only) ──
+
+integrations = [Depends(page_roles(*Policies.INTEGRATIONS))]
+
+
+async def _integrations(request: Request, klaviyo: Klaviyo, **messages: Any) -> HTMLResponse:
+    template = "marketing/_integrations.html" if is_fragment(request) else "marketing/integrations.html"
+    settings = get_settings()
+    return render(
+        request, template, klaviyo=await klaviyo.settings(), feed_enabled=settings.tiktok_feed.enabled,
+        store_url=settings.customers.store_url, **messages,
+    )  # fmt: skip
+
+
+@router.get("/integrations", dependencies=integrations)
+async def integrations_page(request: Request, klaviyo: Klaviyo) -> HTMLResponse:
+    return await _integrations(request, klaviyo)
+
+
+@router.post("/integrations/klaviyo", dependencies=integrations)
+async def save_klaviyo(request: Request, klaviyo: Klaviyo, session: Session) -> HTMLResponse:
+    form = await request.form()
+    try:
+        settings = KlaviyoSettingsDto(
+            enabled=_text(form, "enabled") == "1",
+            tracking=_text(form, "tracking") == "1",
+            newsletter_list_id=_text(form, "newsletter_list_id"),
+        )
+        await klaviyo.save_settings(settings)
+    except ValidationError:
+        return await _integrations(request, klaviyo, error="Номер списку — до 64 знаків.")
+    except BUSINESS_ERRORS as error:
+        return await _integrations(request, klaviyo, error=await undo(session, error))
+    return await _integrations(request, klaviyo, saved="Збережено.")
+
+
+@router.post("/integrations/instagram", dependencies=integrations)
+async def update_instagram(request: Request, instagram: Instagram, session: Session) -> HTMLResponse:
+    try:
+        result = await instagram.update()
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=await undo(session, error))
+    if not result.configured:
+        return render(request, "_error.html", error="Токена Instagram немає в налаштуваннях модуля вітрини.")
+    return render(
+        request, "_note.html", text=f"Нових дописів: {result.added}, картинок збережено: {result.pictures_saved}."
+    )

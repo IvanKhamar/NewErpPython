@@ -242,6 +242,27 @@ class VoucherSettings(BaseModel):
     )
 
 
+class TikTokFeedSettings(BaseModel):
+    """The product feed TikTok Shop and Ads read (a catalog by URL). The token only in .env; without it the feed is
+    off. Links and pictures use the storefront address (NEWERP_CUSTOMERS__STORE_URL)."""
+
+    token: SecretStr = SecretStr("")
+    brand: str = "Vidro"
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.token.get_secret_value().strip())
+
+
+class InstagramSettings(BaseModel):
+    """The storefront's Instagram block. The access token stays where the old module keeps it (dd_setting), because
+    it has to be refreshed and saved every month. image_dir: the storefront's image folder, when the ERP can write
+    there; without it only the records are saved."""
+
+    image_dir: str = ""
+    update_interval_hours: int = 6  # 0: only by hand
+
+
 class RevenueFeedSettings(BaseModel):
     """The revenue feed for an outside dashboard. The token goes only into .env or NEWERP_REVENUE_FEED__TOKEN;
     without it the feed is off."""
@@ -309,6 +330,8 @@ class Settings(BaseSettings):
     vouchers: VoucherSettings = VoucherSettings()
     mail: MailSettings = MailSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
+    tiktok_feed: TikTokFeedSettings = TikTokFeedSettings()
+    instagram: InstagramSettings = InstagramSettings()
     competitors: CompetitorSettings = CompetitorSettings()
     kafka: KafkaSettings = KafkaSettings()
 

@@ -1,10 +1,11 @@
 """Marketing: birthdays, bulk SMS, the contacts export, gift vouchers and paying an order with a voucher."""
 
+import hmac
 from datetime import date
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 
 from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
@@ -23,6 +24,14 @@ from newerp.application.marketing.campaigns import (
     MarketingService,
 )
 from newerp.application.marketing.coupons import CouponCardDto, CouponListItem, CouponService, SaveCouponRequest
+from newerp.application.marketing.integrations import (
+    InstagramService,
+    InstagramUpdateResult,
+    KlaviyoList,
+    KlaviyoService,
+    KlaviyoSettingsDto,
+    TikTokFeedService,
+)
 from newerp.application.marketing.tracking import TrackingCodeDto, TrackingService
 from newerp.application.marketing.voucher_admin import VoucherAdminService, VoucherMailResult, VoucherThemeDto
 from newerp.application.marketing.vouchers import (
@@ -40,6 +49,13 @@ from newerp.domain.marketing import BirthdayPeriod, ContactField, ContactSource
 from newerp.infrastructure.mail import mail_sender
 from newerp.infrastructure.marketing.campaigns import SqlMarketingStore
 from newerp.infrastructure.marketing.coupons import SqlCouponStore
+from newerp.infrastructure.marketing.integrations import (
+    HttpInstagramClient,
+    LocalPictureFolder,
+    SqlFeedStore,
+    SqlInstagramStore,
+    SqlKlaviyoStore,
+)
 from newerp.infrastructure.marketing.tracking import SqlTrackingStore, SqlVoucherThemeStore
 from newerp.infrastructure.marketing.vouchers import SqlVoucherStore
 from newerp.infrastructure.sms import SqlSmsLog
@@ -306,3 +322,78 @@ async def update_voucher_theme(theme_id: int, request: VoucherThemeDto, service:
 @router.delete("/vouchers/themes/{theme_id}", status_code=204, summary="Видалити тему, якої не мають сертифікати")
 async def delete_voucher_theme(theme_id: int, principal: CurrentPrincipal, service: VoucherAdmin) -> None:
     await service.delete_theme(theme_id, principal.user_id)
+
+
+# ═══ Klaviyo, TikTok feed, Instagram (Python first) ═══
+
+integrations = [Depends(require_roles(*Policies.INTEGRATIONS))]
+
+
+def get_klaviyo(session: Session) -> KlaviyoService:
+    return KlaviyoService(SqlKlaviyoStore(session))
+
+
+def get_instagram(session: Session, clock: ClockDep) -> InstagramService:
+    settings = get_settings().instagram
+    return InstagramService(
+        HttpInstagramClient(), SqlInstagramStore(session), LocalPictureFolder(settings.image_dir), clock
+    )
+
+
+Klaviyo = Annotated[KlaviyoService, Depends(get_klaviyo)]
+Instagram = Annotated[InstagramService, Depends(get_instagram)]
+
+
+@router.get(
+    "/klaviyo/export/{which}.csv", dependencies=integrations, response_class=Response,
+    summary="CSV для імпорту в Klaviyo: customers, subscribers або unsubscribers (лише адміністратор)",
+)  # fmt: skip
+async def klaviyo_export(which: KlaviyoList, principal: CurrentPrincipal, service: Klaviyo) -> Response:
+    text = await service.export(which, principal.user_id)
+    return Response(
+        "﻿" + text, media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="klaviyo-{which}.csv"'},
+    )  # fmt: skip
+
+
+@router.get("/klaviyo/settings", dependencies=integrations, summary="Перемикачі модуля Klaviyo (без ключів API)")
+async def klaviyo_settings(service: Klaviyo) -> KlaviyoSettingsDto:
+    return await service.settings()
+
+
+@router.put("/klaviyo/settings", dependencies=integrations, summary="Увімкнути модуль, відстеження, список розсилки")
+async def save_klaviyo_settings(request: KlaviyoSettingsDto, service: Klaviyo) -> KlaviyoSettingsDto:
+    return await service.save_settings(request)
+
+
+@router.post("/instagram/update", dependencies=integrations, summary="Нові дописи Instagram для блоку вітрини")
+async def instagram_update(service: Instagram) -> InstagramUpdateResult:
+    return await service.update()
+
+
+feeds_router = APIRouter(prefix="/feeds", tags=["Фіди"])
+
+
+def get_tiktok_feed(session: Session) -> TikTokFeedService:
+    settings = get_settings()
+    return TikTokFeedService(
+        SqlFeedStore(session, settings.language_id), settings.customers.store_url, settings.tiktok_feed.brand
+    )
+
+
+@feeds_router.get(
+    "/tiktok.csv", response_class=Response,
+    summary="Каталог для TikTok за посиланням: токен у X-Feed-Token або ?token= (без токена в налаштуваннях — 404)",
+)  # fmt: skip
+async def tiktok_feed(
+    service: Annotated[TikTokFeedService, Depends(get_tiktok_feed)],
+    header: Annotated[str | None, Header(alias="X-Feed-Token")] = None,
+    token: str | None = None,
+) -> Response:
+    expected = get_settings().tiktok_feed.token.get_secret_value().strip()
+    if not expected:
+        return Response(status_code=404)
+    given = header if header is not None else token
+    if given is None or not hmac.compare_digest(given.strip().encode(), expected.encode()):
+        return Response(status_code=401)
+    return Response(await service.csv(), media_type="text/csv; charset=utf-8")

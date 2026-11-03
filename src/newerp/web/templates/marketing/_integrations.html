@@ -1,0 +1,29 @@
+{% from "_macros.html" import messages %}
+{{ messages(error, (), saved) }}
+<article>
+  <header>Klaviyo <small>(ключі API лишаються в модулі вітрини)</small></header>
+  <form hx-post="/app/marketing/integrations/klaviyo" hx-target="#integrations">
+    <label><input type="checkbox" role="switch" name="enabled" value="1"{% if klaviyo.enabled %} checked{% endif %}> Модуль увімкнений</label>
+    <label><input type="checkbox" name="tracking" value="1"{% if klaviyo.tracking %} checked{% endif %}> Відстеження подій на вітрині</label>
+    <label>Список розсилки <input name="newsletter_list_id" value="{{ klaviyo.newsletter_list_id }}" maxlength="64"></label>
+    <button type="submit">Зберегти</button>
+  </form>
+  <p>Вивантаження для імпорту:
+    <a href="/marketing/klaviyo/export/customers.csv">усі покупці</a> ·
+    <a href="/marketing/klaviyo/export/subscribers.csv">підписані</a> ·
+    <a href="/marketing/klaviyo/export/unsubscribers.csv">не підписані</a></p>
+</article>
+<article>
+  <header>Каталог для TikTok</header>
+  {% if feed_enabled and store_url %}
+  <p>TikTok читає каталог за адресою <code>{{ request.base_url }}feeds/tiktok.csv?token=…</code> (токен — NEWERP_TIKTOK_FEED__TOKEN).</p>
+  {% else %}
+  <p>Фід вимкнено: потрібні NEWERP_TIKTOK_FEED__TOKEN і адреса вітрини NEWERP_CUSTOMERS__STORE_URL.</p>
+  {% endif %}
+</article>
+<article>
+  <header>Instagram</header>
+  <p><small>Нові дописи для блоку вітрини; токен оновлюється раз на місяць. Це ж робить фонова задача.</small></p>
+  <button type="button" class="secondary" hx-post="/app/marketing/integrations/instagram" hx-target="#instagram-result">Оновити зараз</button>
+  <div id="instagram-result"></div>
+</article>

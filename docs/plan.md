@@ -97,9 +97,9 @@ missing in all three new versions, so every item is Python first):
 | 56 | PrivatBank business cards: their payments next to the statement | `sale/privatbank` checkBusinessCards | done (already in phase 9: the business cards are more accounts in `NEWERP_PRIVAT_BANK__ACCOUNTS`, read with the same statement API; the old code had their tokens written into it) |
 | 57 | Marketing tracking codes | `marketing/marketing` | done (`/marketing/tracking` with clicks, orders and their sum, the storefront link; page `/app/marketing/tracking`) |
 | 58 | Gift vouchers: sending by e-mail, editing the voucher themes | `sale/voucher` send, `sale/voucher_theme` | done (`POST /marketing/vouchers/{id}/email` through SMTP from `NEWERP_MAIL__*`, `/marketing/vouchers/themes`; page `/app/marketing/vouchers/themes`) |
-| 59 | Klaviyo: customer and subscriber exports, events | `extension/module/klaviyo` | |
-| 60 | TikTok Business: catalog sync | `extension/module/tiktok_business` | |
-| 61 | Instagram: image update | `extension/module/instagram` | |
+| 59 | Klaviyo: customer and subscriber exports, events | `extension/module/klaviyo` | done (`GET /marketing/klaviyo/export/{customers|subscribers|unsubscribers}.csv` and the module's switches, admin only; its API keys stay in the storefront module) |
+| 60 | TikTok Business: catalog sync | `extension/module/tiktok_business` | done as a catalog feed: `GET /feeds/tiktok.csv` with `NEWERP_TIKTOK_FEED__TOKEN` (TikTok reads a catalog by URL; the storefront pixel stays in the module) |
+| 61 | Instagram: image update | `extension/module/instagram` | done (`POST /marketing/instagram/update` and a Celery task: the token refreshed after 30 days, new posts into dd_instagram, pictures only from Instagram's CDN when `NEWERP_INSTAGRAM__IMAGE_DIR` is set) |
 | 62 | Remarketing module settings (pixels, feeds) | `extension/module/remarketing` | |
 | 63 | Settings page: the store settings in `dd_setting` | `setting/setting` | |
 | 64 | User groups with per-page permissions | `user/user_permission` | |
