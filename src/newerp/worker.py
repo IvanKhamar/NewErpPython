@@ -39,6 +39,8 @@ from newerp.infrastructure.stock.repositories import SqlStockRepository
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+# Celery sends the root logger to its own output; the audit lines only have to get past their level.
+logging.getLogger("newerp.audit").setLevel(logging.INFO)
 
 app = Celery("newerp", broker=settings.redis_url, backend=settings.redis_url)
 app.conf.update(task_acks_late=True, timezone="Europe/Kyiv")

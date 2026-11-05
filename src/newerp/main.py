@@ -35,6 +35,7 @@ from newerp.api.security import add_security_middleware
 from newerp.config import get_settings
 from newerp.infrastructure.db import engine
 from newerp.infrastructure.events import KafkaOrderEvents, LogOrderEvents, kafka_producer
+from newerp.infrastructure.logs import enable_audit_log
 from newerp.web import add_web
 
 
@@ -53,6 +54,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.order_events = LogOrderEvents()
         await engine.dispose()
 
+
+enable_audit_log()
 
 app = FastAPI(title="NewErp API", version="0.1.0", lifespan=lifespan)
 # The default until the lifespan connects Kafka (tests do not run the lifespan, so they keep it).
