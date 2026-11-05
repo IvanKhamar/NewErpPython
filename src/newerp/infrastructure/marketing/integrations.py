@@ -1,12 +1,13 @@
 """Klaviyo, the TikTok feed and Instagram over the OpenCart tables, and the Instagram Graph API client."""
 
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import BigInteger, Column, DateTime, MetaData, String, Table, Text, delete, func, insert, select
+from sqlalchemy import BigInteger, Column, DateTime, MetaData, String, Table, Text, delete, func, insert, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.marketing.integrations import (
@@ -17,7 +18,9 @@ from newerp.application.marketing.integrations import (
     KlaviyoContact,
     KlaviyoList,
     KlaviyoSettingsDto,
+    mask_error,
 )
+from newerp.config import TikTokSyncSettings
 from newerp.domain.common import DomainError
 from newerp.infrastructure.catalog.product_edit import STORE_ID, seo_url
 from newerp.infrastructure.models.catalog import DdProduct, DdProductDescription
@@ -27,6 +30,10 @@ from newerp.infrastructure.models.settings import DdSetting
 TIMEOUT_SECONDS = 30
 MAX_PICTURE_BYTES = 5_000_000
 GRAPH = "https://graph.instagram.com"
+TIKTOK_API = "https://business-api.tiktok.com/open_api/v1.3"
+TIKTOK_TIMEOUT_SECONDS = 120  # a batch of a thousand products
+
+log = logging.getLogger(__name__)
 _PICTURE_NAME = re.compile(r"\d{1,30}\.jpg")
 
 metadata = MetaData()
@@ -95,7 +102,7 @@ class SqlFeedStore:
         self._session = session
         self._language_id = language_id
 
-    async def products(self) -> list[FeedProduct]:
+    async def products(self, include_disabled: bool = False) -> list[FeedProduct]:
         p, d = DdProduct, DdProductDescription
         keyword = (
             select(seo_url.c.keyword)
@@ -104,9 +111,10 @@ class SqlFeedStore:
             .scalar_subquery()
         )
         rows = await self._session.execute(
-            select(p.product_id, d.name, d.description, p.price, p.quantity, p.image, keyword)
+            select(p.product_id, d.name, d.description, p.price, p.quantity, p.image, keyword, p.status)
             .join(d, (d.product_id == p.product_id) & (d.language_id == self._language_id))
-            .where(p.status.is_(True), p.price > 0, p.image.is_not(None), p.image != "")
+            .where(p.price > 0, p.image.is_not(None), p.image != "")
+            .where(true() if include_disabled else p.status.is_(True))
             .order_by(p.product_id)
         )
         return [
@@ -118,6 +126,7 @@ class SqlFeedStore:
                 quantity=r[4],
                 image=r[5],
                 seo_keyword=r[6] or "",
+                enabled=bool(r[7]),
             )  # fmt: skip
             for r in rows
         ]
@@ -158,6 +167,34 @@ def _old_date(value: str) -> datetime | None:
     """The old module wrote date('Y:m:d h:m:s') (colons, and the month for the minutes); the date part is enough."""
     match = re.match(r"(\d{4})[:-](\d{2})[:-](\d{2})", value.strip())
     return datetime(int(match[1]), int(match[2]), int(match[3])) if match else None
+
+
+class HttpTikTokCatalog:
+    """TikTok's Business API, as the old module called it. The token goes only in the Access-Token header."""
+
+    def __init__(self, settings: TikTokSyncSettings, transport: httpx.AsyncBaseTransport | None = None) -> None:
+        self._settings = settings
+        self._transport = transport
+
+    @property
+    def enabled(self) -> bool:
+        return self._settings.enabled
+
+    async def upload(self, products: list[dict]) -> bool:
+        body = {"bc_id": self._settings.bc_id, "catalog_id": self._settings.catalog_id, "products": products}
+        headers = {"Access-Token": self._settings.access_token.get_secret_value()}
+        try:
+            async with httpx.AsyncClient(timeout=TIKTOK_TIMEOUT_SECONDS, transport=self._transport,
+                                         follow_redirects=False) as http:  # fmt: skip
+                response = await http.post(f"{TIKTOK_API}/catalog/product/upload/", json=body, headers=headers)
+            answer = response.json()
+        except (httpx.HTTPError, ValueError) as error:
+            log.warning("TikTok catalog batch failed: %s", mask_error(error))
+            return False
+        if response.status_code == 200 and answer.get("message") == "OK":
+            return True
+        log.warning("TikTok refused a catalog batch: HTTP %s, code %s", response.status_code, answer.get("code"))
+        return False
 
 
 class HttpInstagramClient:

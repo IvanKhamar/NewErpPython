@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from starlette.datastructures import FormData
 
 from newerp.api.deps import Session
-from newerp.api.marketing import Instagram, Klaviyo, RemarketingSettings, Tracking, VoucherAdmin
+from newerp.api.marketing import Instagram, Klaviyo, KlaviyoLog, RemarketingSettings, TikTokSync, Tracking, VoucherAdmin
 from newerp.api.security import Policies
 from newerp.application.marketing.integrations import KlaviyoSettingsDto
 from newerp.application.marketing.tracking import TrackingCodeDto
@@ -117,8 +117,25 @@ async def _integrations(request: Request, klaviyo: Klaviyo, **messages: Any) -> 
     settings = get_settings()
     return render(
         request, template, klaviyo=await klaviyo.settings(), feed_enabled=settings.tiktok_feed.enabled,
-        store_url=settings.customers.store_url, **messages,
+        tiktok_sync_enabled=settings.tiktok_sync.enabled, store_url=settings.customers.store_url, **messages,
     )  # fmt: skip
+
+
+@router.post("/integrations/tiktok", dependencies=integrations)
+async def sync_tiktok(request: Request, user: WebUser, service: TikTokSync) -> HTMLResponse:
+    try:
+        result = await service.sync(user.user_id)
+    except BUSINESS_ERRORS as error:
+        return render(request, "_error.html", error=str(error))
+    if not result.configured:
+        return render(request, "_error.html", error="Надсилання каталогу в TikTok не налаштовано.")
+    text = f"Надіслано товарів: {result.uploaded}, не прийнято: {result.failed}."
+    return render(request, "_error.html" if result.failed else "_note.html", error=text, text=text)
+
+
+@router.get("/integrations/klaviyo-log", dependencies=integrations)
+async def klaviyo_log(request: Request, log: KlaviyoLog) -> HTMLResponse:
+    return render(request, "marketing/_klaviyo_log.html", log=log.view())
 
 
 @router.get("/integrations", dependencies=integrations)

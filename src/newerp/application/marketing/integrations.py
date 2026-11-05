@@ -94,11 +94,12 @@ class FeedProduct:
     quantity: int
     image: str
     seo_keyword: str
+    enabled: bool = True
 
 
 class FeedStore(Protocol):
-    async def products(self) -> list[FeedProduct]:
-        """Enabled products with a price and a picture."""
+    async def products(self, include_disabled: bool = False) -> list[FeedProduct]:
+        """Products with a price and a picture; enabled ones unless asked otherwise."""
         ...
 
 
@@ -117,17 +118,86 @@ class TikTokFeedService:
             raise DomainError("Адресу вітрини не задано (NEWERP_CUSTOMERS__STORE_URL): без неї немає посилань.")
         rows = [FEED_COLUMNS]
         for p in await self._store.products():
-            link = (
-                f"{self._store_url}/{p.seo_keyword}"
-                if p.seo_keyword
-                else f"{self._store_url}/index.php?route=product/product&product_id={p.product_id}"
-            )
-            text = " ".join(nh3.clean(p.description, tags=set()).split())[:5000]
             rows.append([
-                str(p.product_id), p.name[:255], text or p.name, "in stock" if p.quantity > 0 else "out of stock",
-                "new", f"{p.price:.2f} UAH", link, f"{self._store_url}/image/{p.image}", self._brand,
+                str(p.product_id), p.name[:255], _plain_text(p) or p.name,
+                "in stock" if p.quantity > 0 else "out of stock", "new", f"{p.price:.2f} UAH",
+                _product_link(self._store_url, p), f"{self._store_url}/image/{p.image}", self._brand,
             ])  # fmt: skip
         return csv_text(rows, ",")
+
+
+def _plain_text(p: FeedProduct) -> str:
+    return " ".join(nh3.clean(p.description, tags=set()).split())[:5000]
+
+
+def _product_link(store_url: str, p: FeedProduct) -> str:
+    if p.seo_keyword:
+        return f"{store_url}/{p.seo_keyword}"
+    return f"{store_url}/index.php?route=product/product&product_id={p.product_id}"
+
+
+SYNC_BATCH = 1000  # TikTok takes up to 5000 at once; smaller batches lose less when one is refused
+
+
+class TikTokCatalogClient(Protocol):
+    @property
+    def enabled(self) -> bool: ...
+
+    async def upload(self, products: list[dict]) -> bool:
+        """True when TikTok accepted the batch. Never raises for TikTok's or the network's failure."""
+        ...
+
+
+class TikTokSyncResult(Dto):
+    configured: bool
+    uploaded: int = 0
+    failed: int = 0
+
+
+def mask_error(error: Exception) -> str:
+    """For the log: the kind of failure only, as a message may repeat a request's headers."""
+    return type(error).__name__
+
+
+class TikTokSyncService:
+    """The old module's catalog sync: products go to TikTok in batches, through its API."""
+
+    def __init__(self, store: FeedStore, catalog: TikTokCatalogClient, store_url: str, brand: str) -> None:
+        self._store = store
+        self._catalog = catalog
+        self._store_url = store_url.strip().rstrip("/")
+        self._brand = brand
+
+    async def sync(self, user_id: int | None) -> TikTokSyncResult:
+        if not self._catalog.enabled:
+            return TikTokSyncResult(configured=False)
+        if not self._store_url:
+            raise DomainError("Адресу вітрини не задано (NEWERP_CUSTOMERS__STORE_URL): без неї немає посилань.")
+        # Disabled products too: left out, they would stay on sale there with the last stock TikTok was told.
+        products = [self._format(p) for p in await self._store.products(include_disabled=True)]
+        uploaded = failed = 0
+        for start in range(0, len(products), SYNC_BATCH):
+            batch = products[start : start + SYNC_BATCH]
+            if await self._catalog.upload(batch):
+                uploaded += len(batch)
+            else:
+                failed += len(batch)
+        audit.info("tiktok catalog sync: %s uploaded, %s failed, by %s", uploaded, failed,
+                   f"user {user_id}" if user_id is not None else "the schedule")  # fmt: skip
+        return TikTokSyncResult(configured=True, uploaded=uploaded, failed=failed)
+
+    def _format(self, p: FeedProduct) -> dict:
+        return {
+            "sku_id": str(p.product_id),
+            "title": p.name[:255],
+            "description": _plain_text(p) or p.name,
+            "availability": "IN_STOCK" if p.enabled and p.quantity > 0 else "OUT_OF_STOCK",
+            "image_url": f"{self._store_url}/image/{p.image}",
+            "brand": self._brand,
+            "product_detail": {"condition": "NEW"},
+            "price_info": {"price": f"{p.price:.2f}", "currency": "UAH"},
+            "landing_page": {"landing_page_url": _product_link(self._store_url, p)},
+        }
 
 
 # ── Instagram ──

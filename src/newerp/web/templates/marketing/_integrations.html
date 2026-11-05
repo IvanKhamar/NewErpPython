@@ -20,6 +20,19 @@
   {% else %}
   <p>Фід вимкнено: потрібні NEWERP_TIKTOK_FEED__TOKEN і адреса вітрини NEWERP_CUSTOMERS__STORE_URL.</p>
   {% endif %}
+  {% if tiktok_sync_enabled %}
+  <p><small>Або ERP сам надсилає каталог через API TikTok. Вимкнені товари йдуть як «немає в наявності».</small></p>
+  <p><button class="outline" hx-post="/app/marketing/integrations/tiktok" hx-target="#tiktok-result" hx-disabled-elt="this">Надіслати каталог зараз</button></p>
+  <div id="tiktok-result" role="status"></div>
+  {% else %}
+  <p><small>Надсилання через API вимкнено: потрібні NEWERP_TIKTOK_SYNC__ACCESS_TOKEN, __BC_ID і __CATALOG_ID.</small></p>
+  {% endif %}
+</article>
+<article>
+  <details>
+    <summary>Журнал модуля Klaviyo</summary>
+    <div hx-get="/app/marketing/integrations/klaviyo-log" hx-trigger="toggle from:closest details once" aria-live="polite">Завантаження…</div>
+  </details>
 </article>
 <article>
   <header>Instagram</header>

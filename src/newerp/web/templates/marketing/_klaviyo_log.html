@@ -1,0 +1,8 @@
+{% if not log.enabled %}
+<p><small>Журнал не підключено: NEWERP_ADMIN_TOOLS__KLAVIYO_LOG (файл klaviyo_logs.txt модуля вітрини на спільному томі).</small></p>
+{% elif not log.text %}
+<p>Журнал порожній.</p>
+{% else %}
+{% if log.cut %}<p><small>Показано кінець файлу.</small></p>{% endif %}
+<pre>{{ log.text }}</pre>
+{% endif %}

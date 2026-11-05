@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from newerp.api.deps import ClockDep, Session, enum_from_query
 from newerp.api.security import CurrentPrincipal, Policies, require_roles
 from newerp.api.sms import get_sender
+from newerp.application.admin_files import ErrorLogDto, ErrorLogService
 from newerp.application.common import LookupItem, SystemClock
 from newerp.application.marketing.campaigns import (
     BirthdayContactDto,
@@ -31,6 +32,8 @@ from newerp.application.marketing.integrations import (
     KlaviyoService,
     KlaviyoSettingsDto,
     TikTokFeedService,
+    TikTokSyncResult,
+    TikTokSyncService,
 )
 from newerp.application.marketing.tracking import TrackingCodeDto, TrackingService
 from newerp.application.marketing.voucher_admin import VoucherAdminService, VoucherMailResult, VoucherThemeDto
@@ -47,11 +50,13 @@ from newerp.application.marketing.vouchers import (
 from newerp.application.module_settings import REMARKETING, ModuleSettingsService, SettingGroupDto
 from newerp.config import get_settings
 from newerp.domain.marketing import BirthdayPeriod, ContactField, ContactSource
+from newerp.infrastructure.admin_files import LocalLogFile
 from newerp.infrastructure.mail import mail_sender
 from newerp.infrastructure.marketing.campaigns import SqlMarketingStore
 from newerp.infrastructure.marketing.coupons import SqlCouponStore
 from newerp.infrastructure.marketing.integrations import (
     HttpInstagramClient,
+    HttpTikTokCatalog,
     LocalPictureFolder,
     SqlFeedStore,
     SqlInstagramStore,
@@ -371,6 +376,34 @@ async def save_klaviyo_settings(request: KlaviyoSettingsDto, service: Klaviyo) -
 @router.post("/instagram/update", dependencies=integrations, summary="Нові дописи Instagram для блоку вітрини")
 async def instagram_update(service: Instagram) -> InstagramUpdateResult:
     return await service.update()
+
+
+def get_tiktok_sync(session: Session) -> TikTokSyncService:
+    settings = get_settings()
+    return TikTokSyncService(
+        SqlFeedStore(session, settings.language_id),
+        HttpTikTokCatalog(settings.tiktok_sync),
+        settings.customers.store_url,
+        settings.tiktok_feed.brand,
+    )
+
+
+def get_klaviyo_log() -> ErrorLogService:
+    return ErrorLogService(LocalLogFile(get_settings().admin_tools.klaviyo_log))
+
+
+TikTokSync = Annotated[TikTokSyncService, Depends(get_tiktok_sync)]
+KlaviyoLog = Annotated[ErrorLogService, Depends(get_klaviyo_log)]
+
+
+@router.post("/tiktok/sync", dependencies=integrations, summary="Надіслати каталог у TikTok через його API")
+async def tiktok_sync(service: TikTokSync, principal: CurrentPrincipal) -> TikTokSyncResult:
+    return await service.sync(principal.user_id)
+
+
+@router.get("/klaviyo/log", dependencies=integrations, summary="Кінець журналу модуля Klaviyo (ключі приховані)")
+async def klaviyo_log(log: KlaviyoLog) -> ErrorLogDto:
+    return log.view()
 
 
 feeds_router = APIRouter(prefix="/feeds", tags=["Фіди"])

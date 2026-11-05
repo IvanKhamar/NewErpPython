@@ -260,12 +260,27 @@ class AdminToolsSettings(BaseModel):
 
     error_log: str = ""  # /var/www/storage/logs/error.log
     upload_dir: str = ""  # /var/www/storage/upload
+    klaviyo_log: str = ""  # /var/www/storage/logs/huntbee_klaviyo_logs/klaviyo_logs.txt
 
 
 class PictureSettings(BaseModel):
     """The storefront's image folder for uploaded pictures, on a shared volume. Empty: paths are typed by hand."""
 
     image_dir: str = ""  # /var/www/image
+
+
+class TikTokSyncSettings(BaseModel):
+    """The catalog sync through TikTok's API, as the old module did it. The token only in .env; bc_id and catalog_id
+    are in TikTok's Business Center. interval_hours 0: only by hand."""
+
+    access_token: SecretStr = SecretStr("")
+    bc_id: str = ""
+    catalog_id: str = ""
+    interval_hours: int = 0
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.access_token.get_secret_value().strip() and self.bc_id.strip() and self.catalog_id.strip())
 
 
 class InstagramSettings(BaseModel):
@@ -345,6 +360,7 @@ class Settings(BaseSettings):
     mail: MailSettings = MailSettings()
     revenue_feed: RevenueFeedSettings = RevenueFeedSettings()
     tiktok_feed: TikTokFeedSettings = TikTokFeedSettings()
+    tiktok_sync: TikTokSyncSettings = TikTokSyncSettings()
     instagram: InstagramSettings = InstagramSettings()
     admin_tools: AdminToolsSettings = AdminToolsSettings()
     pictures: PictureSettings = PictureSettings()
