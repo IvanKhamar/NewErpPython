@@ -84,8 +84,43 @@
       </tbody>
     </table>
   </article>
+  {% if lookups.options %}
   <article>
-    <header>Акційні ціни <small>(ціна або відсоток знижки; порожні дати — без обмеження)</small></header>
+    <header>Інші опції <small>(кольори, довжини… Залишків у них немає: виробництво веде їх лише за розмірами)</small></header>
+    {% set chosen_options = {} %}{% for option in product.options %}{% set _ = chosen_options.update({option.option_id: option}) %}{% endfor %}
+    {% for option in lookups.options %}{% set current = chosen_options.get(option.id) %}
+    <details{% if current %} open{% endif %}>
+      <summary>{{ option.name }}{% if current %} <span class="chip">обрано</span>{% endif %}</summary>
+      <label><input type="checkbox" name="option_required_{{ option.id }}" value="1"{% if not current or current.required %} checked{% endif %}> Обов'язково обрати на вітрині</label>
+      {% if option.has_values %}
+      {% set chosen_values = {} %}{% if current %}{% for value in current["values"] %}{% set _ = chosen_values.update({value.option_value_id: value}) %}{% endfor %}{% endif %}
+      {% if not option["values"] %}<p class="warning">Значень немає: додайте їх у «Фільтри, атрибути, опції».</p>{% endif %}
+      <table>
+        <thead><tr><th>Значення</th><th>Знак</th><th>Різниця в ціні, грн</th><th class="num">Залишок</th></tr></thead>
+        <tbody>
+        {% for value in option["values"] %}{% set chosen = chosen_values.get(value.id) %}
+          <tr>
+            <td><label><input type="checkbox" name="option_value_{{ option.id }}" value="{{ value.id }}"{% if chosen %} checked{% endif %}> {{ value.name }}</label></td>
+            <td><select name="value_prefix_{{ value.id }}" aria-label="Знак {{ value.name }}">
+              <option value="+">+</option>
+              <option value="-"{% if chosen and chosen.price_prefix == "-" %} selected{% endif %}>−</option>
+            </select></td>
+            <td><input name="value_price_{{ value.id }}" value="{{ chosen.price|qty if chosen else 0 }}" inputmode="decimal" aria-label="Різниця в ціні {{ value.name }}"></td>
+            <td class="num">{{ chosen.quantity if chosen else "—" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <label><input type="checkbox" name="option_text" value="{{ option.id }}"{% if current %} checked{% endif %}> Додати до товару</label>
+      <label>Текст <input name="option_text_value_{{ option.id }}" value="{{ current.value if current else '' }}" maxlength="1000"></label>
+      {% endif %}
+    </details>
+    {% endfor %}
+  </article>
+  {% endif %}
+  <article>
+    <header>Акційні ціни<small>(ціна або відсоток знижки; порожні дати — без обмеження)</small></header>
     <table>
       <thead><tr><th>Група</th><th>Пріоритет</th><th>Ціна</th><th>Знижка, %</th><th>Від</th><th>До</th></tr></thead>
       <tbody>

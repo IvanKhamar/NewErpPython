@@ -6,7 +6,7 @@ disabled, without stock and without the SEO address, which must stay unique."""
 import logging
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import Field
 
@@ -19,6 +19,7 @@ audit = logging.getLogger("newerp.audit")
 
 Ids = list[int]
 MAX_LINKS = 200
+OPTION_TYPES_WITH_VALUES = ("select", "radio", "checkbox", "image")  # the others hold a text: text, date, file...
 
 
 class ProductImageDto(Dto):
@@ -51,6 +52,30 @@ class ProductSizeEditDto(Dto):
     name: str = ""
     price: Money = Field(default=Decimal(0), ge=0, le=10_000_000)
     quantity: int = 0
+
+
+class ProductOptionValueDto(ProductSizeEditDto):
+    """A value of an option other than size (a colour, a length). price_prefix: the storefront adds or subtracts it."""
+
+    price_prefix: Literal["+", "-"] = "+"
+
+
+class ProductOptionDto(Dto):
+    """An option other than size. value: the text of an option with no list of values (text, date...)."""
+
+    option_id: int
+    name: str = ""
+    required: bool = True
+    value: str = Field(default="", max_length=1000)
+    values: list[ProductOptionValueDto] = Field(default_factory=list, max_length=200)
+
+
+class ProductOptionLookup(Dto):
+    id: int
+    name: str
+    type: str
+    has_values: bool
+    values: list[LookupItem]
 
 
 class ProductFormDto(Dto):
@@ -92,6 +117,7 @@ class ProductFormDto(Dto):
     images: list[ProductImageDto] = Field(default_factory=list, max_length=50)
     specials: list[ProductSpecialDto] = Field(default_factory=list, max_length=50)
     sizes: list[ProductSizeEditDto] = Field(default_factory=list, max_length=100)
+    options: list[ProductOptionDto] = Field(default_factory=list, max_length=50)
     attributes: list[ProductAttributeDto] = Field(default_factory=list, max_length=100)
     download_ids: Ids = Field(default_factory=list, max_length=MAX_LINKS)
 
@@ -112,6 +138,7 @@ class ProductFormLookups(Dto):
     labels: list[LookupItem]
     filters: list[LookupItem]  # "Група: значення"
     sizes: list[LookupItem]  # values of the size option
+    options: list[ProductOptionLookup] = Field(default_factory=list)  # every other option
     attributes: list[LookupItem]  # "Група: атрибут"
     downloads: list[LookupItem]
 
@@ -227,6 +254,7 @@ class ProductEditService:
             for size in current.sizes:
                 if size.option_value_id not in kept and size.quantity > 0:
                     raise DomainError(f"Розмір {size.name} не можна прибрати: на вітрині {size.quantity} шт.")
+        options = _checked_options(request.options, lookups.options, current)
         related = set(request.related_ids) | set(request.related_color_ids) | set(request.related_variant_ids)
         related.discard(product_id or 0)
         missing = related - await self._store.existing_products(related)
@@ -250,6 +278,7 @@ class ProductEditService:
                 "image": image,
                 "images": images,
                 "seo_keyword": keyword,
+                "options": options,
                 "related_ids": _unique(request.related_ids, product_id),
                 "related_color_ids": _unique(request.related_color_ids, product_id),
                 "related_variant_ids": _unique(request.related_variant_ids, product_id),
@@ -264,6 +293,38 @@ class ProductEditService:
 
 
 HTML_FIELDS = ("description", "table_size", "notice", "model_info", "characteristics")
+
+
+def _checked_options(
+    options: list[ProductOptionDto], lookups: list[ProductOptionLookup], current: ProductEditDto | None
+) -> list[ProductOptionDto]:
+    known = {lookup.id: lookup for lookup in lookups}
+    checked: dict[int, ProductOptionDto] = {}
+    for option in options:
+        lookup = known.get(option.option_id)
+        if lookup is None:
+            raise DomainError(f"Опції №{option.option_id} немає (розміри задаються окремо).")
+        if option.option_id in checked:
+            raise DomainError(f"Опція «{lookup.name}» у списку двічі.")
+        ids = [value.option_value_id for value in option.values]
+        if len(set(ids)) != len(ids):
+            raise DomainError(f"Опція «{lookup.name}»: значення у списку двічі.")
+        if not set(ids) <= {value.id for value in lookup.values}:
+            raise DomainError(f"Опція «{lookup.name}» не має такого значення.")
+        if lookup.has_values and not ids:  # a required list with nothing to choose stops the purchase on the storefront
+            raise DomainError(f"Опція «{lookup.name}»: оберіть хоча б одне значення.")
+        text = "" if lookup.has_values else option.value.strip()
+        if "<" in text or ">" in text:
+            raise DomainError(f"Опція «{lookup.name}»: текст без знаків < і >.")
+        checked[option.option_id] = option.model_copy(update={"value": text})
+    if current is not None:
+        kept = {value.option_value_id for option in options for value in option.values}
+        for option in current.options:
+            for value in option.values:
+                if value.option_value_id not in kept and value.quantity > 0:
+                    name = f"{value.name} опції «{option.name}»"
+                    raise DomainError(f"Значення {name} не можна прибрати: на вітрині {value.quantity} шт.")
+    return list(checked.values())
 
 
 def _known(what: str, chosen: list[int], allowed: list[LookupItem], kept: list[int]) -> None:

@@ -10,11 +10,15 @@ from sqlalchemy import Column, Integer, MetaData, String, Table, Text, case, del
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.catalog.product_edit import (
+    OPTION_TYPES_WITH_VALUES,
     ProductAttributeDto,
     ProductEditDto,
     ProductFormDto,
     ProductFormLookups,
     ProductImageDto,
+    ProductOptionDto,
+    ProductOptionLookup,
+    ProductOptionValueDto,
     ProductSizeEditDto,
     ProductSpecialDto,
     RemoveNewResult,
@@ -26,6 +30,8 @@ from newerp.infrastructure.catalog.tables import (
     attribute_description,
     attribute_group_description,
     download_description,
+    option,
+    option_value,
     product_attribute,
     product_to_download,
 )
@@ -125,13 +131,7 @@ class SqlProductEditStore:
             .where(s.product_id == product_id)
             .order_by(s.priority, s.product_special_id)  # fmt: skip
         )
-        v, n = DdProductOptionValue, DdOptionValueDescription
-        sizes = await self._session.execute(
-            select(v.option_value_id, n.name, v.price, v.quantity)
-            .outerjoin(n, (n.option_value_id == v.option_value_id) & (n.language_id == self._language_id))
-            .where(v.product_id == product_id)
-            .order_by(v.product_option_value_id)
-        )
+        sizes, options = await self._sizes_and_options(product_id)
         images = await self._session.scalars(
             select(DdProductImage).where(DdProductImage.product_id == product_id).order_by(DdProductImage.sort_order)
         )
@@ -171,14 +171,79 @@ class SqlProductEditStore:
                                   date_end=r[5])  # fmt: skip
                 for r in specials
             ],
-            sizes=[
-                ProductSizeEditDto(option_value_id=i, name=name or f"#{i}", price=price, quantity=quantity)
-                for i, name, price, quantity in sizes
-            ],
+            sizes=sizes,
+            options=options,
             attributes=[ProductAttributeDto(attribute_id=i, text=t) for i, t in await self._attributes(product_id)],
             download_ids=await ids(product_to_download.c.download_id, product_to_download.c.product_id),
             **text,
         )  # fmt: skip
+
+    async def _size_option_ids(self) -> set[int]:
+        d = DdOptionDescription
+        return set(
+            await self._session.scalars(
+                select(d.option_id).where(d.name.contains(SIZE_OPTION_NAME), d.language_id == self._language_id)
+            )
+        )
+
+    async def _sizes_and_options(self, product_id: int) -> tuple[list[ProductSizeEditDto], list[ProductOptionDto]]:
+        """The product's option rows: those of the size option are its sizes, the others are its other options."""
+        v, n, d, o = DdProductOptionValue, DdOptionValueDescription, DdOptionDescription, product_option.c
+        size_options = await self._size_option_ids()
+        parents = await self._session.execute(
+            select(o.option_id, d.name, o.value, o.required)
+            .outerjoin(d, (d.option_id == o.option_id) & (d.language_id == self._language_id))
+            .where(o.product_id == product_id)
+        )
+        options = {
+            option_id: ProductOptionDto(option_id=option_id, name=name or f"#{option_id}", value=value or "",
+                                        required=bool(required))
+            for option_id, name, value, required in parents
+            if option_id not in size_options
+        }  # fmt: skip
+        rows = await self._session.execute(
+            select(v.option_id, v.option_value_id, n.name, v.price, v.price_prefix, v.quantity)
+            .outerjoin(n, (n.option_value_id == v.option_value_id) & (n.language_id == self._language_id))
+            .where(v.product_id == product_id)
+            .order_by(v.product_option_value_id)
+        )
+        sizes = []
+        for option_id, value_id, name, price, prefix, quantity in rows:
+            if option_id in size_options:
+                sizes.append(ProductSizeEditDto(option_value_id=value_id, name=name or f"#{value_id}", price=price,
+                                                quantity=quantity))  # fmt: skip
+                continue
+            entry = options.setdefault(option_id, ProductOptionDto(option_id=option_id, name=f"#{option_id}"))
+            entry.values.append(
+                ProductOptionValueDto(option_value_id=value_id, name=name or f"#{value_id}", price=price,
+                                      price_prefix="-" if prefix == "-" else "+", quantity=quantity)
+            )  # fmt: skip
+        return sizes, list(options.values())
+
+    async def _option_lookups(self) -> list[ProductOptionLookup]:
+        d, n, o, ov = DdOptionDescription, DdOptionValueDescription, option.c, option_value.c
+        size_options = await self._size_option_ids()
+        values: dict[int, list[LookupItem]] = {}
+        rows = await self._session.execute(
+            select(ov.option_id, ov.option_value_id, n.name)
+            .select_from(option_value)
+            .outerjoin(n, (n.option_value_id == ov.option_value_id) & (n.language_id == self._language_id))
+            .order_by(ov.sort_order, ov.option_value_id)
+        )
+        for option_id, value_id, name in rows:
+            values.setdefault(option_id, []).append(LookupItem(id=value_id, name=name or f"#{value_id}"))
+        options = await self._session.execute(
+            select(o.option_id, d.name, o.type)
+            .select_from(option)
+            .outerjoin(d, (d.option_id == o.option_id) & (d.language_id == self._language_id))
+            .order_by(o.sort_order, o.option_id)
+        )
+        return [
+            ProductOptionLookup(id=option_id, name=name or f"#{option_id}", type=kind or "",
+                                has_values=kind in OPTION_TYPES_WITH_VALUES, values=values.get(option_id, []))
+            for option_id, name, kind in options
+            if option_id not in size_options
+        ]  # fmt: skip
 
     async def _attributes(self, product_id: int) -> list[tuple[int, str]]:
         c = product_attribute.c
@@ -238,6 +303,7 @@ class SqlProductEditStore:
             labels=[LookupItem(id=i, name=n) for i, n in labels],
             filters=[LookupItem(id=i, name=f"{g}: {n}") for i, n, g in filters],
             sizes=[LookupItem(id=i, name=n) for i, n in sizes],
+            options=await self._option_lookups(),
             attributes=[LookupItem(id=i, name=f"{g}: {n}" if g else n) for i, n, g in attributes],
             downloads=[LookupItem(id=i, name=n) for i, n in downloads],
         )
@@ -412,57 +478,74 @@ class SqlProductEditStore:
         if form.download_ids:
             links = [{"product_id": product_id, "download_id": i} for i in form.download_ids]
             await s.execute(insert(product_to_download), links)
-        await self._write_sizes(product_id, form.sizes, sizes_before)
+        await self._write_options(product_id, form, sizes_before)
         await s.commit()
 
-    async def _write_sizes(self, product_id: int, sizes: list[ProductSizeEditDto], before: set[int]) -> None:
-        """Changes prices, adds new sizes with no stock and removes sizes left out; stock stays as production set it."""
-        v, s = DdProductOptionValue, self._session
-        wanted = {size.option_value_id: size for size in sizes}
+    async def _write_options(self, product_id: int, form: ProductFormDto, before: set[int]) -> None:
+        """Changes prices, adds new values with no stock and removes values left out; stock stays as production set it.
+        Rows are changed in place and never rewritten: the lines of old orders point to them."""
+        v, o, s = DdProductOptionValue, product_option.c, self._session
+        wanted = {size.option_value_id for size in form.sizes}
+        wanted |= {value.option_value_id for option in form.options for value in option.values}
         gone = [i for i in before if i not in wanted]
         if gone:
             await s.execute(delete(v).where(v.product_id == product_id, v.option_value_id.in_(gone)))
-        for option_value_id, size in wanted.items():
-            if option_value_id in before:
-                await s.execute(
-                    update(v)
-                    .where(v.product_id == product_id, v.option_value_id == option_value_id)
-                    .values(price=size.price)
-                )
+        for size in form.sizes:
+            if size.option_value_id in before:
+                await self._update_value(product_id, size.option_value_id, price=size.price)
                 continue
             option_id = await s.scalar(
                 select(DdOptionValueDescription.option_id)
-                .where(DdOptionValueDescription.option_value_id == option_value_id)
+                .where(DdOptionValueDescription.option_value_id == size.option_value_id)
                 .limit(1)
             )
-            product_option_id = await s.scalar(
-                select(product_option.c.product_option_id).where(
-                    product_option.c.product_id == product_id, product_option.c.option_id == option_id
-                )
-            )
-            if product_option_id is None:
-                product_option_id = (
-                    await s.execute(
-                        insert(product_option).values(product_id=product_id, option_id=option_id, value="", required=1)
-                    )
-                ).inserted_primary_key[0]
-            await s.execute(
-                insert(v).values(
-                    product_option_id=product_option_id,
-                    product_id=product_id,
-                    option_id=option_id,
-                    option_value_id=option_value_id,
-                    quantity=0,
-                    subtract=True,
-                    price=size.price,
-                    price_prefix="+",
-                    points=0,
-                    points_prefix="+",
-                    weight=Decimal(0),
-                    weight_prefix="+",
-                )  # fmt: skip
-            )
-        # The product's quantity is the sum of its sizes, as production keeps it.
-        if sizes or before:
+            parent = await self._write_parent(product_id, option_id, required=True)
+            # subtract: the storefront counts it down, and hides it at zero until production adds stock.
+            await self._insert_value(product_id, parent, option_id, size, "+", subtract=True)
+        for chosen in form.options:
+            parent = await self._write_parent(product_id, chosen.option_id, chosen.required, chosen.value)
+            for value in chosen.values:
+                if value.option_value_id in before:
+                    await self._update_value(product_id, value.option_value_id, price=value.price,
+                                             price_prefix=value.price_prefix)  # fmt: skip
+                else:
+                    # Production keeps stock only by size, so a colour is not counted: it would stay hidden at zero.
+                    await self._insert_value(product_id, parent, chosen.option_id, value, value.price_prefix,
+                                             subtract=False)  # fmt: skip
+        # An option with nothing left goes too: the storefront would ask for a choice it can't offer.
+        kept = set(await s.scalars(select(v.option_id).where(v.product_id == product_id)))
+        kept |= {option.option_id for option in form.options}
+        await s.execute(delete(product_option).where(o.product_id == product_id, o.option_id.not_in(kept)))
+        # The product's quantity is the sum of its option rows, as production keeps it.
+        if wanted or before:
             total = await s.scalar(select(func.coalesce(func.sum(v.quantity), 0)).where(v.product_id == product_id))
             await s.execute(update(DdProduct).where(DdProduct.product_id == product_id).values(quantity=total))
+
+    async def _write_parent(self, product_id: int, option_id: int, required: bool, value: str = "") -> int:
+        o, s = product_option.c, self._session
+        parent = await s.scalar(select(o.product_option_id).where(o.product_id == product_id, o.option_id == option_id))
+        if parent is None:
+            row = insert(product_option).values(product_id=product_id, option_id=option_id, value=value,
+                                                required=int(required))  # fmt: skip
+            return (await s.execute(row)).inserted_primary_key[0]
+        await s.execute(
+            update(product_option).where(o.product_option_id == parent).values(value=value, required=int(required))
+        )
+        return parent
+
+    async def _update_value(self, product_id: int, option_value_id: int, **values: object) -> None:
+        v = DdProductOptionValue
+        await self._session.execute(
+            update(v).where(v.product_id == product_id, v.option_value_id == option_value_id).values(**values)
+        )
+
+    async def _insert_value(
+        self, product_id: int, parent: int, option_id: int, value: ProductSizeEditDto, prefix: str, subtract: bool
+    ) -> None:
+        await self._session.execute(
+            insert(DdProductOptionValue).values(
+                product_option_id=parent, product_id=product_id, option_id=option_id,
+                option_value_id=value.option_value_id, quantity=0, subtract=subtract, price=value.price,
+                price_prefix=prefix, points=0, points_prefix="+", weight=Decimal(0), weight_prefix="+",
+            )
+        )  # fmt: skip

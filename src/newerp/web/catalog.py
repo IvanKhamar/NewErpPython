@@ -23,6 +23,8 @@ from newerp.application.catalog.product_edit import (
     ProductAttributeDto,
     ProductFormDto,
     ProductImageDto,
+    ProductOptionDto,
+    ProductOptionValueDto,
     ProductSizeEditDto,
     ProductSpecialDto,
     RemoveNewRequest,
@@ -166,6 +168,23 @@ def _product_request(form: FormData) -> SaveProductRequest:
         for v in map(str, form.getlist("size"))
         if v.isdigit()
     ]
+    options = [
+        ProductOptionDto(
+            option_id=int(option_id),
+            required=text(f"option_required_{option_id}") == "1",
+            value=text(f"option_text_value_{option_id}"),
+            values=[
+                ProductOptionValueDto(
+                    option_value_id=int(v),
+                    price=decimal_field(text(f"value_price_{v}"), "Ціна значення опції"),
+                    price_prefix="-" if text(f"value_prefix_{v}") == "-" else "+",
+                )
+                for v in map(str, form.getlist(f"option_value_{option_id}"))
+                if v.isdigit()
+            ],
+        )
+        for option_id in _chosen_options(form)
+    ]
     images = [ProductImageDto(image=line.strip(), sort_order=n) for n, line in enumerate(text("images").splitlines())]
     modified = text("date_modified")
     return SaveProductRequest(
@@ -188,8 +207,16 @@ def _product_request(form: FormData) -> SaveProductRequest:
         images=[i for i in images if i.image],
         specials=specials,
         sizes=sizes,
+        options=options,
         date_modified=datetime.fromisoformat(modified) if modified else None,
     )
+
+
+def _chosen_options(form: FormData) -> list[str]:
+    """Options with a value ticked (option_value_<id>) and text options ticked (option_text), in the form's order."""
+    with_values = (key.removeprefix("option_value_") for key in form if key.startswith("option_value_"))
+    chosen = [*with_values, *map(str, form.getlist("option_text"))]
+    return [option_id for option_id in dict.fromkeys(chosen) if option_id.isdigit()]
 
 
 def _invalid(error: ValidationError) -> str:
