@@ -86,6 +86,8 @@ def test_the_menu_shows_only_what_the_role_can_open(api):
     home = storekeeper.get("/app/")
     assert home.status_code == 200
     assert 'href="/app/orders"' not in home.text
+    assert "<summary>Склад</summary>" in home.text
+    assert "<summary>Продажі</summary>" not in home.text  # a section with no links for this role is not shown
     assert storekeeper.get("/app/orders").status_code == 403
 
     manager_home = api(MANAGER).get("/app/")

@@ -15,8 +15,21 @@
   <nav>
     <ul>
       <li><strong>NewErp</strong></li>
-      {% for link in menu %}
-      <li><a href="{{ link.href }}"{% if request.url.path == link.href %} aria-current="page"{% endif %}>{{ link.title }}</a></li>
+      {% for group in menu %}
+      {% if group.links|length == 1 %}
+      <li><a href="{{ group.links[0].href }}"{% if request.url.path == group.links[0].href %} aria-current="page"{% endif %}>{{ group.links[0].title }}</a></li>
+      {% else %}
+      <li>
+        <details class="dropdown">
+          <summary>{{ group.title }}</summary>
+          <ul>
+            {% for link in group.links %}
+            <li><a href="{{ link.href }}"{% if request.url.path == link.href %} aria-current="page"{% endif %}>{{ link.title }}</a></li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
       {% endfor %}
     </ul>
     <ul>

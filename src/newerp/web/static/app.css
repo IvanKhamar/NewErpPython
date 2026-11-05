@@ -1,5 +1,11 @@
 /* Small additions to Pico.css (which styles the plain HTML tags). */
 header.container-fluid nav { flex-wrap: wrap; }
+header.container-fluid nav > ul { flex-wrap: wrap; }
+header.container-fluid nav details.dropdown { margin: 0; }
+header.container-fluid nav details.dropdown > summary { height: auto; padding: 0.3rem 1.6rem 0.3rem 0.4rem; border: 0; background-color: transparent; box-shadow: none; color: var(--pico-primary); }
+header.container-fluid nav details.dropdown > summary + ul { z-index: 20; width: max-content; max-width: 90vw; }
+header.container-fluid nav details.dropdown > summary + ul li { display: block; padding: 0; }
+header.container-fluid nav details.dropdown > summary + ul a[aria-current] { font-weight: 600; }
 form.inline { display: inline; margin: 0; }
 form.inline button { margin: 0; padding: 0.3rem 0.8rem; }
 .narrow { max-width: 26rem; margin: 3rem auto; }

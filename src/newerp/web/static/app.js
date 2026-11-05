@@ -15,3 +15,10 @@ document.addEventListener("htmx:afterRequest", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && event.target.matches("[data-no-submit]")) event.preventDefault();
 });
+
+// Only one menu section stays open, and a click elsewhere closes it.
+document.addEventListener("click", (event) => {
+  for (const open of document.querySelectorAll("details.dropdown[open]")) {
+    if (!open.contains(event.target)) open.removeAttribute("open");
+  }
+});

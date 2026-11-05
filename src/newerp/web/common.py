@@ -54,60 +54,90 @@ class MenuLink:
     roles: tuple[str, ...]
 
 
-# Each link is shown only to the roles the API lets into that module.
+@dataclass(frozen=True)
+class MenuGroup:
+    title: str
+    links: tuple[MenuLink, ...]
+
+
+# Each link is shown only to the roles the API lets into that module; a group with no links left is not shown.
 MENU = (
-    MenuLink("Головна", "/app/", Roles.ALL),
-    MenuLink("Замовлення", "/app/orders", Policies.ORDERS),
-    MenuLink("Нове замовлення", "/app/orders/new", Policies.ORDERS),
-    MenuLink("Повернення", "/app/returns", Policies.ORDERS),
-    MenuLink("Покупці", "/app/customers", Policies.ORDERS),
-    MenuLink("Налаштування покупців", "/app/customers/settings", Policies.ORDERS),
-    MenuLink("Доставка", "/app/delivery", Policies.ORDERS),
-    MenuLink("Товари", "/app/catalog/products", Policies.ORDERS),
-    MenuLink("Порядок товарів", "/app/catalog/sort", Policies.ORDERS),
-    MenuLink("Категорії", "/app/catalog/categories", Policies.ORDERS),
-    MenuLink("Мітки й пресети пошуку", "/app/catalog/labels", Policies.ORDERS),
-    MenuLink("Фільтри, атрибути, опції", "/app/catalog/references", Policies.ORDERS),
-    MenuLink("Банери й SEO-адреси", "/app/catalog/banners", Policies.ORDERS),
-    MenuLink("Вміст вітрини й відгуки", "/app/catalog/content", Policies.ORDERS),
-    MenuLink("Масові ціни й імпорт", "/app/catalog/prices", Policies.CATALOG_BULK),
-    MenuLink("Передзамовлення", "/app/preorders", Policies.ORDERS),
-    MenuLink("Дні народження", "/app/marketing/birthdays", Policies.ORDERS),
-    MenuLink("Вивантаження контактів", "/app/marketing/export", Policies.ORDERS),
-    MenuLink("Подарункові сертифікати", "/app/marketing/vouchers", Policies.ORDERS),
-    MenuLink("Купони", "/app/marketing/coupons", Policies.ORDERS),
-    MenuLink("Коди відстеження", "/app/marketing/tracking", Policies.ORDERS),
-    MenuLink("Теми сертифікатів", "/app/marketing/vouchers/themes", Policies.ORDERS),
-    MenuLink("Інтеграції", "/app/marketing/integrations", Policies.INTEGRATIONS),
-    MenuLink("Ремаркетинг", "/app/marketing/remarketing", Policies.INTEGRATIONS),
-    MenuLink("Партнери", "/app/partners", Policies.ORDERS),
-    MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
-    MenuLink("Звіти", "/app/reports", Policies.ORDERS),
-    MenuLink("Стандартні звіти", "/app/reports/standard", Policies.ORDERS),
-    MenuLink("Каса", "/app/cashbox", Policies.FINANCE),
-    MenuLink("Надходження на рахунок", "/app/payments", Policies.FINANCE),
-    MenuLink("Розхідники", "/app/stock", Policies.STOCK),
-    MenuLink("За складами", "/app/stock/by-warehouse", Policies.STOCK),
-    MenuLink("Інвентаризація", "/app/stock/stocktaking", Policies.STOCK),
-    MenuLink("Що дозамовити", "/app/stock/reorder", Policies.STOCK),
-    MenuLink("Замовлення постачальникам", "/app/stock/purchase-orders", Policies.STOCK),
-    MenuLink("Постачальники", "/app/stock/suppliers", Policies.STOCK),
-    MenuLink("Моделі", "/app/production", Policies.STOCK),
-    MenuLink("Пошите за складами", "/app/production/by-warehouse", Policies.STOCK),
-    MenuLink("План пошиву", "/app/production/plan", Policies.STOCK),
-    MenuLink("Журнал крою й пошиву", "/app/production/log", Policies.STOCK),
-    MenuLink("Бонуси", "/app/bonuses", Policies.BONUSES),
-    MenuLink("Користувачі", "/app/users", Policies.USERS),
-    MenuLink("Адміністрування", "/app/admin", Policies.ADMIN_TOOLS),
-    MenuLink("Довідники статусів", "/app/admin/statuses", Policies.ADMIN_TOOLS),
-)
+    MenuGroup("Головна", (MenuLink("Головна", "/app/", Roles.ALL),)),
+    MenuGroup("Продажі", (
+        MenuLink("Замовлення", "/app/orders", Policies.ORDERS),
+        MenuLink("Нове замовлення", "/app/orders/new", Policies.ORDERS),
+        MenuLink("Передзамовлення", "/app/preorders", Policies.ORDERS),
+        MenuLink("Повернення", "/app/returns", Policies.ORDERS),
+        MenuLink("Доставка", "/app/delivery", Policies.ORDERS),
+    )),
+    MenuGroup("Покупці", (
+        MenuLink("Покупці", "/app/customers", Policies.ORDERS),
+        MenuLink("Налаштування покупців", "/app/customers/settings", Policies.ORDERS),
+    )),
+    MenuGroup("Каталог", (
+        MenuLink("Товари", "/app/catalog/products", Policies.ORDERS),
+        MenuLink("Порядок товарів", "/app/catalog/sort", Policies.ORDERS),
+        MenuLink("Категорії", "/app/catalog/categories", Policies.ORDERS),
+        MenuLink("Мітки й пресети пошуку", "/app/catalog/labels", Policies.ORDERS),
+        MenuLink("Фільтри, атрибути, опції", "/app/catalog/references", Policies.ORDERS),
+        MenuLink("Банери й SEO-адреси", "/app/catalog/banners", Policies.ORDERS),
+        MenuLink("Вміст вітрини й відгуки", "/app/catalog/content", Policies.ORDERS),
+        MenuLink("Масові ціни й імпорт", "/app/catalog/prices", Policies.CATALOG_BULK),
+        MenuLink("Ціни конкурентів", "/app/competitors", Policies.ORDERS),
+    )),
+    MenuGroup("Маркетинг", (
+        MenuLink("Дні народження", "/app/marketing/birthdays", Policies.ORDERS),
+        MenuLink("Вивантаження контактів", "/app/marketing/export", Policies.ORDERS),
+        MenuLink("Подарункові сертифікати", "/app/marketing/vouchers", Policies.ORDERS),
+        MenuLink("Теми сертифікатів", "/app/marketing/vouchers/themes", Policies.ORDERS),
+        MenuLink("Купони", "/app/marketing/coupons", Policies.ORDERS),
+        MenuLink("Коди відстеження", "/app/marketing/tracking", Policies.ORDERS),
+        MenuLink("Партнери", "/app/partners", Policies.ORDERS),
+        MenuLink("Інтеграції", "/app/marketing/integrations", Policies.INTEGRATIONS),
+        MenuLink("Ремаркетинг", "/app/marketing/remarketing", Policies.INTEGRATIONS),
+    )),
+    MenuGroup("Гроші", (
+        MenuLink("Каса", "/app/cashbox", Policies.FINANCE),
+        MenuLink("Надходження на рахунок", "/app/payments", Policies.FINANCE),
+    )),
+    MenuGroup("Склад", (
+        MenuLink("Розхідники", "/app/stock", Policies.STOCK),
+        MenuLink("За складами", "/app/stock/by-warehouse", Policies.STOCK),
+        MenuLink("Інвентаризація", "/app/stock/stocktaking", Policies.STOCK),
+        MenuLink("Що дозамовити", "/app/stock/reorder", Policies.STOCK),
+        MenuLink("Замовлення постачальникам", "/app/stock/purchase-orders", Policies.STOCK),
+        MenuLink("Постачальники", "/app/stock/suppliers", Policies.STOCK),
+    )),
+    MenuGroup("Виробництво", (
+        MenuLink("Моделі", "/app/production", Policies.STOCK),
+        MenuLink("Пошите за складами", "/app/production/by-warehouse", Policies.STOCK),
+        MenuLink("План пошиву", "/app/production/plan", Policies.STOCK),
+        MenuLink("Журнал крою й пошиву", "/app/production/log", Policies.STOCK),
+    )),
+    MenuGroup("Звіти", (
+        MenuLink("Звіти", "/app/reports", Policies.ORDERS),
+        MenuLink("Стандартні звіти", "/app/reports/standard", Policies.ORDERS),
+    )),
+    MenuGroup("Адміністрування", (
+        MenuLink("Бонуси", "/app/bonuses", Policies.BONUSES),
+        MenuLink("Користувачі", "/app/users", Policies.USERS),
+        MenuLink("Адміністрування", "/app/admin", Policies.ADMIN_TOOLS),
+        MenuLink("Довідники статусів", "/app/admin/statuses", Policies.ADMIN_TOOLS),
+    )),
+)  # fmt: skip
+
+
+def visible_menu(user: Principal | None) -> list[MenuGroup]:
+    if user is None:
+        return []
+    groups = (MenuGroup(g.title, tuple(k for k in g.links if user.role in k.roles)) for g in MENU)
+    return [group for group in groups if group.links]
 
 
 def render(request: Request, template: str, status_code: int = 200, **context: Any) -> HTMLResponse:
     user: Principal | None = getattr(request.state, "web_user", None)
-    menu = [link for link in MENU if user is not None and user.role in link.roles]
     return templates.TemplateResponse(
-        request, template, {"user": user, "menu": menu, **context}, status_code=status_code
+        request, template, {"user": user, "menu": visible_menu(user), **context}, status_code=status_code
     )
 
 
