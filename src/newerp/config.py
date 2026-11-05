@@ -262,6 +262,12 @@ class AdminToolsSettings(BaseModel):
     upload_dir: str = ""  # /var/www/storage/upload
 
 
+class PictureSettings(BaseModel):
+    """The storefront's image folder for uploaded pictures, on a shared volume. Empty: paths are typed by hand."""
+
+    image_dir: str = ""  # /var/www/image
+
+
 class InstagramSettings(BaseModel):
     """The storefront's Instagram block. The access token stays where the old module keeps it (dd_setting), because
     it has to be refreshed and saved every month. image_dir: the storefront's image folder, when the ERP can write
@@ -341,6 +347,7 @@ class Settings(BaseSettings):
     tiktok_feed: TikTokFeedSettings = TikTokFeedSettings()
     instagram: InstagramSettings = InstagramSettings()
     admin_tools: AdminToolsSettings = AdminToolsSettings()
+    pictures: PictureSettings = PictureSettings()
     competitors: CompetitorSettings = CompetitorSettings()
     kafka: KafkaSettings = KafkaSettings()
 

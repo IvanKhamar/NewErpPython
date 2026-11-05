@@ -1,4 +1,4 @@
-{% from "_macros.html" import messages %}
+{% from "_macros.html" import messages, picture %}
 {% set size_prices = {} %}{% for size in product.sizes %}{% set _ = size_prices.update({size.option_value_id: size}) %}{% endfor %}
 {# date_modified goes back with the form: if someone changed the product meanwhile, the save is refused (409). #}
 <form hx-post="/app/catalog/products/{{ product_id or 'new' }}{% if product_id %}/edit{% endif %}" hx-target="#form-result">
@@ -47,10 +47,9 @@
   </article>
   <article>
     <header>Картинки</header>
-    <label>Головна <input name="image" value="{{ product.image }}" placeholder="catalog/dresses/photo.jpg" maxlength="255"></label>
+    <label>Головна {{ picture("products", "image", product.image) }}</label>
     <label>Додаткові, по одній у рядку
-      <textarea name="images" rows="3">{% for image in product.images %}{{ image.image }}
-{% endfor %}</textarea></label>
+      {{ picture("products", "images", product.images|map(attribute="image")|join("\n"), multi=True) }}</label>
   </article>
   <div class="grid">
     <article>

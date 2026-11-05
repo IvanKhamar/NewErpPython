@@ -1,4 +1,4 @@
-{% from "_macros.html" import messages %}
+{% from "_macros.html" import messages, picture %}
 {{ messages(error, (), saved) }}
 <h2>Банери</h2>
 {% for banner in banners + [None] %}{% set id = banner.id if banner else 0 %}
@@ -14,7 +14,7 @@
         <tr>
           <td><input name="image_title" value="{{ image.title if image else '' }}" maxlength="64" aria-label="Підпис"></td>
           <td><input name="image_link" value="{{ image.link if image else '' }}" maxlength="255" aria-label="Посилання"></td>
-          <td><input name="image_image" value="{{ image.image if image else '' }}" maxlength="255" aria-label="Картинка"></td>
+          <td>{{ picture("banners", "image_image", image.image if image else "") }}</td>
           <td><input name="image_sort_order" value="{{ image.sort_order if image else '' }}" size="3" aria-label="Порядок"></td>
         </tr>
       {% endfor %}

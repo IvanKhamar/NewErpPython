@@ -35,6 +35,7 @@ from newerp.application.catalog.pages import (
     PageKind,
     PageService,
 )
+from newerp.application.catalog.pictures import MAX_PICTURE_BYTES, PictureDto, PictureService
 from newerp.application.catalog.prices import (
     MAX_IMPORT_BYTES,
     ImportPreview,
@@ -92,6 +93,7 @@ from newerp.infrastructure.catalog.dictionaries import SqlDictionaryStore
 from newerp.infrastructure.catalog.feedback import SqlFeedbackStore
 from newerp.infrastructure.catalog.maintenance import SqlMaintenanceStore
 from newerp.infrastructure.catalog.pages import SqlPageStore
+from newerp.infrastructure.catalog.pictures import LocalCatalogPictures
 from newerp.infrastructure.catalog.prices import SqlImportStore, SqlPriceStore
 from newerp.infrastructure.catalog.product_edit import SqlProductEditStore
 from newerp.infrastructure.catalog.products import SqlProductStore
@@ -356,6 +358,20 @@ def get_dictionary_service(session: Session, clock: ClockDep) -> CatalogDictiona
 
 
 Dictionaries = Annotated[CatalogDictionaryService, Depends(get_dictionary_service)]
+
+
+def get_picture_service() -> PictureService:
+    return PictureService(LocalCatalogPictures(get_settings().pictures.image_dir))
+
+
+Pictures = Annotated[PictureService, Depends(get_picture_service)]
+
+
+@dictionaries_router.post(
+    "/pictures/{kind}", status_code=201, summary="Завантажити картинку (products, categories, banners, vouchers)"
+)
+async def upload_picture(kind: str, file: UploadFile, principal: CurrentPrincipal, pictures: Pictures) -> PictureDto:
+    return await pictures.upload(kind, await file.read(MAX_PICTURE_BYTES + 1), principal.user_id)
 
 
 @dictionaries_router.get("/labels", summary="Мітки товарів з кількістю товарів")

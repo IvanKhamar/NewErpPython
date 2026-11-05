@@ -1,4 +1,4 @@
-{% from "_macros.html" import messages %}
+{% from "_macros.html" import messages, picture %}
 <form hx-post="/app/catalog/categories/{{ category_id or 0 }}" hx-target="#category-form">
   {{ messages(error, (), saved_text) }}
   <div class="grid">
@@ -19,8 +19,8 @@
   <label>Опис <small>(HTML; скрипти прибираються)</small> <textarea name="description" rows="5">{{ category.description }}</textarea></label>
   <label>Таблиця розмірів <textarea name="description_table_size" rows="3">{{ category.description_table_size }}</textarea></label>
   <div class="grid">
-    <label>Картинка <input name="image" value="{{ category.image }}" placeholder="catalog/categories/dresses.jpg" maxlength="255"></label>
-    <label>Картинка таблиці розмірів <input name="image_table_size" value="{{ category.image_table_size }}" maxlength="255"></label>
+    <label>Картинка {{ picture("categories", "image", category.image) }}</label>
+    <label>Картинка таблиці розмірів {{ picture("categories", "image_table_size", category.image_table_size) }}</label>
   </div>
   <div class="grid">
     <label>SEO-адреса <input name="seo_keyword" value="{{ category.seo_keyword }}" maxlength="255"></label>

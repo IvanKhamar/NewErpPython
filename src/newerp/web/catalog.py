@@ -6,16 +6,17 @@ from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import ValidationError
 from starlette.datastructures import FormData
 from starlette.datastructures import UploadFile as StarletteUpload
 
-from newerp.api.catalog import Editor, Imports, Maintenance, Prices, Products, Sorting
+from newerp.api.catalog import Editor, Imports, Maintenance, Pictures, Prices, Products, Sorting
 from newerp.api.deps import Session
 from newerp.api.pre_orders import Service as PreOrders
 from newerp.api.security import Policies
+from newerp.application.catalog.pictures import MAX_PICTURE_BYTES
 from newerp.application.catalog.pre_orders import PreOrderFilter, UpdatePreOrderRequest
 from newerp.application.catalog.prices import MAX_IMPORT_BYTES, PriceChangeRequest
 from newerp.application.catalog.product_edit import (
@@ -504,6 +505,35 @@ async def import_products(
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     return render(request, "catalog/_import_preview.html", preview=preview)
+
+
+@router.post("/catalog/pictures")
+async def upload_picture(
+    request: Request,
+    user: WebUser,
+    pictures: Pictures,
+    session: Session,
+    kind: str,
+    field: Annotated[str, Query(pattern=r"^[a-z_]+$")],
+    multi: bool = False,
+    form_id: Annotated[str, Query(pattern=r"^[\w-]*$")] = "",
+) -> HTMLResponse:
+    """Stores the file and returns the field with its new path; a refusal is added under the field and keeps it."""
+    form = await request.form()
+    file = form.get("file")
+    try:
+        if not isinstance(file, StarletteUpload):
+            raise DomainError("Оберіть файл картинки.")
+        saved = await pictures.upload(kind, await file.read(MAX_PICTURE_BYTES + 1), user.user_id)
+    except BUSINESS_ERRORS as error:
+        response = render(request, "_error.html", error=await undo(session, error))
+        response.headers["HX-Reswap"] = "beforeend"
+        return response
+    value = saved.path
+    if multi:
+        current = str(form.get(field) or "").strip()
+        value = f"{current}\n{saved.path}" if current else saved.path
+    return render(request, "catalog/_picture.html", kind=kind, field=field, value=value, multi=multi, form_id=form_id)
 
 
 @router.post("/catalog/size-filters", dependencies=bulk)

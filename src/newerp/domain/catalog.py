@@ -210,6 +210,19 @@ def image_path(value: str) -> str:
     return path
 
 
+def picture_extension(content: bytes) -> str | None:
+    """What a file is by its first bytes (the "magic number"), or None. SVG is refused: it can carry scripts."""
+    if content.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if content[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
 def seo_keyword(value: str) -> str:
     """The product's address on the storefront: latin letters, digits, - and _ ("" for none)."""
     keyword = value.strip().lower()

@@ -1,3 +1,19 @@
+{# A picture's path with an upload next to it. Only the file is sent (hx-params), not the form around it; the answer
+   replaces this block with the new path. form_id: for an input tied to a form outside its table cell. #}
+{% macro picture(kind, field, value="", multi=False, form_id="") -%}
+<span class="picture">
+  {% if multi %}
+  <textarea name="{{ field }}" rows="3" aria-label="Шляхи до картинок">{{ value }}</textarea>
+  {% else %}
+  <input name="{{ field }}" value="{{ value }}" maxlength="255" aria-label="Шлях до картинки"{% if form_id %} form="{{ form_id }}"{% endif %}>
+  {% endif %}
+  <input type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Завантажити картинку"
+         hx-post="/app/catalog/pictures?kind={{ kind }}&amp;field={{ field }}{% if multi %}&amp;multi=true{% endif %}{% if form_id %}&amp;form_id={{ form_id }}{% endif %}"
+         hx-trigger="change" hx-encoding="multipart/form-data" hx-params="file{% if multi %},{{ field }}{% endif %}"
+         hx-target="closest .picture" hx-swap="outerHTML">
+</span>
+{%- endmacro %}
+
 {# A status with the colour it has on the old site (StatusChip.razor). #}
 {% macro chip(color, name) -%}
 <span class="chip"{% if color %} style="background: {{ color }}"{% endif %}>{{ name or "—" }}</span>

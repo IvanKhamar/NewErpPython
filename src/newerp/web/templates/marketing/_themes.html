@@ -1,4 +1,4 @@
-{% from "_macros.html" import messages %}
+{% from "_macros.html" import messages, picture %}
 {{ messages(error, (), saved) }}
 <table>
   <thead><tr><th>Назва</th><th>Картинка</th><th class="num">Сертифікатів</th><th></th></tr></thead>
@@ -6,7 +6,7 @@
   {% for theme in themes + [None] %}{% set id = theme.id if theme else 0 %}
     <tr>
       <td><input form="th-{{ id }}" name="name" value="{{ theme.name if theme else '' }}" maxlength="32" aria-label="Назва" placeholder="Нова тема"></td>
-      <td><input form="th-{{ id }}" name="image" value="{{ theme.image if theme else '' }}" maxlength="255" aria-label="Картинка" placeholder="catalog/vouchers/winter.jpg"></td>
+      <td>{{ picture("vouchers", "image", theme.image if theme else "", form_id="th-" ~ id) }}</td>
       <td class="num">{{ theme.vouchers if theme else "" }}</td>
       <td>
         <form id="th-{{ id }}" hx-post="/app/marketing/vouchers/themes/{{ id }}/save" hx-target="#themes" role="group">
