@@ -57,6 +57,12 @@ def test_auto_match_links_older_payments_with_one_confident_order(api, db):
     assert still_open["payer"] == "Тарас Клієнт2"
     # Now order 2 is paid, so the seeded payment would not be confident even with its phone.
     assert client.post("/payments/bank/auto-match?from=2026-10-01&to=2026-10-31").json()["links"] == []
+    # The page has no dates: it looks at the last 31 days, so only a payment of today is sure to be inside them.
+    insert(
+        db, "dd_privatbank", appcode="tx-today", card="UA00", amount="1.00 UAH", cardamount="1.00 UAH",
+        rest="7001.00 UAH", description="Без ознак замовлення", terminal="", trandate=date.today(),
+        trantime="11:00:00", status="", show_status=True, order_id=0,
+    )  # fmt: skip
     assert "Перевірено платежів без замовлення: 1" in client.post("/app/payments/auto-match").text
     assert api(STOREKEEPER).post("/payments/bank/auto-match").status_code == 403
 
