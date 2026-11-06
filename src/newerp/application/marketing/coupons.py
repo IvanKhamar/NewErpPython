@@ -3,6 +3,7 @@
 The storefront (OpenCart) applies the coupons; the ERP only keeps them. Python first: the .NET and Java versions have
 only birthday coupons so far."""
 
+import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
@@ -12,6 +13,8 @@ from newerp.domain.common import DomainError
 from newerp.domain.marketing import Coupon
 
 LIST_LIMIT = 500
+
+audit = logging.getLogger("newerp.audit")
 
 
 class CouponListItem(Dto):
@@ -114,22 +117,26 @@ class CouponService:
             raise NotFoundError(f"Купон {coupon_id} не знайдено.")
         return card
 
-    async def create(self, request: SaveCouponRequest) -> CouponCardDto:
+    async def create(self, request: SaveCouponRequest, user_id: int) -> CouponCardDto:
         coupon = await self._checked(request, None)
-        return await self.get(await self._store.add(coupon, self._clock.now()))
+        coupon_id = await self._store.add(coupon, self._clock.now())
+        audit.info("coupon created: %s, %s %s, by user %s", coupon_id, coupon.type, coupon.discount, user_id)
+        return await self.get(coupon_id)
 
-    async def update(self, coupon_id: int, request: SaveCouponRequest) -> CouponCardDto:
+    async def update(self, coupon_id: int, request: SaveCouponRequest, user_id: int) -> CouponCardDto:
         coupon = await self._checked(request, coupon_id)
         if not await self._store.update(coupon_id, coupon):
             raise NotFoundError(f"Купон {coupon_id} не знайдено.")
+        audit.info("coupon changed: %s, %s %s, by user %s", coupon_id, coupon.type, coupon.discount, user_id)
         return await self.get(coupon_id)
 
-    async def delete(self, coupon_id: int) -> None:
+    async def delete(self, coupon_id: int, user_id: int) -> None:
         """A coupon that orders used stays for their history: it can only be turned off."""
         await self.get(coupon_id)
         if await self._store.used(coupon_id):
             raise DomainError("Купон уже використали в замовленнях — його можна лише вимкнути.")
         await self._store.delete(coupon_id)
+        audit.info("coupon deleted: %s, by user %s", coupon_id, user_id)
 
     async def _checked(self, request: SaveCouponRequest, coupon_id: int | None) -> Coupon:
         coupon = Coupon.of(

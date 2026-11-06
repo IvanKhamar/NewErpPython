@@ -1,5 +1,6 @@
 """Bank payments (PrivatBank statement, matched to orders by hand with suggestions) and LiqPay payment links."""
 
+import logging
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -29,6 +30,8 @@ SUGGESTION_DAYS = 60  # orders up to this many days before the payment
 MAX_IMPORT_DAYS = 31
 AUTO_MATCH_DAYS = 31  # automatic matching of older payments looks this far back by default
 AUTO_MATCH_LIMIT = 500
+
+audit = logging.getLogger("newerp.audit")
 
 
 class BankPaymentDto(Dto):
@@ -223,6 +226,7 @@ class BankPaymentService:
             return False
         payment.link_to(order.order_id)
         await self._repository.save_changes()
+        audit.info("payment auto-linked: %s, order %s, amount %s", payment.id, order.order_id, payment.amount)
         return True
 
     async def _ranked(self, payment: BankPayment, customer: str | None) -> list[ScoredCandidate]:

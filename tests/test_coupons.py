@@ -7,7 +7,7 @@ import pytest
 
 from newerp.domain.common import DomainError
 from newerp.domain.marketing import Coupon
-from tests.seed import CATEGORY_ID, CATEGORY_PRODUCT_ID, MANAGER, ORDER_ID, STOREKEEPER, insert
+from tests.seed import CATEGORY_ID, CATEGORY_PRODUCT_ID, LANGUAGE_ID, MANAGER, ORDER_ID, STOREKEEPER, insert
 from tests.test_partners import add_catalog_data
 
 HTMX = {"HX-Request": "true"}
@@ -72,6 +72,40 @@ def test_coupon_admin_with_exclusions_history_and_delete(api, db, catalog):
     assert refused.json()["detail"] == "Купон уже використали в замовленнях — його можна лише вимкнути."
     assert client.get(f"/marketing/coupons/{card['id']}").json()["history"][0]["orderId"] == ORDER_ID
     assert api(STOREKEEPER).get("/marketing/coupons").status_code == 403
+
+
+def test_changes_to_a_coupon_are_in_the_audit_log(api, catalog, caplog):
+    client = api(MANAGER)
+    body = {"name": "Аудит", "code": "audit5", "type": "P", "discount": 5, "total": 0, "dateStart": "2026-11-01",
+            "dateEnd": "2026-11-30", "usesTotal": 0, "usesCustomer": 1}  # fmt: skip
+    coupon_id = client.post("/marketing/coupons", json=body).json()["id"]
+    assert client.put(f"/marketing/coupons/{coupon_id}", json=body | {"discount": 7}).status_code == 200
+    assert client.delete(f"/marketing/coupons/{coupon_id}").status_code == 204
+    assert f"coupon created: {coupon_id}, P 5" in caplog.text
+    assert f"coupon changed: {coupon_id}, P 7" in caplog.text
+    assert f"coupon deleted: {coupon_id}, by user" in caplog.text
+
+
+def test_saving_the_form_keeps_a_disabled_category_of_the_coupon(api, db, catalog):
+    client = api(MANAGER)
+    insert(db, "dd_category", category_id=777, status=False, top=False, column=0, date_added="2026-01-01",
+           date_modified="2026-01-01")  # fmt: skip
+    insert(db, "dd_category_description", category_id=777, language_id=LANGUAGE_ID, name="Архів", description="",
+           meta_title="", meta_description="", meta_keyword="")  # fmt: skip
+    body = {"name": "Архівний", "code": "archive1", "type": "P", "discount": 5, "total": 0, "dateStart": "2026-11-01",
+            "dateEnd": "2026-11-30", "usesTotal": 0, "usesCustomer": 1, "categoryIds": [777]}  # fmt: skip
+    coupon_id = client.post("/marketing/coupons", json=body).json()["id"]
+
+    page = client.get(f"/app/marketing/coupons/{coupon_id}").text
+    assert "Архів (вимкнена)" in page
+    assert 'name="category_id" value="777" checked' in page
+
+    form = {"coupon_id": str(coupon_id), "name": "Архівний", "code": "archive1", "type": "P", "discount": "6",
+            "total": "0", "date_start": "2026-11-01", "date_end": "2026-11-30", "uses_total": "0",
+            "uses_customer": "1", "active": "1", "product_ids": "", "excluded_product_ids": "",
+            "category_id": "777"}  # fmt: skip
+    assert client.post("/app/marketing/coupons/save", data=form, follow_redirects=False).status_code in (302, 303)
+    assert [c["id"] for c in client.get(f"/marketing/coupons/{coupon_id}").json()["categories"]] == [777]
 
 
 def test_coupon_pages(api, catalog):

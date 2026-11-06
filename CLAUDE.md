@@ -58,8 +58,8 @@ pytest, ruff, import-linter. Later: aiokafka.
 
 ## Permissions
 
-They are in `F:\PROJECTS\CLAUDE.md` (outside this repo, for all projects): work without asking across `F:\PROJECTS`,
-with a short list of what still needs asking.
+They are in `F:\PROJECTS\CLAUDE.md` (outside this repo, for all projects): do not ask, do anything that does not go
+against security or common sense.
 
 ## Security (the repository is public)
 

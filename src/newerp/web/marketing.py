@@ -12,12 +12,13 @@ from newerp.api.catalog import Products
 from newerp.api.deps import Session
 from newerp.api.marketing import Coupons, Marketing, Vouchers, contacts_csv
 from newerp.api.security import Policies
+from newerp.application.common import LookupItem
 from newerp.application.marketing.campaigns import BirthdaySmsRequest, BulkSmsRequest
 from newerp.application.marketing.coupons import CouponCardDto, SaveCouponRequest
 from newerp.application.marketing.vouchers import SaveVoucherRequest
 from newerp.domain.common import DomainError
 from newerp.domain.marketing import BirthdayPeriod
-from newerp.web.common import BUSINESS_ERRORS, Redirect, decimal_field, number, page_roles, qty, render, undo
+from newerp.web.common import BUSINESS_ERRORS, Redirect, WebUser, decimal_field, number, page_roles, qty, render, undo
 
 router = APIRouter(
     prefix="/app/marketing", include_in_schema=False, dependencies=[Depends(page_roles(*Policies.ORDERS))]
@@ -281,8 +282,17 @@ def _coupon_request(form: FormData) -> SaveCouponRequest:
 
 async def _coupon_form(request: Request, products: Products, values: dict[str, Any], coupon_id: int | None = None,
                        error: str | None = None, **context: Any) -> HTMLResponse:  # fmt: skip
+    categories = await products.categories()
+    # The list has only enabled categories. A disabled one this coupon uses must stay in the form: a browser sends only
+    # the boxes it has, so without it saving would silently drop that category from the coupon.
+    card: CouponCardDto | None = context.get("card")
+    names = {c.id: c.name for c in [*card.categories, *card.excluded_categories]} if card else {}
+    chosen = {number(str(v)) for v in [*values.get("category_ids", []), *values.get("excluded_category_ids", [])]}
+    enabled = {c.id for c in categories}
+    disabled = sorted(i for i in chosen if i and i not in enabled)
+    categories += [LookupItem(id=i, name=f"{names.get(i, f'Категорія {i}')} (вимкнена)") for i in disabled]
     return render(request, "marketing/coupon.html", status_code=200 if error is None else 400, values=values,
-                  coupon_id=coupon_id, categories=await products.categories(), error=error, **context)  # fmt: skip
+                  coupon_id=coupon_id, categories=categories, error=error, **context)  # fmt: skip
 
 
 def _card_values(card: CouponCardDto) -> dict[str, Any]:
@@ -319,7 +329,9 @@ async def coupon_page(request: Request, coupon_id: int, coupons: Coupons, produc
 
 
 @router.post("/coupons/save")
-async def save_coupon(request: Request, coupons: Coupons, products: Products, session: Session) -> HTMLResponse:
+async def save_coupon(
+    request: Request, user: WebUser, coupons: Coupons, products: Products, session: Session
+) -> HTMLResponse:
     form = await request.form()
     coupon_id = number(_text(form, "coupon_id"))
     values: dict[str, Any] = dict(form) | {
@@ -328,18 +340,20 @@ async def save_coupon(request: Request, coupons: Coupons, products: Products, se
     }
     try:
         if coupon_id is None:
-            card = await coupons.create(_coupon_request(form))
+            card = await coupons.create(_coupon_request(form), user.user_id)
         else:
-            card = await coupons.update(coupon_id, _coupon_request(form))
+            card = await coupons.update(coupon_id, _coupon_request(form), user.user_id)
     except BUSINESS_ERRORS as error:
         return await _coupon_form(request, products, values, coupon_id, await undo(session, error))
     raise Redirect(f"/app/marketing/coupons/{card.id}")
 
 
 @router.post("/coupons/{coupon_id}/delete")
-async def delete_coupon(request: Request, coupon_id: int, coupons: Coupons, session: Session) -> HTMLResponse:
+async def delete_coupon(
+    request: Request, coupon_id: int, user: WebUser, coupons: Coupons, session: Session
+) -> HTMLResponse:
     try:
-        await coupons.delete(coupon_id)
+        await coupons.delete(coupon_id, user.user_id)
     except BUSINESS_ERRORS as error:
         return render(request, "_error.html", error=await undo(session, error))
     raise Redirect("/app/marketing/coupons")

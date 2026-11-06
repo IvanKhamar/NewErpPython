@@ -248,20 +248,22 @@ async def get_coupon(coupon_id: int, service: Coupons) -> CouponCardDto:
     summary="Новий купон: type P (відсоток) або F (сума), дати обов'язкові; списки товарів і категорій — на що діє "
     "(порожньо — на весь кошик) і виключення",
 )
-async def create_coupon(request: SaveCouponRequest, service: Coupons) -> CouponCardDto:
-    return await service.create(request)
+async def create_coupon(request: SaveCouponRequest, principal: CurrentPrincipal, service: Coupons) -> CouponCardDto:
+    return await service.create(request, principal.user_id)
 
 
 @router.put("/coupons/{coupon_id}", summary="Змінити купон разом зі списками")
-async def update_coupon(coupon_id: int, request: SaveCouponRequest, service: Coupons) -> CouponCardDto:
-    return await service.update(coupon_id, request)
+async def update_coupon(
+    coupon_id: int, request: SaveCouponRequest, principal: CurrentPrincipal, service: Coupons
+) -> CouponCardDto:
+    return await service.update(coupon_id, request, principal.user_id)
 
 
 @router.delete(
     "/coupons/{coupon_id}", status_code=204, summary="Видалити купон, яким ще не користувались (інакше — вимкнути)"
 )
-async def delete_coupon(coupon_id: int, service: Coupons) -> None:
-    await service.delete(coupon_id)
+async def delete_coupon(coupon_id: int, principal: CurrentPrincipal, service: Coupons) -> None:
+    await service.delete(coupon_id, principal.user_id)
 
 
 # ═══ Tracking codes, voucher e-mail and themes (Python first) ═══
