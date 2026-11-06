@@ -54,14 +54,10 @@ pytest, ruff, import-linter. Later: aiokafka.
 - Secrets only in the git-ignored `.env` (see `.env.example`) or env vars `NEWERP_*`.
 - Only invented data; no real customer data.
 
-## Permissions (since 2026-11-06)
+## Permissions
 
-Inside `F:\PROJECTS\NewErpPython` the user allows Claude to work without asking: change, create and delete files, run
-any project command (uv, tests, seed, tools, `docker compose`), change data in the local Docker databases, commit, push
-to any branch including `main` (the CI rule below still holds) and open PRs.
-
-Still ask about: force push or deleting branches on GitHub, wiping a Docker volume (`docker compose down -v`), other
-changes outside this folder (the .NET and Java repos follow their own rules), anything with real keys or the live shop.
+They are in `F:\PROJECTS\CLAUDE.md` (outside this repo, for all projects): work without asking across `F:\PROJECTS`,
+with a short list of what still needs asking.
 
 ## Security (the repository is public)
 
