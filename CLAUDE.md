@@ -31,6 +31,8 @@ pytest, ruff, import-linter. Later: aiokafka.
 - Features: the goal is every feature of all four versions. The old PHP project
   (`F:\PROJECTS\VIDRO\Vidro_OpenCart_WebSite`, read only, never open its `config.php`) is probably still the fullest,
   so check it first when looking for what a module should do.
+- Scope: this is an ERP. It covers the admin side, with pages a manager or another employee can open and really work
+  in. The shop's storefront is out of scope.
 
 ## Staying in sync with .NET and Java
 
@@ -43,8 +45,8 @@ pytest, ruff, import-linter. Later: aiokafka.
 
 - Database-first, like the other versions.
 - `dd_*` tables may be changed, structure included, when a feature needs it (decided 2026-11-06: `dd_` is only the
-  prefix of the old project, and "never change them" was a leftover). Record the change in `db/*.sql`, and say in the
-  commit what it means for the old storefront, which reads the same tables.
+  prefix of the old project, and "never change them" was a leftover). Record the change in `db/*.sql`. No real shop
+  runs on these tables.
 - New own tables only with the `erp_` prefix, and they go into all repos.
 - Tables and columns that are not in `db/schema.sql` are not invented silently: each reconstruction is marked as ours
   in `db/reconstructed.sql`.
