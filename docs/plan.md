@@ -1,9 +1,10 @@
 # Porting plan
 
-Source of truth: the .NET version (`F:\PROJECTS\NewErp\NewErp`). It already holds the functionality of the old Vidro
-OpenCart CRM (`F:\PROJECTS\VIDRO\Vidro_OpenCart_WebSite`), cleaned up and covered by tests. Each phase ports one .NET
-module: endpoints with the same paths, JSON names, status codes and ProblemDetails titles, plus its integration tests.
-Background workers (`*Worker.cs`) become Celery beat tasks.
+Features: the goal is every feature of all four versions. The old Vidro OpenCart project
+(`F:\PROJECTS\VIDRO\Vidro_OpenCart_WebSite`) is probably still the fullest (decided 2026-11-06; until then the .NET
+version counted as the source of truth). API contract: the .NET version (`F:\PROJECTS\NewErp\NewErp`). Each phase ports
+one .NET module: endpoints with the same paths, JSON names, status codes and ProblemDetails titles, plus its
+integration tests. Background workers (`*Worker.cs`) become Celery beat tasks.
 
 Decided 2026-10-30: the user asked Claude to port the whole system (not only the skeleton).
 
@@ -140,6 +141,7 @@ Still open after items 35–71 (found 2026-11-03):
 | 78 | Port items 23–71 and 74–77 to the .NET and Java versions: `docs/from-python.md` in both repos lists them with contracts, security rules and tables. .NET: groups 1–5 of 12 merged (items 23–34, 71), stopped on 2026-11-05; groups 6–12 are left (35–70, 75–77), with the order and notes at the top of its `docs/from-python.md`. Java: not started; its docs with items 75–77 are on the unmerged branch `docs/python-75-77` | |
 | 79 | Fixes the .NET port showed are worth bringing back here: `RedisLoginThrottle` sets the expiry only on the first failure, so a crash at that moment leaves a counter that never expires and stops locking (.NET: EXPIRE NX on every failure); `tools/check_live.py` prints the raw exception text, which could hold a key (.NET: only words written for people, or the error type); coupon create, change and delete and automatic payment links are not in the audit log; check whether saving a coupon in the web form drops a disabled category it uses | |
 | 80 | Move the `SET SESSION sql_mode` line into `db/reconstructed.sql` here too: .NET needs it because it runs each file in its own session, so the files differ until then | |
+| 81 | Move .NET and Java to the Docker MySQL of this repo (port 3307), so all three use one database; details in `docs/plan.md` of both repos | planned, not started |
 
 Not planned on purpose (they stay in OpenCart or were replaced): Ukrposhta, WayForPay and Justin (closed in 2022),
 LiqPay e-mail invoices (replaced by the payment link), OpenCart engine settings (extensions, marketplace, themes,
