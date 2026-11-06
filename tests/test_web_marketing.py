@@ -1,7 +1,6 @@
 """Marketing and partner pages: birthdays, the contact export, gift vouchers (also in the order card), partners."""
 
-from datetime import datetime
-
+from tests import helpers
 from tests.seed import CATEGORY_ID, CATEGORY_PRODUCT_ID, MANAGER, STOREKEEPER
 from tests.test_new_orders import request as order_request
 from tests.test_partners import add_catalog_data
@@ -11,7 +10,7 @@ PHONE = "380670000002"  # the phone of order 2 in the shared test data
 
 
 def test_birthday_greeting_with_a_coupon(api, db):
-    today = datetime.now()
+    today = helpers.now()
     with db.cursor() as cursor:
         cursor.execute(
             "UPDATE dd_order SET birthday_day = %s, birthday_month = %s WHERE order_id = 2", (today.day, today.month)

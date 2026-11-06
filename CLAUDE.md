@@ -95,5 +95,8 @@ uv run pytest                              # tests
 uv run ruff check . ; uv run lint-imports  # lint + layer check
 ```
 
+Tests take the time from `tests.helpers` (`now()`, `today()`: Kyiv, like the app), never from the machine's clock: CI
+runs in UTC, so the two dates differ from 22:00 to 24:00 UTC. `TZ=UTC0 uv run pytest` reproduces CI's clock on Windows.
+
 Push only after all CI steps (`ruff check`, `ruff format --check`, `lint-imports`, `pytest`) pass locally, each
 exit code checked: a failed CI run e-mails the user. Report problems in the chat instead.

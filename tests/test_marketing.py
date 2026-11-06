@@ -31,6 +31,7 @@ from newerp.domain.marketing import (
     require_coupon_code,
 )
 from newerp.domain.sms import BIRTHDAY_MARKER
+from tests import helpers
 from tests.seed import MANAGER, STOREKEEPER, insert
 
 PHONE = "380670000002"  # the phone of order 2 in the shared test data
@@ -259,7 +260,7 @@ def test_export_needs_source_and_builds_csv(parts, service):
 
 
 def test_birthday_greeting_with_coupon_is_logged_and_counted(api, db):
-    today = datetime.now()
+    today = helpers.now()
     with db.cursor() as cursor:
         cursor.execute(
             "UPDATE dd_order SET birthday_day = %s, birthday_month = %s WHERE order_id = 2", (today.day, today.month)

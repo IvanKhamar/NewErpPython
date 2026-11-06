@@ -3,7 +3,7 @@ invoice and printing, reward points and commission, delete, Nova Poshta shipping
 
 from datetime import datetime, timedelta
 
-from tests import seed
+from tests import helpers, seed
 from tests.seed import ADMIN, CATEGORY_PRODUCT_ID, MANAGER, PENDING, STOREKEEPER
 
 NOVA_POSHTA = "novaposhta_warehouse.novaposhta_warehouse"
@@ -44,12 +44,12 @@ def waybill(db, order_id: int, number: str, created: datetime | None = None) -> 
     seed.insert(
         db, "dd_novaposhta_document", order_id=order_id, carrier="novaposhta", ref=f"ref-{number}", number=number,
         cost=70, status="", status_code=1, recipient_address="Київ", redelivery=False,
-        date_created=created or datetime.now(),
+        date_created=created or helpers.now(),
     )  # fmt: skip
 
 
 def sms(db, phone: str, text: str) -> None:
-    seed.insert(db, "dd_sms_log", order_id=0, pre_order_id=0, phone=phone, text=text, response="", date=datetime.now())
+    seed.insert(db, "dd_sms_log", order_id=0, pre_order_id=0, phone=phone, text=text, response="", date=helpers.now())
 
 
 def issues(client, order_id: int, status_id: int) -> list[tuple[str, str]]:
@@ -93,7 +93,7 @@ def test_discrepancies_list_stale_waybills_and_shipped_problems(api, db):
     client = api(MANAGER)
     stale = new_order(client, "+380671110005")
     assert client.put(f"/orders/{stale}/status", json={"statusId": ACCEPTED}).status_code == 200
-    waybill(db, stale, "20450000003333", datetime.now() - timedelta(hours=5))
+    waybill(db, stale, "20450000003333", helpers.now() - timedelta(hours=5))
     fresh = new_order(client, "+380671110006")
     assert client.put(f"/orders/{fresh}/status", json={"statusId": ACCEPTED}).status_code == 200
     waybill(db, fresh, "20450000004444")  # made just now: still normal

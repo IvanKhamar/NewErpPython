@@ -12,6 +12,7 @@ from newerp.config import RevenueFeedSettings
 from newerp.domain.common import DomainError
 from newerp.domain.reports import ReportGrouping, SaleFact, SalesPeriod, change_percent, group_sales, period_start
 from newerp.main import app
+from tests import helpers
 from tests.seed import (
     CANCELLED,
     CANCELLED_ORDER_ID,
@@ -206,7 +207,7 @@ def test_feed_needs_token_returns_totals_and_series(api, feed_settings):
     response = client.get("/feeds/revenue.json?days=7", headers={"X-Feed-Token": FEED_TOKEN})
     assert response.status_code == 200
     feed = response.json()
-    assert len(feed["days"]) == 7 and feed["days"][-1]["date"] == date.today().isoformat()
+    assert len(feed["days"]) == 7 and feed["days"][-1]["date"] == helpers.today().isoformat()
     assert set(feed["month"]) == {"from", "to", "orders", "revenue", "averageCheck"}
 
     assert client.get(f"/feeds/revenue.json?token={FEED_TOKEN}").status_code == 200

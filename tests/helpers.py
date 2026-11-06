@@ -1,9 +1,12 @@
 """Small helpers shared by the API tests."""
 
 import io
+from datetime import date, datetime
 
 from fastapi.testclient import TestClient
 from openpyxl import Workbook, load_workbook
+
+from newerp.application.common import SystemClock
 
 
 def create(client: TestClient, url: str, body: dict) -> int:
@@ -25,3 +28,12 @@ def save_book(book: Workbook) -> bytes:
     buffer = io.BytesIO()
     book.save(buffer)
     return buffer.getvalue()
+
+
+def now() -> datetime:
+    """The time the app sees (Kyiv), not the machine's: on a UTC machine their dates differ for two hours a day."""
+    return SystemClock().now()
+
+
+def today() -> date:
+    return now().date()

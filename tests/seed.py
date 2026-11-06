@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 import pymysql
 
 from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
+from tests import helpers
 
 PASSWORD = "test-password"
 
@@ -142,7 +143,7 @@ def run(connection: pymysql.Connection) -> None:
             code="",
             ip="",
             status=active,
-            date_added=datetime.now(),
+            date_added=helpers.now(),
         )
         insert(
             connection,
@@ -170,7 +171,7 @@ def run(connection: pymysql.Connection) -> None:
     option_value(connection, 502, 51, CATEGORY_PRODUCT_ID)
     insert(
         connection, "erp_order_manager", order_id=2, user_id=ACTIVE_USER_ID, assigned_by_user_id=ACTIVE_USER_ID,
-        assigned_at=datetime.now(),
+        assigned_at=helpers.now(),
     )  # fmt: skip
 
     order(
@@ -197,7 +198,7 @@ def run(connection: pymysql.Connection) -> None:
     insert(
         connection, "dd_novaposhta_document", order_id=2, carrier="novaposhta", ref=WAITING_TTN, number=WAITING_TTN,
         cost=70, status="Прибув у відділення", status_code=7, recipient_address="Київ, відділення 1",
-        redelivery=False, date_created=datetime.now(), date_payed_keeping=date.today() + timedelta(days=1),
+        redelivery=False, date_created=helpers.now(), date_payed_keeping=helpers.today() + timedelta(days=1),
     )  # fmt: skip
     for ref, description, category, city_ref, city, weight, working in (
         (BRANCH_1_REF, BRANCH_1, "Branch", KYIV_REF, "Київ", 30, True),
@@ -216,7 +217,7 @@ def run(connection: pymysql.Connection) -> None:
     insert(
         connection, "dd_cashbox_user", user_id=CASHIER_ID, name="Олена Каса", description="", payment_code="",
         login="", password="", checkbox_key="", customer_id=0, warehouse_id=0, requisites_id=0, status=True,
-        date_added=datetime.now(),
+        date_added=helpers.now(),
     )  # fmt: skip
 
     # 2000 UAH from the customer of order 2 (the sum and surname match): the first suggestion.

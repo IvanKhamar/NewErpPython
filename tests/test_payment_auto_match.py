@@ -14,6 +14,7 @@ from newerp.domain.payments import (
     confident_match,
     is_confident,
 )
+from tests import helpers
 from tests.seed import MANAGER, STOREKEEPER, insert
 
 
@@ -61,7 +62,7 @@ def test_auto_match_links_older_payments_with_one_confident_order(api, db, caplo
     # The page has no dates: it looks at the last 31 days, so only a payment of today is sure to be inside them.
     insert(
         db, "dd_privatbank", appcode="tx-today", card="UA00", amount="1.00 UAH", cardamount="1.00 UAH",
-        rest="7001.00 UAH", description="Без ознак замовлення", terminal="", trandate=date.today(),
+        rest="7001.00 UAH", description="Без ознак замовлення", terminal="", trandate=helpers.today(),
         trantime="11:00:00", status="", show_status=True, order_id=0,
     )  # fmt: skip
     assert "Перевірено платежів без замовлення: 1" in client.post("/app/payments/auto-match").text
