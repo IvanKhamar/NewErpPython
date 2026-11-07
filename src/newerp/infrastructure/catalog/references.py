@@ -4,7 +4,6 @@ The three two-level lists differ only in table and column names, so each is desc
 the same code: a group table with its names per language, and a value table with its names per language."""
 
 from dataclasses import dataclass
-from datetime import datetime
 
 from sqlalchemy import Table, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +15,7 @@ from newerp.application.catalog.references import (
     ReferenceItemDto,
     ReferenceKind,
 )
+from newerp.application.common import SystemClock
 from newerp.infrastructure.catalog.dictionaries import category_filter
 from newerp.infrastructure.catalog.product_edit import STORE_ID, product_option, seo_url
 from newerp.infrastructure.catalog.tables import (
@@ -215,7 +215,7 @@ class SqlReferenceStore:
             await self._session.execute(update(download).where(download.c.download_id == item.id).values(values))
             download_id = item.id
         else:
-            query = insert(download).values({**values, "date_added": datetime.now().replace(microsecond=0)})
+            query = insert(download).values({**values, "date_added": SystemClock().now().replace(microsecond=0)})
             download_id = (await self._session.execute(query)).inserted_primary_key[0]
         await self._replace_name(download_description, "download_id", download_id, item.name)
         await self._session.commit()

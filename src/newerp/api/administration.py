@@ -3,7 +3,6 @@ user groups and API users, the error log, the database backup and the uploaded f
 
 import re
 import tempfile
-from datetime import datetime
 from typing import Annotated
 from urllib.parse import quote
 
@@ -19,6 +18,7 @@ from newerp.application.admin_files import (
     UploadDto,
     UploadService,
 )
+from newerp.application.common import SystemClock
 from newerp.application.module_settings import STORE_CONFIG, ModuleSettingsService, SettingGroupDto
 from newerp.application.opencart_access import ApiKeyDto, ApiUserDto, ApiUserService, UserGroupDto, UserGroupService
 from newerp.application.status_lists import StatusItemDto, StatusList, StatusListService
@@ -170,7 +170,7 @@ async def backup(
     spool = tempfile.SpooledTemporaryFile(max_size=20_000_000)
     await service.dump(tables, spool, principal.user_id)
     spool.seek(0)
-    name = f"newerp-backup-{datetime.now():%Y%m%d-%H%M}.sql.gz"
+    name = f"newerp-backup-{SystemClock().now():%Y%m%d-%H%M}.sql.gz"
     return StreamingResponse(
         _chunks(spool), media_type="application/gzip", headers={"Content-Disposition": f'attachment; filename="{name}"'}
     )

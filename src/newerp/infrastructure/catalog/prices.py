@@ -6,6 +6,7 @@ from sqlalchemy import delete, exists, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from newerp.application.catalog.prices import ImportedProduct, PricedProduct
+from newerp.application.common import SystemClock
 from newerp.infrastructure.catalog.product_edit import NO_END, NO_START
 from newerp.infrastructure.models.catalog import DdProduct, DdProductDescription, DdProductSpecial, DdProductToCategory
 
@@ -47,7 +48,7 @@ class SqlPriceStore:
             await self._session.execute(
                 update(DdProduct)
                 .where(DdProduct.product_id == product_id)
-                .values(price=price, date_modified=func.now())
+                .values(price=price, date_modified=SystemClock().now().replace(microsecond=0))
             )
         await self._session.commit()
 
@@ -121,7 +122,9 @@ class SqlImportStore:
         # date_modified changes too, so a product form opened before the import refuses to overwrite it (409).
         product = {column: value for column, value in values.items() if column != "name"}
         await self._session.execute(
-            update(DdProduct).where(DdProduct.product_id == product_id).values({**product, "date_modified": func.now()})
+            update(DdProduct)
+            .where(DdProduct.product_id == product_id)
+            .values({**product, "date_modified": SystemClock().now().replace(microsecond=0)})
         )
         if "name" in values:
             d = DdProductDescription

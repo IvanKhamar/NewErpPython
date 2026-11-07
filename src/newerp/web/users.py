@@ -14,6 +14,7 @@ from newerp.api.staff import get_bonus_service
 from newerp.api.users import Service
 from newerp.application.auth.models import CreateUserRequest, ResetPasswordRequest, SetAccessRequest
 from newerp.application.auth.policy import Roles
+from newerp.application.common import SystemClock
 from newerp.application.staff import BonusService
 from newerp.web.common import BUSINESS_ERRORS, WebUser, page_roles, render, undo
 
@@ -75,7 +76,7 @@ async def user_action(
 @router.get("/bonuses", dependencies=[Depends(page_roles(*Policies.BONUSES))])
 async def bonuses_page(request: Request, service: Bonuses, since: str = "", until: str = "") -> HTMLResponse:
     """Managers' bonuses for a period, the current month by default."""
-    today = date.today()
+    today = SystemClock().now().date()
     error, report = None, None
     try:
         start = date.fromisoformat(since) if since else today.replace(day=1)

@@ -12,7 +12,7 @@ from newerp.api.catalog import Products
 from newerp.api.deps import Session
 from newerp.api.marketing import Coupons, Marketing, Vouchers, contacts_csv
 from newerp.api.security import Policies
-from newerp.application.common import LookupItem
+from newerp.application.common import LookupItem, SystemClock
 from newerp.application.marketing.campaigns import BirthdaySmsRequest, BulkSmsRequest
 from newerp.application.marketing.coupons import CouponCardDto, SaveCouponRequest
 from newerp.application.marketing.vouchers import SaveVoucherRequest
@@ -313,7 +313,7 @@ def _card_values(card: CouponCardDto) -> dict[str, Any]:
 
 @router.get("/coupons/new")
 async def new_coupon_page(request: Request, products: Products) -> HTMLResponse:
-    today = date.today()
+    today = SystemClock().now().date()
     values = {"type": "P", "total": "0", "uses_total": "1", "uses_customer": "1", "active": "1",
               "date_start": today.isoformat(), "date_end": today.replace(day=28).isoformat()}  # fmt: skip
     return await _coupon_form(request, products, values)

@@ -18,6 +18,7 @@ import pymysql
 from faker import Faker
 from fastapi.testclient import TestClient
 
+from newerp.application.common import SystemClock
 from newerp.infrastructure.auth.password_hasher import Pbkdf2PasswordHasher
 
 DEV_DATABASE = "newerp_dev"
@@ -156,7 +157,7 @@ def seed(connection: pymysql.Connection, client: TestClient, order_count: int = 
     rows = Rows(connection)
     if rows.count("dd_order"):
         raise SeedRefused("The database already has orders. The seeder works only with an empty one; nothing changed.")
-    return _Seeder(rows, Api(client), today or date.today()).run(order_count)
+    return _Seeder(rows, Api(client), today or SystemClock().now().date()).run(order_count)
 
 
 class _Seeder:
