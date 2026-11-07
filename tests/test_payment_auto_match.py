@@ -14,6 +14,7 @@ from newerp.domain.payments import (
     confident_match,
     is_confident,
 )
+from tests import helpers
 from tests.seed import MANAGER, STOREKEEPER, insert
 
 
@@ -40,7 +41,7 @@ def test_only_exactly_one_confident_order_is_linked():
     assert confident_match([weak]) is None
 
 
-def test_auto_match_links_older_payments_with_one_confident_order(api, db):
+def test_auto_match_links_older_payments_with_one_confident_order(api, db, caplog):
     # 2000 with the phone of order 2 in the purpose: confident. The seeded payment (surname and sum) is not.
     insert(
         db, "dd_privatbank", appcode="tx-phone", card="UA00", amount="2000.00 UAH", cardamount="2000.00 UAH",
@@ -53,6 +54,7 @@ def test_auto_match_links_older_payments_with_one_confident_order(api, db):
     assert result["checked"] == 2
     [link] = result["links"]
     assert link["orderId"] == 2
+    assert f"payment auto-linked: {link['paymentId']}, order 2, amount 2000" in caplog.text
     [still_open] = client.get("/payments/bank?linked=false").json()["items"]
     assert still_open["payer"] == "Тарас Клієнт2"
     # Now order 2 is paid, so the seeded payment would not be confident even with its phone.
@@ -60,7 +62,7 @@ def test_auto_match_links_older_payments_with_one_confident_order(api, db):
     # The page has no dates: it looks at the last 31 days, so only a payment of today is sure to be inside them.
     insert(
         db, "dd_privatbank", appcode="tx-today", card="UA00", amount="1.00 UAH", cardamount="1.00 UAH",
-        rest="7001.00 UAH", description="Без ознак замовлення", terminal="", trandate=date.today(),
+        rest="7001.00 UAH", description="Без ознак замовлення", terminal="", trandate=helpers.today(),
         trantime="11:00:00", status="", show_status=True, order_id=0,
     )  # fmt: skip
     assert "Перевірено платежів без замовлення: 1" in client.post("/app/payments/auto-match").text

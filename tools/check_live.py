@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from newerp.application.common import SystemClock
 from newerp.application.delivery.models import TrackingRequest
 from newerp.config import get_settings
+from newerp.domain.common import DomainError
 from newerp.infrastructure.cashbox.checkbox import checkbox_client
 from newerp.infrastructure.delivery.nova_poshta import nova_poshta_client
 from newerp.infrastructure.payments import bank_statement_client, liqpay_gateway
@@ -92,6 +93,11 @@ async def check_schema(database_url: str | None = None) -> list[str]:
     return compare(expected, actual)
 
 
+def finding(name: str, error: Exception) -> str:
+    """Only words written for people, or the error type: another exception's text can hold a request URL or a key."""
+    return f"{name}: {error if isinstance(error, DomainError) else type(error).__name__}"
+
+
 async def check_integrations() -> list[str]:
     settings = get_settings()
     problems = []
@@ -105,7 +111,7 @@ async def check_integrations() -> list[str]:
             await call()
             print(f"{name}: відповідає")
         except Exception as error:  # noqa: BLE001 - any failure of an outside service is a finding to report
-            problems.append(f"{name}: {type(error).__name__}: {error}")
+            problems.append(finding(name, error))
 
     nova_poshta = nova_poshta_client(settings.nova_poshta)
     await probe("Нова Пошта (трекінг вигаданої ТТН)", nova_poshta.is_configured,

@@ -58,8 +58,8 @@ pytest, ruff, import-linter. Later: aiokafka.
 
 ## Permissions
 
-They are in `F:\PROJECTS\CLAUDE.md` (outside this repo, for all projects): work without asking across `F:\PROJECTS`,
-with a short list of what still needs asking.
+They are in `F:\PROJECTS\CLAUDE.md` (outside this repo, for all projects): do not ask, do anything that does not go
+against security or common sense.
 
 ## Security (the repository is public)
 
@@ -94,6 +94,9 @@ uv run fastapi dev src/newerp/main.py      # run the API; /health, /docs
 uv run pytest                              # tests
 uv run ruff check . ; uv run lint-imports  # lint + layer check
 ```
+
+Tests take the time from `tests.helpers` (`now()`, `today()`: Kyiv, like the app), never from the machine's clock: CI
+runs in UTC, so the two dates differ from 22:00 to 24:00 UTC. `TZ=UTC0 uv run pytest` reproduces CI's clock on Windows.
 
 Push only after all CI steps (`ruff check`, `ruff format --check`, `lint-imports`, `pytest`) pass locally, each
 exit code checked: a failed CI run e-mails the user. Report problems in the chat instead.

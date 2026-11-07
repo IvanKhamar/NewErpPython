@@ -569,6 +569,9 @@ CREATE TABLE `dd_warehouse` (
 
 -- Стандартна таблиця OpenCart, якої немає в нашому дампі; старий сайт додав колонку `percent`:
 -- знижка у відсотках від ціни товару (тоді `price` не діє), ціну округлено до десятків гривень.
+-- Без NO_ZERO_DATE лише в цьому сеансі, інакше MySQL 8 не прийме DEFAULT '0000-00-00' (як у schema.sql).
+SET SESSION sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
 CREATE TABLE `dd_product_special` (
   `product_special_id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
@@ -626,6 +629,9 @@ CREATE TABLE `dd_coupon_category_exclude` (
 -- Таблиця модуля «Remarketing All in One» старого сайту; вітрина пише її при оформленні замовлення. Колонки відновлено
 -- з admin/controller/sale/order.php (картка замовлення) і admin/model/report/remarketing.php (звіт UTM); у модуля
 -- можуть бути й інші колонки, звірити tools/check_live.py. Час події '0000-00-00 00:00:00' — подію не надсилали.
+-- Без NO_ZERO_DATE лише в цьому сеансі, інакше MySQL 8 не прийме такі значення за замовчуванням (як у schema.sql).
+SET SESSION sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
 CREATE TABLE `dd_remarketing_orders` (
   `order_id` int(11) NOT NULL,
   `first_referrer` varchar(255) NOT NULL DEFAULT '',

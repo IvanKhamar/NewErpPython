@@ -1,8 +1,9 @@
 """The login throttle with its counters in Redis, so every worker and container counts the same failures.
 
 The rules are LoginThrottle's: a window starts with the first failure and the limits are per username and per
-address. Redis keeps a counter per key with the window as its time to live (INCR, and EXPIRE only on the first
-failure), so the window ends by itself."""
+address. Redis keeps a counter per key with the window as its time to live, so the window ends by itself. The time to
+live is set on every failure with EXPIRE NX (only when the key has none), not just on the first one: after a crash
+between INCR and EXPIRE, a counter without an expiry would never end and would lock that login for good."""
 
 from datetime import timedelta
 
@@ -31,8 +32,8 @@ class RedisLoginThrottle:
     async def failed(self, address: str | None, username: str | None) -> None:
         window = self._options.window_minutes * 60
         for key, _ in self._keys(address, username):
-            if await self._redis.incr(key) == 1:
-                await self._redis.expire(key, window)
+            await self._redis.incr(key)
+            await self._redis.expire(key, window, nx=True)
 
     async def succeeded(self, username: str | None) -> None:
         await self._redis.delete(self._user_key(username))

@@ -39,3 +39,29 @@ def test_two_workers_share_the_counters_and_success_resets_the_user():
             await redis.aclose()
 
     asyncio.run(run())
+
+
+def test_a_counter_left_without_an_expiry_gets_one_on_the_next_failure():
+    async def run() -> None:
+        redis = Redis.from_url(URL)
+        try:
+            await redis.ping()
+        except OSError:
+            pytest.skip("Redis is not running")
+        options = LoginThrottleOptions(max_failures_per_user=5, max_failures_per_address=5, window_minutes=1)
+        throttle = RedisLoginThrottle(redis, options)
+        user, ip = f"user-{uuid.uuid4()}", f"ip-{uuid.uuid4()}"
+        key = f"newerp:login:user:{user}"
+        try:
+            await redis.set(key, 3)  # what a crash between INCR and EXPIRE leaves behind
+            assert await redis.ttl(key) == -1
+            await throttle.failed(ip, user)
+            assert 0 < await redis.ttl(key) <= 60
+            await redis.expire(key, 30)
+            await throttle.failed(ip, user)
+            assert await redis.ttl(key) <= 30  # a running window is not pushed further by more failures
+        finally:
+            await redis.delete(key, f"newerp:login:ip:{ip}")
+            await redis.aclose()
+
+    asyncio.run(run())

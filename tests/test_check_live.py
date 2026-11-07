@@ -3,8 +3,9 @@ here the schema check runs against the test database, built from the same files,
 
 import asyncio
 
+from newerp.domain.common import DomainError
 from tests.conftest import SERVER_URL
-from tools.check_live import RECONSTRUCTED, Column, check_schema, compare, expected_columns
+from tools.check_live import RECONSTRUCTED, Column, check_schema, compare, expected_columns, finding
 
 SQL = """
 CREATE TABLE `dd_thing` (
@@ -42,3 +43,9 @@ def test_compare_names_what_is_missing_or_different():
 def test_the_test_database_matches_the_reconstruction(database):
     url = SERVER_URL.set(database=database, query={"charset": "utf8mb4"}).render_as_string(hide_password=False)
     assert asyncio.run(check_schema(url)) == []
+
+
+def test_a_finding_never_shows_the_text_of_an_unexpected_error():
+    outside = RuntimeError("GET https://api.example.test/?token=test-token failed")
+    assert finding("Банк", outside) == "Банк: RuntimeError"
+    assert finding("Банк", DomainError("Сервіс не відповідає.")) == "Банк: Сервіс не відповідає."

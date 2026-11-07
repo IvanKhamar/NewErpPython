@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 
 from newerp.domain.catalog import SpecialPrice
+from tests import helpers
 from tests.seed import CATEGORY_PRODUCT_ID, MANAGER, insert
 
 HTMX = {"HX-Request": "true"}
@@ -24,7 +25,7 @@ def test_fixed_special_price_is_used_without_a_percent():
 
 
 def test_search_gives_the_first_active_special_and_keeps_the_regular_price(api, db):
-    today = date.today()
+    today = helpers.today()
 
     def special(priority: int, price: int, percent: int, start: date, end: date) -> None:
         insert(db, "dd_product_special", product_id=CATEGORY_PRODUCT_ID, customer_group_id=1, priority=priority,
