@@ -10,6 +10,7 @@ import httpx
 from sqlalchemy import BigInteger, Column, DateTime, MetaData, String, Table, Text, delete, func, insert, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from newerp.application.common import KYIV, SystemClock
 from newerp.application.marketing.integrations import (
     INSTAGRAM_HOSTS,
     FeedProduct,
@@ -157,7 +158,7 @@ class SqlInstagramStore:
                 caption=media.caption,
                 thumbnail_url=media.thumbnail_url,
                 permalink=media.permalink[:255],
-                date_added=media.timestamp or datetime.now().replace(microsecond=0),
+                date_added=media.timestamp or SystemClock().now().replace(microsecond=0),
             )  # fmt: skip
         )
         await self._session.commit()
@@ -268,7 +269,7 @@ def _timestamp(value: object) -> datetime | None:
         moment = datetime.fromisoformat(value.replace("+0000", "+00:00"))
     except ValueError:
         return None
-    return moment.astimezone().replace(tzinfo=None) if moment.tzinfo else moment
+    return moment.astimezone(KYIV).replace(tzinfo=None) if moment.tzinfo else moment
 
 
 class LocalPictureFolder:

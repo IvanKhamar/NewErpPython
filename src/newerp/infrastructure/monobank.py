@@ -11,6 +11,7 @@ import httpx
 from sqlalchemy import Column, DateTime, Integer, MetaData, Numeric, String, Table, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from newerp.application.common import KYIV
 from newerp.application.monobank import CreatedMonoInvoice, MonoInvoice, MonoInvoiceDto, invoice_dto
 from newerp.config import MonobankSettings
 from newerp.domain.common import DomainError
@@ -165,4 +166,4 @@ def _when(value: object) -> datetime | None:
         moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
-    return moment.astimezone().replace(tzinfo=None) if moment.tzinfo else moment
+    return moment.astimezone(KYIV).replace(tzinfo=None) if moment.tzinfo else moment

@@ -2,7 +2,7 @@
 
 import random
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from math import ceil
 from typing import Any
@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 import httpx
 
+from newerp.application.common import SystemClock
 from newerp.application.delivery.models import (
     CreatedShipment,
     DropoffPointOption,
@@ -242,7 +243,7 @@ class HttpNovaPoshtaClient:
                 "CargoType": "Parcel",
                 "SeatsAmount": "1",
                 "Cost": number(cost),
-                "DateTime": date.today().strftime("%d.%m.%Y"),
+                "DateTime": SystemClock().now().strftime("%d.%m.%Y"),
             },
         )
         return decimal_or_zero(text(data[0], "Cost")) if data else Decimal(0)
