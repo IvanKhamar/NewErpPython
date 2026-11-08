@@ -7,14 +7,15 @@ configuration), so the domain does not know about the database.
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
 
 from newerp.domain.common import DomainError, plain, require_text
 
 USE = "use"  # consumption; the old module writes the same
 RESTOCK = "restock"  # receipt
 
-SCALE = 3  # quantities are decimal(12,3)
+# dd_stock_items keeps decimal(10,2) (checked against the CREATE script of the old site), so two decimals.
+SCALE = 2
 
 
 def has_scale(quantity: Decimal, places: int = SCALE) -> bool:
@@ -24,7 +25,7 @@ def has_scale(quantity: Decimal, places: int = SCALE) -> bool:
 class StockCategory:
     def __init__(self, name: str | None, sort_order: int = 0) -> None:
         self.id: int | None = None
-        self.name = require_text(name, "Назва категорії", 100)
+        self.name = require_text(name, "Назва категорії", 128)
         self.sort_order = sort_order
 
 
@@ -33,7 +34,7 @@ class StockSupplier:
         self, name: str | None, phone: str | None, email: str | None, categories: str | None, notes: str | None
     ) -> None:
         self.id: int | None = None
-        self.name = require_text(name, "Назва постачальника", 150)
+        self.name = require_text(name, "Назва постачальника", 255)
         # The old module stores an empty string, not NULL.
         self.phone = (phone or "").strip()
         self.email = (email or "").strip()
@@ -77,8 +78,8 @@ class StockItem:
             raise DomainError("Ціна не може бути від'ємною.")
         self.category_id = category_id
         self.supplier_id = supplier_id
-        self.name = require_text(name, "Назва позиції", 150)
-        self.unit = require_text(unit, "Одиниця виміру", 16)
+        self.name = require_text(name, "Назва позиції", 255)
+        self.unit = require_text(unit, "Одиниця виміру", 32)
         self.used_for = (used_for or "").strip()
         self.price = price
         self.set_min_quantity(min_quantity)
@@ -93,6 +94,8 @@ class StockItem:
         """A manual change by delta (+ receipt, − use). Stricter than the old module: no going below zero."""
         if delta == 0:
             raise DomainError("Зміна залишку не може дорівнювати нулю.")
+        if not has_scale(delta):
+            raise DomainError(f"Зміна залишку: не більше {SCALE} знаків після коми.")
         if self.quantity + delta < 0:
             raise DomainError(f"Недостатньо залишку: є {self.quantity} {self.unit}, списується {-delta} {self.unit}.")
         return self._change(delta, require_text(comment, "Причина", 255), user_id, username, now)
@@ -100,10 +103,13 @@ class StockItem:
     def take_up_to(
         self, wanted: Decimal, comment: str | None, user_id: int, username: str, now: datetime
     ) -> "StockMovement | None":
-        """Write-off for production, as in the old module: takes what there is, at most down to zero."""
+        """
+        Write-off for production, as in the old module: takes what there is, at most down to zero. The norm times
+        pieces can have more decimals than the table keeps; it is rounded half up, as MySQL rounds it in the old module.
+        """
         if wanted <= 0:
             raise DomainError("Кількість для списання має бути більшою за нуль.")
-        amount = min(wanted, self.quantity)
+        amount = min(wanted.quantize(Decimal(1).scaleb(-SCALE), ROUND_HALF_UP), self.quantity)
         if amount <= 0:
             return None
         return self._change(-amount, require_text(comment, "Причина", 255), user_id, username, now)
@@ -301,7 +307,7 @@ class StockPlacement:
 
 def require_quantity(quantity: Decimal) -> None:
     if quantity <= 0 or not has_scale(quantity):
-        raise DomainError("Кількість має бути більшою за нуль, не більше 3 знаків після коми.")
+        raise DomainError(f"Кількість має бути більшою за нуль, не більше {SCALE} знаків після коми.")
 
 
 # ── Stocktaking: the storekeeper downloads the list, writes the counts into the last column and uploads it ──

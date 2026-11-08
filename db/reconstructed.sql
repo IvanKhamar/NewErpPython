@@ -28,59 +28,71 @@ ALTER TABLE `dd_order`
   ADD COLUMN `order_source_id` int(11) NOT NULL DEFAULT '0';
 
 -- ═══ Склад розхідників (модуль StockTrack старого сайту) ═══
--- Колонки взято із запитів admin/model/tool/stocktrack.php. Типи, довжини й рушій вгадані:
--- DDL модуля в коді немає, тож їх треба звірити зі справжньою базою (SHOW CREATE TABLE).
--- InnoDB обрано, бо модуль створював таблиці сам, а MySQL 5.5+ без явного ENGINE створює InnoDB.
+-- Звірено 2026-11-08 зі скриптом, яким ці таблиці створювали на сайті (Vidro_DB, UPDATE/Додавання_таблиць_складу):
+-- типи, довжини, ключі й зовнішні ключі звідти. Кількості там decimal(10,2), тобто два знаки після коми.
+-- Колонок item_name і username у скрипті немає: їх пише admin/model/tool/stocktrack.php (addLog), тож їх додали
+-- пізніше; їхні типи вгадані.
 
 CREATE TABLE `dd_stock_categories` (
   `category_id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT '0',
+  `name` varchar(128) NOT NULL,
+  `sort_order` int(3) NOT NULL DEFAULT '0',
+  `date_added` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `dd_stock_suppliers` (
   `supplier_id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(150) NOT NULL,
-  `phone` varchar(32) NOT NULL DEFAULT '',
-  `email` varchar(96) NOT NULL DEFAULT '',
-  `categories` varchar(255) NOT NULL DEFAULT '',  -- вільний текст: що постачає
-  `notes` text NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(64) DEFAULT '',
+  `email` varchar(128) DEFAULT '',
+  `categories` varchar(512) DEFAULT '',  -- вільний текст: що постачає
+  `notes` text,
+  `date_added` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`supplier_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- status = 0 означає «видалено»: старий модуль не видаляє позиції, а приховує.
 CREATE TABLE `dd_stock_items` (
   `item_id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(150) NOT NULL,
-  `category_id` int(11) NULL,
-  `unit` varchar(16) NOT NULL DEFAULT 'шт.',
-  `stock` decimal(12,3) NOT NULL DEFAULT '0.000',
-  `min_stock` decimal(12,3) NOT NULL DEFAULT '0.000',
-  `used_for` varchar(255) NOT NULL DEFAULT '',
-  `supplier_id` int(11) NULL,
-  `price` decimal(15,4) NOT NULL DEFAULT '0.0000',
+  `name` varchar(255) NOT NULL,
+  `category_id` int(11) DEFAULT NULL,
+  `unit` varchar(32) NOT NULL DEFAULT 'шт.',
+  `stock` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `min_stock` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `used_for` varchar(512) DEFAULT '',
+  `supplier_id` int(11) DEFAULT NULL,
+  `price` decimal(15,2) NOT NULL DEFAULT '0.00',
   `status` tinyint(1) NOT NULL DEFAULT '1',
+  `date_added` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`),
-  KEY `category_id` (`category_id`)
+  KEY `idx_category` (`category_id`),
+  KEY `idx_supplier` (`supplier_id`),
+  KEY `idx_stock_alert` (`stock`, `min_stock`),
+  CONSTRAINT `fk_stock_item_category` FOREIGN KEY (`category_id`) REFERENCES `dd_stock_categories` (`category_id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_stock_item_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `dd_stock_suppliers` (`supplier_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Журнал руху розхідників. action: 'use' (витрата) або 'restock' (прихід); quantity завжди додатна.
--- date_added старий модуль не задає явно, тож у справжній таблиці, ймовірно, DEFAULT CURRENT_TIMESTAMP.
 CREATE TABLE `dd_stock_log` (
   `log_id` int(11) NOT NULL AUTO_INCREMENT,
   `item_id` int(11) NOT NULL,
-  `item_name` varchar(150) NOT NULL,
-  `user_id` int(11) NOT NULL DEFAULT '0',
-  `username` varchar(20) NOT NULL DEFAULT '',
-  `action` varchar(16) NOT NULL,
-  `quantity` decimal(12,3) NOT NULL,
-  `stock_before` decimal(12,3) NOT NULL,
-  `stock_after` decimal(12,3) NOT NULL,
-  `comment` varchar(255) NOT NULL DEFAULT '',
+  `item_name` varchar(255) NOT NULL DEFAULT '',  -- додано пізніше, тип вгаданий
+  `user_id` int(11) DEFAULT NULL,
+  `username` varchar(20) NOT NULL DEFAULT '',    -- додано пізніше, тип вгаданий
+  `action` enum('use','restock','add','edit','delete') NOT NULL,
+  `quantity` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `stock_before` decimal(10,2) DEFAULT NULL,
+  `stock_after` decimal(10,2) DEFAULT NULL,
+  `comment` varchar(255) DEFAULT '',
   `date_added` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`log_id`),
-  KEY `item_id` (`item_id`, `date_added`)
+  KEY `idx_item` (`item_id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_date` (`date_added`),
+  KEY `idx_action` (`action`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ═══ Виробництво (модуль StockTrack старого сайту) ═══
@@ -394,61 +406,69 @@ ALTER TABLE `dd_order`
   ADD COLUMN `shipping_flat` varchar(32) NOT NULL DEFAULT '',
   ADD COLUMN `callback` tinyint(1) NOT NULL DEFAULT '0';
 
--- Товар додано до замовлення як супутній (cross-sell). Звірити.
+-- Товар додано до замовлення як супутній (cross-sell). Звірено 2026-11-08 зі скриптом Vidro_DB (Оновлення_порядку_допродажу_в_бд).
 ALTER TABLE `dd_order_product`
   ADD COLUMN `crosssell` tinyint(1) NOT NULL DEFAULT '0';
 
 -- ═══ Партнери-перепродавці та фід для них ═══
--- Відновлено з admin/model/sale/partner.php і catalog/model/feed/eva.php. DDL у коді немає: типи, довжини й ключі вгадані, звірити.
+-- Відновлено з admin/model/sale/partner.php і catalog/model/feed/eva.php. Звірено 2026-11-08 зі скриптами, якими таблиці
+-- створювали на сайті (Vidro_DB, UPDATE/Додавання_таблиць_для_партнерів і Додавання_таблиці_продуктів_для_партнерів):
+-- типи, довжини, ключі й рушій звідти. Колонки, яких у скриптах немає, а код їх пише (size_name і націнки категорій,
+-- ціни товарів), додали пізніше; їхні типи вгадані.
 -- code — короткий код партнера, з ним формується адреса фіда; default_quantity — кількість, яку фід показує для кожної пропозиції.
 CREATE TABLE `dd_partner` (
   `partner_id` int(11) NOT NULL AUTO_INCREMENT,
   `code` varchar(32) NOT NULL,
   `name` varchar(128) NOT NULL,
-  `status` tinyint(1) NOT NULL DEFAULT '1',
-  `feed_url` varchar(255) NOT NULL DEFAULT '',
+  `status` tinyint(1) NOT NULL DEFAULT '0',
+  `feed_url` varchar(255) DEFAULT NULL,
   `feed_enabled` tinyint(1) NOT NULL DEFAULT '0',
-  `vendor_name` varchar(64) NOT NULL DEFAULT '',
-  `notes` text NOT NULL,
+  `vendor_name` varchar(128) DEFAULT NULL,
   `default_quantity` int(11) NOT NULL DEFAULT '5',
+  `notes` text,
   `date_added` datetime NOT NULL,
   `date_modified` datetime NOT NULL,
   PRIMARY KEY (`partner_id`),
   UNIQUE KEY `code` (`code`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Категорія магазину (за потреби лише один розмір) → категорія партнера, з націнкою до ціни (percent_supply)
--- і до перекресленої «старої» ціни (percent_sale) у відсотках. NULL — без націнки чи без старої ціни. Звірити.
+-- і до перекресленої «старої» ціни (percent_sale) у відсотках. NULL — без націнки чи без старої ціни.
+-- Скрипт мав UNIQUE KEY (partner_id, category_id); його тут немає, бо з size_name одна категорія має кілька рядків
+-- (по рядку на розмір), тож ключ, мабуть, прибрали разом із додаванням size_name.
 CREATE TABLE `dd_partner_category_map` (
   `partner_category_map_id` int(11) NOT NULL AUTO_INCREMENT,
   `partner_id` int(11) NOT NULL,
   `category_id` int(11) NOT NULL,
-  `size_name` varchar(64) DEFAULT NULL,
-  `external_id` varchar(64) NOT NULL DEFAULT '',
-  `external_name` varchar(255) NOT NULL DEFAULT '',
-  `percent_supply` decimal(8,2) DEFAULT NULL,
-  `percent_sale` decimal(8,2) DEFAULT NULL,
+  `size_name` varchar(64) DEFAULT NULL,            -- додано пізніше, тип вгаданий
+  `external_id` varchar(64) DEFAULT NULL,
+  `external_name` varchar(255) DEFAULT NULL,
+  `percent_supply` decimal(8,2) DEFAULT NULL,      -- додано пізніше, тип вгаданий
+  `percent_sale` decimal(8,2) DEFAULT NULL,        -- додано пізніше, тип вгаданий
   PRIMARY KEY (`partner_category_map_id`),
   KEY `partner_id` (`partner_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Окремий товар (за потреби лише один розмір) у фіді партнера: свій артикул і назва в партнера, фіксовані ціни.
--- Ключа partner_product_map_id старий код не читає, але таблиці потрібен первинний ключ. Звірити.
 CREATE TABLE `dd_partner_product_map` (
   `partner_product_map_id` int(11) NOT NULL AUTO_INCREMENT,
   `partner_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `size_name` varchar(64) DEFAULT NULL,
-  `external_id` varchar(64) NOT NULL DEFAULT '',
+  `size_name` varchar(255) DEFAULT NULL,
+  `external_id` varchar(255) NOT NULL DEFAULT '',
   `external_name` varchar(255) NOT NULL DEFAULT '',
-  `price_supply` decimal(15,4) DEFAULT NULL,
-  `price_sale` decimal(15,4) DEFAULT NULL,
+  `price_supply` decimal(15,4) DEFAULT NULL,       -- додано пізніше, тип вгаданий
+  `price_sale` decimal(15,4) DEFAULT NULL,         -- додано пізніше, тип вгаданий
   PRIMARY KEY (`partner_product_map_id`),
-  KEY `partner_id` (`partner_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  KEY `partner_id` (`partner_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ═══ Порядок товарів за продажами ═══
--- Відновлено з admin/model/catalog/product_order.php, label.php і crosssell.php. DDL у коді немає: типи, довжини, ключі й рушій вгадані, звірити.
+-- Відновлено з admin/model/catalog/product_order.php, label.php і crosssell.php. Звірено 2026-11-08 зі скриптами сайту
+-- (Vidro_DB: UPDATE/Додавання_автоматичного_трекінгу_порядку_товарів, Додавання_таблиці_товарів_зі_знижкою,
+-- Оновлення_порядку_допродажу_в_бд): dd_crosssell_*, dd_product_order_snapshot* і dd_product_manual_pin звідти.
+-- Для dd_order.user_id і міток скриптів немає, вони вгадані, звірити.
 -- Хто створив замовлення в адмінці. Порядок товарів не рахує продажі одного користувача (B2B). Звірити.
 ALTER TABLE `dd_order`
   ADD COLUMN `user_id` int(11) NOT NULL DEFAULT '0';
@@ -471,47 +491,52 @@ CREATE TABLE `dd_product_to_label` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Панель допродажу при оформленні: окремі товари (type = 'product') і категорії (type = 'category') зі знижкою, %.
+-- Один товар чи категорія — один рядок (UNIQUE type_target).
 CREATE TABLE `dd_crosssell_item` (
   `crosssell_item_id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` varchar(16) NOT NULL,
+  `type` enum('product','category') NOT NULL,
   `target_id` int(11) NOT NULL,
   `discount` decimal(5,2) NOT NULL DEFAULT '0.00',
-  PRIMARY KEY (`crosssell_item_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  PRIMARY KEY (`crosssell_item_id`),
+  UNIQUE KEY `type_target` (`type`,`target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Власний порядок товарів у панелі допродажу.
 CREATE TABLE `dd_crosssell_sort` (
   `product_id` int(11) NOT NULL,
-  `sort_order` int(11) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`product_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Знімки sort_order усіх товарів перед кожним перерахунком (для відкату).
 CREATE TABLE `dd_product_order_snapshot` (
   `snapshot_id` int(11) NOT NULL AUTO_INCREMENT,
-  `note` varchar(255) NOT NULL DEFAULT '',
-  `created_at` datetime NOT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`snapshot_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `dd_product_order_snapshot_item` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `snapshot_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `sort_order` int(11) NOT NULL,
-  PRIMARY KEY (`snapshot_id`,`product_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  PRIMARY KEY (`id`),
+  KEY `snapshot_id` (`snapshot_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Закріплені вручну позиції: товар product_id стоїть на позиції position у групі (group_type, group_key).
 CREATE TABLE `dd_product_manual_pin` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `group_type` varchar(32) NOT NULL,
-  `group_key` varchar(128) NOT NULL,
+  `group_type` varchar(50) NOT NULL,
+  `group_key` varchar(100) NOT NULL,
   `position` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `group` (`group_type`,`group_key`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  KEY `group_key` (`group_type`,`group_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ═══ Передзамовлення ═══
 -- Відновлено з admin/model/catalog/product.php, system/library/cart/cart.php і admin/controller/tool/console.php (updatePreOrdersQuantity).
@@ -692,11 +717,12 @@ ALTER TABLE `dd_order`
 
 -- ═══ Каталог: форма товару старої адмінки (admin/model/catalog/product.php) ═══
 -- Власні колонки опису товару; у справжній базі вони, ймовірно, NOT NULL без типового значення — звірити.
+-- model_info (опис фото товару) звірено 2026-11-08 зі скриптом сайту (Vidro_DB, UPDATE/Додавання_опису_фото_товару).
 ALTER TABLE `dd_product_description`
   ADD COLUMN `table_size` text NULL,
   ADD COLUMN `variant` text NULL,
   ADD COLUMN `notice` text NULL,
-  ADD COLUMN `model_info` text NULL,
+  ADD COLUMN `model_info` varchar(255) DEFAULT NULL,
   ADD COLUMN `characteristics` text NULL;
 
 -- Стандартні таблиці OpenCart 3 (install/opencart.sql).
@@ -949,7 +975,7 @@ CREATE TABLE `dd_post` (
   `big_image` varchar(255) NOT NULL DEFAULT '',
   `is_top` tinyint(1) NOT NULL DEFAULT '0',
   `status` tinyint(1) NOT NULL DEFAULT '1',
-  `date_available` datetime NULL,
+  `date_available` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- звірено зі скриптом Vidro_DB (SEO-поля блогу)
   `date_added` datetime NOT NULL,
   PRIMARY KEY (`post_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

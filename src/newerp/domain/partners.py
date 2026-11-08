@@ -119,7 +119,7 @@ class Partner:
         self.is_active = settings.is_active
         self.feed_url = _limit(settings.feed_url, 255, "Адреса фіда")
         self.feed_enabled = settings.feed_enabled
-        self.vendor_name = _limit(settings.vendor_name, 64, "Бренд")
+        self.vendor_name = _limit(settings.vendor_name, 128, "Бренд")
         self.notes = (settings.notes or "").strip()
         self.default_quantity = settings.default_quantity
         self.date_modified = now
@@ -152,7 +152,7 @@ class Partner:
             replace(
                 r,
                 size_name=_normalize_size(r.size_name),
-                external_id=_limit(r.external_id, 64, "Артикул партнера"),
+                external_id=_limit(r.external_id, 255, "Артикул партнера"),
                 external_name=_limit(r.external_name, 255, "Назва в партнера"),
             )
             for r in rows

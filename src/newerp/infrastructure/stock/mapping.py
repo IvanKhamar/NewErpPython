@@ -20,6 +20,9 @@ from newerp.domain.stock import (
 from newerp.infrastructure.db import Base
 
 metadata = Base.metadata
+# The old module keeps two decimals (decimal(10,2), checked against its CREATE script); our erp_* tables keep three.
+ItemQuantity = Numeric(10, 2)
+ItemPrice = Numeric(15, 2)
 Quantity = Numeric(12, 3)
 Price = Numeric(15, 4)
 
@@ -27,7 +30,7 @@ stock_categories = Table(
     "dd_stock_categories",
     metadata,
     Column("category_id", Integer, primary_key=True),
-    Column("name", String(100)),
+    Column("name", String(128)),
     Column("sort_order", Integer),
 )
 
@@ -35,10 +38,10 @@ stock_suppliers = Table(
     "dd_stock_suppliers",
     metadata,
     Column("supplier_id", Integer, primary_key=True),
-    Column("name", String(150)),
-    Column("phone", String(32)),
-    Column("email", String(96)),
-    Column("categories", String(255)),
+    Column("name", String(255)),
+    Column("phone", String(64)),
+    Column("email", String(128)),
+    Column("categories", String(512)),
     Column("notes", Text),
 )
 
@@ -48,12 +51,12 @@ stock_items = Table(
     Column("item_id", Integer, primary_key=True),
     Column("category_id", Integer, nullable=True),
     Column("supplier_id", Integer, nullable=True),
-    Column("name", String(150)),
-    Column("unit", String(16)),
-    Column("stock", Quantity),
-    Column("min_stock", Quantity),
-    Column("used_for", String(255)),
-    Column("price", Price),
+    Column("name", String(255)),
+    Column("unit", String(32)),
+    Column("stock", ItemQuantity),
+    Column("min_stock", ItemQuantity),
+    Column("used_for", String(512)),
+    Column("price", ItemPrice),
     Column("status", Boolean),
 )
 
@@ -62,11 +65,11 @@ stock_log = Table(
     metadata,
     Column("log_id", Integer, primary_key=True),
     Column("item_id", Integer, ForeignKey("dd_stock_items.item_id")),
-    Column("item_name", String(150)),
+    Column("item_name", String(255)),
     Column("action", String(16)),
-    Column("quantity", Quantity),
-    Column("stock_before", Quantity),
-    Column("stock_after", Quantity),
+    Column("quantity", ItemQuantity),
+    Column("stock_before", ItemQuantity),
+    Column("stock_after", ItemQuantity),
     Column("comment", String(255)),
     Column("user_id", Integer),
     Column("username", String(20)),

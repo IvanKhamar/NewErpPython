@@ -10,6 +10,9 @@ from decimal import Decimal
 from newerp.domain.common import DomainError, plain, require_text
 from newerp.domain.stock import has_scale
 
+# Production quantities keep three decimals: its tables (dd_stock_production_*) are still our guess, decimal(12,3).
+# Consumables (domain.stock) keep two, as the old site's dd_stock_items does.
+SCALE = 3
 CLOTHING = "clothing"  # own sewing: cut → sewn
 READY_MADE = "ready_made"  # ready goods from a supplier: only "sewn" stock
 
@@ -329,7 +332,7 @@ class ProductionModel:
 
 
 def require_count(size: ProductionSize, actual: Decimal) -> None:
-    if actual < 0 or not has_scale(actual):
+    if actual < 0 or not has_scale(actual, SCALE):
         raise DomainError(f"Розмір {size.name}: кількість має бути від 0, не більше 3 знаків після коми.")
 
 
@@ -396,7 +399,7 @@ class ComponentStock:
 
     def recount(self, actual: Decimal) -> bool:
         """Stocktaking: the stock becomes the counted one. Returns whether it changed."""
-        if actual < 0 or not has_scale(actual):
+        if actual < 0 or not has_scale(actual, SCALE):
             raise DomainError("Кількість деталей має бути від 0, не більше 3 знаків після коми.")
         changed = actual != self.stock
         self.stock = actual
@@ -481,7 +484,7 @@ class SewnPlacement:
     ) -> SewnTransfer:  # fmt: skip
         if from_id == to_id:
             raise DomainError("Звідки й куди переміщують — має бути різне місце.")
-        if quantity <= 0 or not has_scale(quantity):
+        if quantity <= 0 or not has_scale(quantity, SCALE):
             raise DomainError("Кількість має бути більшою за нуль, не більше 3 знаків після коми.")
         text = (comment or "").strip()
         if len(text) > 255:
