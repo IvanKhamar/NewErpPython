@@ -274,7 +274,8 @@ class SqlProductSortStore:
         rows = await self._session.execute(
             select(s.snapshot_id, s.note, s.created_at).order_by(s.created_at.desc(), s.snapshot_id.desc()).limit(limit)
         )
-        return [SortSnapshotDto(id=i, note=note, created_at=created_at) for i, note, created_at in rows]
+        # The old site's table allows NULL notes.
+        return [SortSnapshotDto(id=i, note=note or "", created_at=created_at) for i, note, created_at in rows]
 
     async def restore_snapshot(self, snapshot_id: int) -> bool:
         if await self._session.get(DdProductOrderSnapshot, snapshot_id) is None:

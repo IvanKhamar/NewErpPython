@@ -216,7 +216,7 @@ class DdCrosssellItem(Base):
     __tablename__ = "dd_crosssell_item"
 
     crosssell_item_id: Mapped[int] = mapped_column(primary_key=True)
-    type: Mapped[str] = mapped_column(String(16))  # "product" or "category"
+    type: Mapped[str] = mapped_column(String(8))  # enum: "product" or "category"; one row per target
     target_id: Mapped[int]
     discount: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal(0))
 
@@ -236,8 +236,8 @@ class DdProductManualPin(Base):
     __tablename__ = "dd_product_manual_pin"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    group_type: Mapped[str] = mapped_column(String(32))
-    group_key: Mapped[str] = mapped_column(String(128))
+    group_type: Mapped[str] = mapped_column(String(50))
+    group_key: Mapped[str] = mapped_column(String(100))
     position: Mapped[int]
     product_id: Mapped[int]
     created_at: Mapped[datetime]
@@ -247,15 +247,16 @@ class DdProductOrderSnapshot(Base):
     __tablename__ = "dd_product_order_snapshot"
 
     snapshot_id: Mapped[int] = mapped_column(primary_key=True)
-    note: Mapped[str] = mapped_column(String(255), default="")
+    note: Mapped[str | None] = mapped_column(String(255), default="")
     created_at: Mapped[datetime]
 
 
 class DdProductOrderSnapshotItem(Base):
     __tablename__ = "dd_product_order_snapshot_item"
 
-    snapshot_id: Mapped[int] = mapped_column(primary_key=True)
-    product_id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)  # own key, as the old site's CREATE script has it
+    snapshot_id: Mapped[int]
+    product_id: Mapped[int]
     sort_order: Mapped[int]
 
 
