@@ -15,7 +15,13 @@ from starlette.datastructures import FormData
 from newerp.api.catalog import Feedback, Pages
 from newerp.api.deps import Session
 from newerp.api.security import Policies
-from newerp.application.catalog.feedback import FeedbackState, UpdateQuestionRequest, UpdateReviewRequest
+from newerp.application.catalog.feedback import (
+    FeedbackState,
+    ReviewImageStatus,
+    SetReviewImageStatusRequest,
+    UpdateQuestionRequest,
+    UpdateReviewRequest,
+)
 from newerp.application.catalog.pages import (
     AboutBlockDto,
     AboutItemDto,
@@ -27,6 +33,7 @@ from newerp.application.catalog.pages import (
     NftImageDto,
     NftItemDto,
 )
+from newerp.config import get_settings
 from newerp.web.common import BUSINESS_ERRORS, WebUser, is_fragment, number, page_roles, render, undo
 
 router = APIRouter(
@@ -134,6 +141,7 @@ async def _tab(
         context["block"] = await pages.nft()
     elif tab == "reviews":
         context["result"] = await feedback.reviews(_state(state), 1, 100)
+        context["picture_base"] = _picture_base()
     else:
         context["result"] = await feedback.questions(_state(state), 1, 100)
     template = "content/_tab.html" if is_fragment(request) else "content/page.html"
@@ -268,3 +276,34 @@ async def moderate(
     except BUSINESS_ERRORS as error:
         return await _tab(request, kind, pages, feedback, state, error=await undo(session, error))
     return await _tab(request, kind, pages, feedback, state, saved="Збережено.")
+
+
+def _picture_base() -> str:
+    """Review photos are shown from the storefront (img-src allows https only), else the page lists their paths."""
+    store = get_settings().customers.store_url.strip()
+    return store.rstrip("/") + "/image/" if store.startswith("https://") else ""
+
+
+@router.post("/reviews/{review_id}/images/{image_id}/{action}")
+async def moderate_photo(
+    request: Request,
+    review_id: int,
+    image_id: int,
+    action: Literal["pending", "published", "rejected", "delete"],
+    user: WebUser,
+    pages: Pages,
+    feedback: Feedback,
+    session: Session,
+    state: Field = "pending",
+) -> HTMLResponse:
+    try:
+        if action == "delete":
+            await feedback.delete_review_image(review_id, image_id, user.user_id)
+        else:
+            status: ReviewImageStatus = action
+            await feedback.set_review_image_status(
+                review_id, image_id, SetReviewImageStatusRequest(status=status), user.user_id
+            )
+    except BUSINESS_ERRORS as error:
+        return await _tab(request, "reviews", pages, feedback, state, error=await undo(session, error))
+    return await _tab(request, "reviews", pages, feedback, state, saved="Збережено.")

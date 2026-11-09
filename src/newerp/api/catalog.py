@@ -21,6 +21,7 @@ from newerp.application.catalog.feedback import (
     FeedbackState,
     QuestionDto,
     ReviewDto,
+    SetReviewImageStatusRequest,
     UpdateQuestionRequest,
     UpdateReviewRequest,
 )
@@ -553,7 +554,9 @@ def get_page_service(session: Session, clock: ClockDep) -> PageService:
 
 
 def get_feedback_service(session: Session, clock: ClockDep) -> FeedbackService:
-    return FeedbackService(SqlFeedbackStore(session, get_settings().language_id), clock)
+    settings = get_settings()
+    photos = LocalCatalogPictures(settings.pictures.image_dir)
+    return FeedbackService(SqlFeedbackStore(session, settings.language_id), clock, photos)
 
 
 Pages = Annotated[PageService, Depends(get_page_service)]
@@ -666,6 +669,22 @@ async def update_review(
 @dictionaries_router.delete("/reviews/{review_id}", status_code=204, summary="Видалити відгук")
 async def delete_review(review_id: int, principal: CurrentPrincipal, feedback: Feedback) -> None:
     await feedback.delete_review(review_id, principal.user_id)
+
+
+@dictionaries_router.put(
+    "/reviews/{review_id}/images/{image_id}", status_code=204, summary="Фото відгуку: pending, published чи rejected"
+)
+async def set_review_image_status(
+    review_id: int, image_id: int, request: SetReviewImageStatusRequest, principal: CurrentPrincipal, feedback: Feedback
+) -> None:
+    await feedback.set_review_image_status(review_id, image_id, request, principal.user_id)
+
+
+@dictionaries_router.delete(
+    "/reviews/{review_id}/images/{image_id}", status_code=204, summary="Видалити фото відгуку (і файл у review_photos/)"
+)
+async def delete_review_image(review_id: int, image_id: int, principal: CurrentPrincipal, feedback: Feedback) -> None:
+    await feedback.delete_review_image(review_id, image_id, principal.user_id)
 
 
 @dictionaries_router.get("/questions", summary="Питання покупців: all, pending або published")

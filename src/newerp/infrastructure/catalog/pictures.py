@@ -16,12 +16,23 @@ class LocalCatalogPictures:
         # File work blocks, so it runs in a thread (like Task.Run), and the event loop keeps serving other requests.
         await asyncio.to_thread(self._write, path, content)
 
-    def _write(self, path: str, content: bytes) -> None:
+    async def delete(self, path: str) -> None:
+        """Removes a picture; one that is already gone is fine. A path that leaves the folder raises ValueError."""
+        await asyncio.to_thread(self._remove, path)
+
+    def _inside(self, path: str) -> Path:
         assert self._root is not None  # the service checks enabled first
         root = self._root.resolve()
         target = (root / path).resolve()
-        if not target.is_relative_to(root):  # the service makes the path; this is a second lock
+        if not target.is_relative_to(root):  # paths come from the service or the database; this is a second lock
             raise ValueError("A picture path outside the image folder.")
+        return target
+
+    def _remove(self, path: str) -> None:
+        self._inside(path).unlink(missing_ok=True)
+
+    def _write(self, path: str, content: bytes) -> None:
+        target = self._inside(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             with target.open("xb") as file:  # "x": fails if the file exists, so nothing is ever overwritten

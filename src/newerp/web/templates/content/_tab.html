@@ -126,6 +126,25 @@
         hx-include="closest form" hx-target="#content-tab" hx-confirm="Видалити?">Видалити</button>
     </div>
   </form>
+  {% if tab == "reviews" and row.images %}
+  {# Photos are moderated one by one; the storefront shows only published ones. #}
+  <div class="grid">
+    {% for photo in row.images %}
+    <figure>
+      {% if picture_base %}<img src="{{ picture_base ~ photo.path }}" alt="Фото відгуку {{ row.id }}" loading="lazy" style="max-height:8rem">{% else %}<code>{{ photo.path }}</code>{% endif %}
+      <figcaption>{{ {"pending": "на модерації", "published": "опубліковано", "rejected": "відхилено"}[photo.status] }}</figcaption>
+      <div role="group">
+        {% for action, title in (("published", "Опублікувати"), ("rejected", "Відхилити")) if action != photo.status %}
+        <button type="button" class="outline" hx-post="/app/catalog/content/reviews/{{ row.id }}/images/{{ photo.id }}/{{ action }}"
+          name="state" value="{{ state }}" hx-target="#content-tab">{{ title }}</button>
+        {% endfor %}
+        <button type="button" class="secondary outline" hx-post="/app/catalog/content/reviews/{{ row.id }}/images/{{ photo.id }}/delete"
+          name="state" value="{{ state }}" hx-target="#content-tab" hx-confirm="Видалити фото?">Видалити</button>
+      </div>
+    </figure>
+    {% endfor %}
+  </div>
+  {% endif %}
 </article>
 {% else %}
 <p>Нічого немає.</p>
