@@ -1,4 +1,4 @@
-"""Reviews (dd_review) and customer questions (dd_question) with their product names."""
+"""Reviews (dd_review) with their photos (dd_review_image) and customer questions (dd_question) with product names."""
 
 from datetime import datetime
 
@@ -24,6 +24,8 @@ from newerp.application.catalog.feedback import (
     FeedbackState,
     QuestionDto,
     ReviewDto,
+    ReviewImageDto,
+    ReviewImageStatus,
     UpdateQuestionRequest,
     UpdateReviewRequest,
 )
@@ -44,6 +46,19 @@ review = Table(
     Column("date_added", DateTime),
     Column("date_modified", DateTime),
 )
+review_image = Table(
+    "dd_review_image",
+    metadata,
+    Column("image_id", Integer, primary_key=True),
+    Column("review_id", Integer),
+    Column("image", String(255)),
+    Column("sort_order", Integer),
+    Column("status", Integer),
+    Column("date_added", DateTime),
+)
+# The old site keeps the photo status as a number.
+IMAGE_STATUSES: dict[int, ReviewImageStatus] = {0: "pending", 1: "published", 2: "rejected"}
+IMAGE_CODES = {status: code for code, status in IMAGE_STATUSES.items()}
 question = Table(
     "dd_question",
     metadata,
@@ -108,7 +123,49 @@ class SqlFeedbackStore:
             )
             for x in rows
         ]
+        images = await self._images([item.id for item in items])
+        items = [item.model_copy(update={"images": images.get(item.id, [])}) for item in items]
         return PagedResult[ReviewDto](items=items, page=page, page_size=page_size, total_count=total or 0)
+
+    async def _images(self, review_ids: list[int]) -> dict[int, list[ReviewImageDto]]:
+        """Every photo of the page's reviews, whatever its status, in the storefront's order."""
+        if not review_ids:
+            return {}
+        i = review_image.c
+        rows = await self._session.execute(
+            select(i.review_id, i.image_id, i.image, i.status)
+            .where(i.review_id.in_(review_ids))
+            .order_by(i.sort_order, i.image_id)
+        )
+        images: dict[int, list[ReviewImageDto]] = {}
+        for review_id, image_id, path, status in rows:
+            dto = ReviewImageDto(id=image_id, path=path, status=IMAGE_STATUSES.get(status, "pending"))
+            images.setdefault(review_id, []).append(dto)
+        return images
+
+    async def set_review_image_status(self, review_id: int, image_id: int, status: ReviewImageStatus) -> bool:
+        i = review_image.c
+        found = await self._session.scalar(
+            select(i.image_id).where(i.image_id == image_id, i.review_id == review_id).with_for_update()
+        )
+        if found is None:
+            return False
+        await self._session.execute(
+            sql_update(review_image).where(i.image_id == image_id).values(status=IMAGE_CODES[status])
+        )
+        await self._session.commit()
+        return True
+
+    async def delete_review_image(self, review_id: int, image_id: int) -> str | None:
+        i = review_image.c
+        path = await self._session.scalar(
+            select(i.image).where(i.image_id == image_id, i.review_id == review_id).with_for_update()
+        )
+        if path is None:
+            return None
+        await self._session.execute(delete(review_image).where(i.image_id == image_id))
+        await self._session.commit()
+        return path
 
     async def update_review(self, review_id: int, request: UpdateReviewRequest, now: datetime) -> bool:
         result = await self._session.execute(
@@ -125,10 +182,17 @@ class SqlFeedbackStore:
         await self._session.commit()
         return result.rowcount > 0
 
-    async def delete_review(self, review_id: int) -> bool:
+    async def delete_review(self, review_id: int) -> list[str] | None:
+        """The old admin left the photos behind; here they go with the review, in one transaction."""
         result = await self._session.execute(delete(review).where(review.c.review_id == review_id))
+        if result.rowcount == 0:
+            await self._session.rollback()
+            return None
+        i = review_image.c
+        paths = list(await self._session.scalars(select(i.image).where(i.review_id == review_id)))
+        await self._session.execute(delete(review_image).where(i.review_id == review_id))
         await self._session.commit()
-        return result.rowcount > 0
+        return paths
 
     async def questions(self, state: FeedbackState, page: int, page_size: int) -> PagedResult[QuestionDto]:
         q = question.c
