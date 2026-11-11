@@ -168,6 +168,24 @@ def test_print_pages_show_the_orders(api):
     assert client.get(f"/app/orders/print/other?id={first}").status_code == 400
 
 
+def test_print_data_lists_the_orders_in_their_order_with_options_and_totals(api):
+    # Ported from .NET OrderToolsApiTests.PrintData_ListsTheOrdersInTheirOrder_WithOptionsAndTotals (item 84).
+    client = api(MANAGER)
+    first, second = new_order(client, "+380671110014", quantity=2), new_order(client, "+380671110015")
+
+    printed = client.get(f"/orders/print?ids={second}&ids={first}&ids=999999&ids={second}").json()
+    assert [p["id"] for p in printed] == [second, first]
+    [line] = printed[1]["lines"]
+    assert (line["name"], line["options"], line["quantity"]) == ("Сорочка лляна оверсайз", "Розмір: M", 2)
+    assert printed[1]["customer"] == "Ольга Перевірка"
+    assert printed[1]["totals"] and set(printed[1]["store"]) == {"name", "address", "telephone", "email"}
+
+    empty = client.get("/orders/print")
+    assert (empty.status_code, empty.json()["detail"]) == (400, "Оберіть від 1 до 100 замовлень.")
+    assert client.get("/orders/print?" + "&".join(f"ids={i}" for i in range(1, 102))).status_code == 400
+    assert api(STOREKEEPER).get(f"/orders/print?ids={first}").status_code == 403
+
+
 def test_reward_points_and_commission_are_added_once_and_taken_back(api, db):
     client = api(MANAGER)
     order_id = new_order(client, "+380671110014")

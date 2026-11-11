@@ -33,6 +33,7 @@ from newerp.application.orders.models import (
     OrderListItem,
     OrderMethodsDto,
     OrderStatusDto,
+    PrintOrderDto,
     ProductPickDto,
     ShippingCostDto,
     ShippingCostRequest,
@@ -42,6 +43,7 @@ from newerp.application.orders.models import (
     UpdateOrderCustomerRequest,
 )
 from newerp.application.orders.services import NewOrderService, OrderService
+from newerp.domain.common import DomainError
 from newerp.domain.orders import DISCREPANCY_DAYS
 from newerp.infrastructure.orders.queries import SqlOrderQueries
 
@@ -51,6 +53,8 @@ Orders = Annotated[OrderService, Depends(get_order_service)]
 NewOrders = Annotated[NewOrderService, Depends(get_new_order_service)]
 Checks = Annotated[ShippingCheckService, Depends(get_shipping_check_service)]
 Credits = Annotated[OrderCreditService, Depends(get_order_credit_service)]
+
+MAX_PRINT_ORDERS = 100  # the same limit as .NET
 
 
 @router.get("", summary="Список замовлень з фільтрами і пагінацією")
@@ -126,6 +130,15 @@ async def shipping_cost(request: ShippingCostRequest, shipments: Shipments) -> S
 @router.get("/discrepancies", summary="Розбіжності статусу й ТТН за останні дні (Python first)")
 async def discrepancies(checks: Checks, days: int = DISCREPANCY_DAYS) -> list[DiscrepancyGroupDto]:
     return await checks.discrepancies(days)
+
+
+@router.get("/print", summary="Дані для друку рахунку й пакувального листа (ids=1&ids=2)")
+async def print_data(queries: Queries, ids: Annotated[list[int] | None, Query()] = None) -> list[PrintOrderDto]:
+    """The web pages here print on the server; a UI that talks only to the API (Blazor, Vaadin) needs the data.
+    Declared before /{order_id}, or "print" would be read as an order id."""
+    if not ids or len(ids) > MAX_PRINT_ORDERS:
+        raise DomainError(f"Оберіть від 1 до {MAX_PRINT_ORDERS} замовлень.")
+    return await queries.print_orders(list(dict.fromkeys(ids)))  # each order once, in the order asked
 
 
 @router.get("/{order_id}", summary="Картка замовлення: товари та історія статусів", response_model=OrderDetails)
