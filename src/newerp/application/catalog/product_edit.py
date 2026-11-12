@@ -104,7 +104,7 @@ class ProductFormDto(Dto):
     table_size: str = Field(default="", max_length=65_000)
     variant: str = Field(default="", max_length=10_000)
     notice: str = Field(default="", max_length=65_000)
-    model_info: str = Field(default="", max_length=65_000)
+    model_info: str = Field(default="", max_length=255)  # varchar(255), confirmed with item 72
     characteristics: str = Field(default="", max_length=65_000)
     color: str = Field(default="", max_length=255)
     seo_keyword: str = Field(default="", max_length=255)
