@@ -87,6 +87,7 @@ def test_create_cleans_html_and_saves_every_part(api):
         ({"sizes": [{"optionValueId": 999}]}, 400),
         ({"relatedIds": [999999]}, 400),
         ({"model": "x" * 65}, 400),
+        ({"modelInfo": "x" * 256}, 400),  # the column is varchar(255)
     ],
 )
 def test_create_refuses_bad_values(api, changes, status):
